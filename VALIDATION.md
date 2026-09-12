@@ -138,13 +138,26 @@ here. The registry records which were used; it does not require any of them.
 
 ---
 
-## Precedent worth mining: Concept Sliders
+## Convergent work, not a source: Concept Sliders
+
+**Provenance, stated because it matters.** This project did not come from this line
+of work. It came from the origin quote above: wanting to know whether the arena's
+own pro-human direction represented what it claimed, and whether someone else's
+better one could be reused without redoing the effort. The connection below was
+noticed afterwards, while thinking about who to involve, and every claim in this
+section was unverified secondhand until checked against the papers on 2026-09-12.
+What follows is convergence with adjacent work in a different modality, not
+derivation from it.
 
 The closest thing to a solved version of this problem is in diffusion, not language.
-Concept Sliders trains low-rank directions for named concepts and distributes them
-as pretrained downloadable artifacts, and the accompanying erasure work reports
-interference with concepts that were *not* targeted rather than only success on the
-targeted one.
+
+- **Concept Sliders** (Gandikota, Materzynska, Zhou, Torralba, Bau; arXiv:2311.12092,
+  ECCV 2024) trains LoRA adaptors as low-rank parameter directions for named
+  concepts while explicitly minimizing interference with other attributes, and
+  distributes pretrained sliders for download at `sliders.baulab.info`.
+- **ESD** (Gandikota et al., arXiv:2303.07345, ICCV 2023) erases concepts from model
+  weights and scores accuracy on the erased class alongside accuracy on untargeted
+  classes, reporting the collateral damage rather than only the targeted success.
 
 Two transferable lessons:
 
@@ -199,7 +212,9 @@ Each needs someone with relevant expertise rather than more reasoning from here.
   metadata turned out to be missing, what people applied wrong, whether anyone
   reused a slider on a model it was not trained for, and whether the `diffusers`
   integration mattered more than the demo. This answers v0 scoping questions
-  directly, and it is not in any paper.
+  directly. The deployment experience is not in any paper, though follow-up work on
+  erasure side effects now exists (arXiv:2505.17013, arXiv:2508.15124), so the gap
+  is operational rather than total.
 
 ---
 

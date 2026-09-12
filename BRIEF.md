@@ -293,7 +293,9 @@ Named Intervention rather than Vector deliberately. An intervention is *where to
 hook, what to do there, and how to scale it*. A residual direction, an SAE latent,
 a probe, a ReFT edit and a LoRA adaptor all fit that shape, so v3 method pluralism
 costs a `kind` field instead of a rewrite. It also makes a Concept Slider a valid
-artifact type in this registry, which is worth raising with the Concept Sliders authors.
+artifact type in this registry, which is worth raising with the Concept Sliders
+authors (arXiv:2311.12092). Noted as convergent rather than as a source; see
+`VALIDATION.md`.
 
 - `kind`: an open string. `direction`, `sae-latent`, `probe`, `reft` and `lora` are
   the ones with client support today, not the permitted set. An unrecognized kind

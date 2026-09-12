@@ -222,9 +222,12 @@ degenerate output is not a small effect, it is a broken instrument.
 - **Model license position.** Whether an activation-derived artifact is a
   derivative of the weights it came from, and what each model's license permits for
   redistribution. Belongs in the schema as per-artifact `license_status`, and
-  constrains which families the registry can carry. Prior practice worth checking:
-  low-rank adaptors derived from open image models have been redistributed
-  permissively at scale for years.
+  constrains which families the registry can carry. Prior practice, verified
+  2026-09-12: the Concept Sliders repo distributes pretrained LoRA adaptors derived
+  from open image models under MIT, with the disclaimer that "the models that you
+  use our methods with, might be on a different licenses." Adaptor MIT, source model
+  separate, disclosed rather than resolved. That is one worked precedent, not a
+  legal opinion.
 
 ## Open, not blocking
 
@@ -242,8 +245,9 @@ degenerate output is not a small effect, it is a broken instrument.
   model-agnostic and v0 carries whatever the first real submissions run on. The
   arena runs Season 3 on Olmo-3-1125-32B.
 
-- **Automatic direction discovery as a seeding method.** SliderSpace finds many
-  interpretable composable directions from a single prompt without per-attribute
-  supervision. If that ports to language-model residual directions, the registry
+- **Automatic direction discovery as a seeding method.** SliderSpace (Gandikota,
+  Wu, Zhang, Bau, Shechtman, Kolkin; arXiv:2502.01639, ICCV 2025) discovers many
+  interpretable composable directions from a single prompt, each a low-rank
+  adaptor, without per-attribute supervision. If that ports to language-model residual directions, the registry
   seeds itself from a short trait list rather than one hand-built recipe at a time,
   which changes the cold-start answer. Speculative; do not build toward it.
