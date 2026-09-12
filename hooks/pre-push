@@ -1,0 +1,4 @@
+#!/bin/sh
+# Invariants are build-failing by design. An invariant that does not block a push
+# is a suggestion.
+exec make verify

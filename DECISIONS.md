@@ -227,6 +227,20 @@ near-equivalent efficacy. This supports the plurality premise rather than
 threatening it: if the equivalence class is large, a bare label resolving to one
 artifact is malformed, not merely undesirable. Abstract read; full paper not yet.
 
+## 2026-09-12 SQLite for v0, not Postgres
+**Decided:** v0 metadata lives in SQLite. Migrations stay portable SQL, the
+connection sits behind one seam, and Postgres or Supabase later is a driver swap.
+**Why:** v0 holds a dozen synthetic fixture records, takes no uploads and serves
+nothing publicly, so there is no Postgres workload. SQLite is stdlib, so a clean
+checkout plus migrations plus fixtures reproduces the database exactly with no
+service to install, run or forget, which is the reproducibility standard this
+project has to meet. It also drops the driver dependency and its LGPL question.
+Postgres has native `ENUM` and encourages `CHECK`, the two constructs the
+no-closed-enum invariant exists to catch; SQLite makes them harder to write by
+accident. Cost accepted: no native array type, so author-declared confound axes and
+recipe payloads are JSON columns, and a type review when it moves.
+**Supersedes:** "Postgres for metadata" in the v0 scope section of `BRIEF.md`.
+
 ---
 
 ## Open, blocking launch (not code)
