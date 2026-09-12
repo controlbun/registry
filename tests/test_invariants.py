@@ -18,7 +18,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = sorted((ROOT / "schema" / "migrations").glob("*.sql"))
-SOURCE_DIRS = [ROOT / "src", ROOT / "web"]
+# Every directory holding code that can render or order a multi-submission view.
+# Adding a frontend without adding it here makes four of the nine invariants go
+# silently inert, which is worse than not having them: the suite stays green
+# while checking nothing.
+SOURCE_DIRS = [ROOT / "src", ROOT / "web", ROOT / "astro" / "src"]
+
+SCANNED_SUFFIXES = {
+    ".py", ".sql",                      # backend
+    ".html", ".jinja",                  # jinja view layer
+    ".astro", ".ts", ".tsx", ".js", ".jsx", ".mjs",   # astro view layer
+}
 
 # --------------------------------------------------------------------------- #
 # helpers
@@ -38,7 +48,7 @@ def source_files() -> list[Path]:
     out: list[Path] = []
     for d in SOURCE_DIRS:
         if d.exists():
-            out += [p for p in d.rglob("*") if p.suffix in {".py", ".html", ".jinja", ".sql"}]
+            out += [p for p in d.rglob("*") if p.suffix in SCANNED_SUFFIXES]
     return out
 
 
@@ -53,6 +63,46 @@ def scan(pattern: str) -> list[str]:
             if rx.search(line):
                 hits.append(f"{p.relative_to(ROOT)}:{n}: {line.strip()}")
     return hits
+
+
+# --------------------------------------------------------------------------- #
+# 0. The scanner actually reaches the code it claims to check.
+
+
+def test_scanner_covers_every_source_directory_that_exists():
+    """A frontend that the scanner cannot read is a frontend with no invariants.
+
+    This is the failure mode that bit already: a regex that matched nothing while
+    reporting success. Silence from a scan is only meaningful if the scan looked.
+    """
+    unread = []
+    for d in SOURCE_DIRS:
+        if not d.exists():
+            continue
+        files = [p for p in d.rglob("*") if p.is_file()]
+        if not files:
+            continue  # an empty directory is scaffolding, not a blind spot
+        if not any(p.suffix in SCANNED_SUFFIXES for p in files):
+            unread.append(d.name)
+    assert not unread, (
+        "a source directory exists but nothing in it has a scanned suffix:\n  "
+        + "\n  ".join(unread)
+    )
+
+
+def test_view_layer_suffixes_are_covered():
+    """If an Astro app is present, its file types must be in the scanned set."""
+    astro = ROOT / "astro" / "src"
+    if not astro.exists():
+        return
+    present = {p.suffix for p in astro.rglob("*") if p.suffix}
+    renderable = {s for s in present if s in {".astro", ".ts", ".tsx", ".js",
+                                              ".jsx", ".mjs", ".html", ".svelte",
+                                              ".vue"}}
+    missed = renderable - SCANNED_SUFFIXES
+    assert not missed, (
+        f"the astro app contains file types the scanner ignores: {sorted(missed)}"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -198,7 +248,7 @@ def test_absent_eval_is_not_an_error():
 def test_trait_score_never_renders_without_coherence():
     offenders = []
     for p in source_files():
-        if p.suffix not in {".html", ".jinja"}:
+        if p.suffix not in {".html", ".jinja", ".astro"}:
             continue
         text = p.read_text()
         if "trait_score" in text and "coherence" not in text:
