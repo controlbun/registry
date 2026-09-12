@@ -66,11 +66,13 @@ without the assertion: nobody is gated, and nobody can appear to have checked
 something they did not.
 **Supersedes:** Out-of-template transfer is a required eval field.
 
-## 2026-09-11 AICR is the compute backend, not the host
-**Decided:** Extraction and eval run on AICR. The web tier and artifact storage
-live elsewhere: HF Hub for artifacts, small VPS for metadata and frontend.
-**Why:** 24h batch limit, acceptable use scoped to institutional research,
-snapshots with no off-site backup.
+## 2026-09-11 The registry needs no compute
+**Decided:** v0 is schema, storage, client, Comparison and views. No extraction, no
+eval runs, no GPU dependency. Artifacts on the HF Hub, metadata and frontend on a
+small host. If extraction is ever run as a service, that is a v1 question with its
+own compute arrangement.
+**Why:** An earlier draft assumed a cluster backend for a fanout runner. The
+registry does not extract anything; authors bring their own artifacts.
 
 ## 2026-09-11 Eval judge is local weights, not an API
 **Decided:** The judge model is pinned as weights with a revision and runs

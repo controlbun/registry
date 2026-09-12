@@ -4,3 +4,14 @@ NOTES-private.md
 __pycache__/
 *.pyc
 .DS_Store
+
+# agent session state, not the working agreement
+.claude/
+.claude*/
+!CLAUDE.md
+.cursor/
+.aider*
+.continue/
+**/transcripts/
+*.transcript
+*.session.json

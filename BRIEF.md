@@ -410,29 +410,6 @@ beats mandated comparability on a thin one.
 
 ---
 
-## Compute
-
-AICR (Massachusetts AI Compute Resource, MGHPCC Holyoke) is the extraction and eval
-backend. Full specs in `CONTEXT.md`. Three consequences for the design:
-
-- **Extraction is cheap here.** Forward passes only, no backprop. Layer sweeps and
-  coefficient sweeps are Slurm array jobs. The B200 partition makes OLMo 3 32B
-  routine, so v0 is not limited to one model by compute.
-- **AICR cannot host the site.** Batch partitions cap at 24 hours, and acceptable
-  use scopes the system to research for participating institutions. The web tier
-  and storage live elsewhere: HF Hub as artifact backend, a small VPS for metadata
-  and frontend.
-- **Judge model runs on-cluster, not via an external API.** Check egress from
-  compute nodes before designing the eval. Independent of egress, an API judge
-  makes scores non-reproducible the moment the provider updates the model. Pin the
-  judge as weights with a revision, not as an endpoint. This is a correctness
-  requirement for this project, not a convenience.
-
-Storage relies on snapshots with no off-site backup, so AICR is never the source of
-truth. Push finished artifacts to the Hub as each run completes.
-
----
-
 ## v0 scope, ship in weeks not months
 
 **Nothing blocks starting.** v0 is software: schema, storage, client, Comparison,
@@ -485,10 +462,10 @@ stays closed until the policy is written and published.
 
 ## Scaling path
 
-- **v1, CI extraction runner.** Upload a recipe; it fans out to every supported
-  model and auto-produces vectors plus eval reports. AICR is the worker pool. This
-  is the moat. It converts N x M from a cold-start problem into a build matrix, and
-  no file-bucket competitor can match it.
+- **v1, CI extraction runner.** Upload a recipe; it fans out to supported models
+  and auto-produces artifacts plus eval reports. Converts N x M from a cold-start
+  problem into a build matrix. Needs a compute arrangement that does not exist yet,
+  so treat it as a direction rather than a plan.
 - **v2, hosted steering inference.** A playground where people feel the vector
   before downloading, plus an API. NDIF already serves models via NNsight, so the
   honest first question is whether this is an NDIF feature rather than a thing to

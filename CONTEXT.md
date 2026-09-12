@@ -1,7 +1,7 @@
 # Context
 
-Compute, upstream project state, and prior art. Facts verified as of 2026-09. Re-check anything
-load-bearing before relying on it; this space moves fast.
+Upstream project state and prior art. Facts verified as of 2026-09. Re-check
+anything load-bearing before relying on it; this space moves fast.
 
 ---
 
@@ -59,38 +59,6 @@ Becoming an official lab competition with prize money, hosted at
 as a dependency, with each season pinning one claimant and citing what it was
 picked over. The registry's origin is an unresolved criticism of this project's own
 frozen direction: see `BRIEF.md` and `VALIDATION.md`.
-
----
-
-## Compute: AICR
-
-Massachusetts AI Compute Resource, MGHPCC Holyoke. Part of the Massachusetts AI
-Hub. Serves BU, Harvard, MIT, Northeastern, UMass (five campuses) and Yale. Docs at
-`docs.aicr.ai`.
-
-| Resource | Detail |
-| --- | --- |
-| B200 nodes | 31 nodes, 8 GPUs each (248 total), 180 GB HBM3e per GPU, NVLink 5 |
-| RTX PRO 6000 nodes | 19 nodes, 8 GPUs each (152 total), 96 GB GDDR7 per GPU |
-| Partitions | `b200-batch`, `b200-devel`, `rtx-batch`, `rtx-devel`, `cpu` |
-| Time limits | 24h batch, 4h devel. Devel capped at 4 concurrent jobs per user |
-| Home | `/home/USERNAME`, 100 GiB, 7-day snapshots |
-| Scratch | `/scratch/USERNAME`, 10 TiB, purged regularly, no snapshots |
-| Work | `/work/INSTITUTION/PROJECT`, quota varies, 7-day snapshots |
-| Interconnect | InfiniBand NDR400 |
-
-Constraints that shape the design:
-
-- **Snapshots only, no off-site backup.** Never the source of truth.
-- **Acceptable use scopes the system to research for participating institutions.**
-  A public-facing upload service for arbitrary internet users does not fit. The web
-  tier lives elsewhere.
-- **Access requires a PI to submit the project proposal form.** Northeastern RC
-  frames AICR as an extension of Explorer: develop on Explorer, run production on
-  AICR.
-- **Publications using AICR must acknowledge it.** See `docs.aicr.ai` for the text.
-- **Verify egress from compute nodes** before designing anything that calls an
-  external API. The eval judge should be local weights regardless.
 
 ---
 

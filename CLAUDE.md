@@ -139,8 +139,8 @@ Do not write code against remembered APIs. nnsight, TransformerLens, HF Hub and 
 steering libraries move fast. Check the installed version's real signatures first
 and show me what you checked.
 
-Same for platform facts: Hub storage and LFS limits, rate limits, GPU pricing, CI
-costs, model licenses. Run the command or fetch the page.
+Same for platform facts: Hub storage and LFS limits, rate limits, hosting costs,
+model licenses. Run the command or fetch the page.
 
 ## Reproducibility
 
