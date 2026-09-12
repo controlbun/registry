@@ -204,33 +204,36 @@ it rather than quietly choosing one.
 
 ## Manifests and timestamps
 
-The manifests are a closed set. `MANIFEST_FINAL.sha256` and the lettered snapshots
-are notarized records of past doc states, not a live check, and nothing here is
-restamped as docs change. `shasum -a 256 -c MANIFEST_FINAL.sha256` is expected to
-disagree with the working tree, and that disagreement is not an error to fix. Git
-tracks the edits. The stamps exist to date the design, and that is done.
+The manifests are a closed set. They are notarized records of past doc states, not
+a live check, and nothing here is restamped as docs change. `shasum -c` against any
+of them is expected to disagree with the working tree, and that disagreement is not
+an error to fix. Git tracks the edits. The stamps exist to date the design.
+
+**Every manifest name carries the date and time it was stamped.** A new snapshot
+therefore never collides with an old one, `ots stamp` never hits its
+refuse-to-overwrite, and no proof is ever discarded to make room for another.
 
 What each one attests:
 
 - `MANIFEST-a` and `-b`, earlier states of the design docs, anchored in Bitcoin
   blocks 966590 and 966592
 - `MANIFEST-c`, an intermediate state, proof still pending
-- `MANIFEST_FINAL.sha256`, the last snapshot, covering all six docs. It replaced
-  the rolling `MANIFEST.sha256`, whose proof was pending and never anchored.
-- `MANIFEST_BRIEF.sha256`, `BRIEF.md` alone, so the brief can be handed to
-  someone and dated without disclosing the rest of the set.
+- `MANIFEST_FINAL_2026-09-11_2317`, all six docs as of that moment. Replaced the
+  rolling `MANIFEST.sha256`, whose proof was pending and never anchored
+- `MANIFEST_BRIEF_2026-09-11_2320`, `BRIEF.md` alone, so the brief can be handed to
+  someone and dated without disclosing the rest of the set. Covers the pre-correction
+  brief; `BRIEF.md` was revised on 2026-09-12 and no longer matches it
 
 Never regenerate any of them, and never rewrite one to make a checksum verify.
 Rewriting an anchored proof's manifest orphans the proof, which is the only thing
 it is for. `.ots.bak` files are the pre-upgrade proofs `ots upgrade` sets aside.
 
-If something new is ever worth dating, stamp it once and leave it alone until
-`ots upgrade` anchors it. `ots stamp` refuses to overwrite an existing `.ots`, and
-a proof discarded before it confirms never existed.
+To date a new state, stamp a new pair under a new timestamped name rather than
+touching an existing one, and leave it alone until `ots upgrade` anchors it.
 
 ```
-ots info MANIFEST_FINAL.sha256.ots      # offline, shows what a proof attests
-ots upgrade MANIFEST_FINAL.sha256.ots   # network, pending proofs only
+ots info <manifest>.sha256.ots      # offline, shows what a proof attests
+ots upgrade <manifest>.sha256.ots   # network, pending proofs only
 ```
 
 ## Repo
