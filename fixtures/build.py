@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import struct
 import sys
 from pathlib import Path
 
@@ -27,6 +28,29 @@ DIM = 8
 NOTE = "SYNTHETIC FIXTURE. Not a real direction. Not derived from any model."
 
 
+def canonicalize(path: Path) -> None:
+    """Rewrite a safetensors header with sorted keys.
+
+    safetensors is Rust-backed and serialises metadata out of a HashMap, whose
+    iteration order is randomly seeded per process. The tensor payload is stable
+    but the header byte order is not, so an unmodified rebuild produces a
+    different file every time. That makes the fixtures churn in version control
+    and means no build reproduces another, which this project cannot accept.
+
+    Sorting the header makes the whole file a pure function of its inputs.
+    Trailing whitespace padding is permitted by the format and preserves the
+    8-byte alignment the writer uses.
+    """
+    raw = path.read_bytes()
+    size = struct.unpack("<Q", raw[:8])[0]
+    header = json.loads(raw[8:8 + size])
+    payload = raw[8 + size:]
+
+    canonical = json.dumps(header, sort_keys=True, separators=(",", ":")).encode()
+    canonical += b" " * (-len(canonical) % 8)
+    path.write_bytes(struct.pack("<Q", len(canonical)) + canonical + payload)
+
+
 def write_vector(name: str, values: np.ndarray, meta: dict[str, str]) -> Path:
     """Write a safetensors file whose metadata says what it is, so the marker
     survives the file being copied away from this directory."""
@@ -37,6 +61,7 @@ def write_vector(name: str, values: np.ndarray, meta: dict[str, str]) -> Path:
         str(path),
         metadata={"synthetic": "true", "note": NOTE, **meta},
     )
+    canonicalize(path)
     return path
 
 
