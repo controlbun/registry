@@ -3,7 +3,7 @@
 
 PY := .venv/bin/python
 
-.PHONY: verify test invariants manifests hooks site licenses
+.PHONY: verify test invariants manifests hooks site licenses serve
 
 verify: invariants test manifests
 
@@ -16,6 +16,10 @@ site:
 
 licenses:
 	cd astro && npm run licenses
+
+# Clean URLs mean directories, which file:// cannot resolve. Serve it instead.
+serve:
+	cd astro && npm run preview
 
 invariants:
 	$(PY) -m pytest tests/test_invariants.py -q

@@ -101,7 +101,7 @@ const evidenceFacet = facet((r) => r.evidence);
               data-models={row.models.join("|")}
               data-evidence={row.evidence.join("|")}
             >
-              <td><a href={`/${row.label}.html`}>{row.label}</a></td>
+              <td><a href={`/${row.label}/`}>{row.label}</a></td>
               <td>{row.claimants}</td>
               <td class="mono">
                 {row.kinds.length ? row.kinds.join(", ") : <span class="absent">none recorded</span>}
