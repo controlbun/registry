@@ -215,18 +215,17 @@ refuse-to-overwrite, and no proof is ever discarded to make room for another.
 
 What each one attests:
 
-- `MANIFEST-a` and `-b`, earlier states of the design docs, anchored in Bitcoin
+- `MANIFEST-a` and `-b`, earliest states of the design docs, anchored in Bitcoin
   blocks 966590 and 966592
-- `MANIFEST-c`, an intermediate state, proof still pending
-- `MANIFEST_FINAL_2026-09-11_2317`, all six docs as of that moment. Replaced the
-  rolling `MANIFEST.sha256`, whose proof was pending and never anchored
-- `MANIFEST_BRIEF_2026-09-11_2320`, `BRIEF.md` alone, so the brief can be handed to
-  someone and dated without disclosing the rest of the set. Covers the
-  pre-correction brief
-- `MANIFEST_BRIEF_2026-09-12_0013`, the corrected `BRIEF.md`, after the Concept
-  Sliders claims were verified and relabelled as convergent. This is the current
-  disclosure document
-- `MANIFEST_FINAL_2026-09-12_0013`, all six docs at that revision
+- `MANIFEST-c`, an intermediate state, proof pending
+- `MANIFEST_FINAL_<date>_<time>`, all tracked docs at that moment
+- `MANIFEST_BRIEF_<date>_<time>`, `BRIEF.md` alone, so the brief can be handed to
+  someone and dated without disclosing the rest of the set
+
+The newest pair of each is the current record; earlier ones are superseded
+snapshots and are expected not to match the tree. `ls MANIFEST_*` shows the series.
+Do not enumerate individual stamps here, or this section needs editing every time
+one is made, which invalidates the stamp being made.
 
 Never regenerate any of them, and never rewrite one to make a checksum verify.
 Rewriting an anchored proof's manifest orphans the proof, which is the only thing

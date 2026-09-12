@@ -71,6 +71,38 @@ drawn from the same generator and the same scaffold shares the artifact.
 
 ---
 
+## The identifiability problem, which conditions everything below
+
+**Steering vectors may not be identifiable from behavior at all.** Venkatesh and
+Kurapath, *On the Non-Identifiability of Steering Vectors in Large Language Models*
+(arXiv:2602.06801, February 2026), report "large equivalence classes of
+behaviorally indistinguishable interventions" under white-box single-layer access,
+with orthogonal perturbations achieving near-equivalent efficacy and semantic
+classifiers confirming equivalence at the output level. **Abstract read directly;
+the full paper has not been. Read it before leaning on this harder.**
+
+Three consequences, and they pull in opposite directions.
+
+- **It supports the premise rather than threatening it.** If many geometrically
+  different vectors produce the same behavior, "which is the kindness vector" is
+  not a hard question, it is a malformed one. Plurality stops being a design
+  preference to defend and becomes what the geometry forces. The registry never
+  designating is now the position with a citation behind it.
+- **Cosine similarity is not evidence of disagreement.** Two submissions far apart
+  in angle may be behaviorally identical. Display it as a fact; do not read a
+  finding into it. `BRIEF.md` is corrected accordingly.
+- **It aims at the ladder below.** Every criterion in the next section is
+  behavioral. If behavior cannot identify a vector, those criteria characterize the
+  equivalence class rather than the direction. That is not a reason to drop them,
+  but it bounds what any of them can establish.
+
+The authors' own conclusion is that the field needs "structural constraints beyond
+behavioral testing." **Recipe is a structural constraint.** Two vectors that are
+behaviorally indistinguishable but produced by different procedures are still
+distinguishable by provenance. That is an answer a registry can give and a library
+or a vendor catalog cannot, and it argues for Recipe being more central than a
+first draft made it.
+
 ## A hard constraint before any criterion
 
 **A judged score without a coherence measure beside it is uninterpretable.** Not

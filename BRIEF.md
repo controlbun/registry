@@ -248,15 +248,19 @@ similarity. Comparability is earned rather than mandated here too.
 **Comparison**, derived, never authored. Computed between any two submissions that
 share a model, a label claim, or an evaluation set. Not a ranking.
 
-- Cosine similarity between interventions on the same model and layer
+- Cosine similarity between interventions on the same model and layer, **displayed
+  as a fact and not as evidence of disagreement.** See the identifiability section
+  in `VALIDATION.md`: behaviorally indistinguishable vectors can be far apart in
+  angle, so a low similarity is not by itself a finding
 - Agreement on any evaluation prompts both submissions happen to share
 - Behavioral correlation when both are applied to the same held-out prompts
 - Which confound axes each author checked, and which one checked that the other
   did not. The asymmetry is the most informative cell in the table.
 - Where they diverge, and on which axis
 
-Two submissions claiming `kindness` with 0.3 cosine similarity is a finding, and
-the registry's job is to surface it rather than to decide which is right.
+Two submissions claiming `kindness` that diverge on shared evals or on collateral
+axes is a finding, and the registry's job is to surface it rather than to decide
+which is right. Geometric distance alone is not that finding.
 
 **EvalSuite**, authored, attachable, reusable.
 

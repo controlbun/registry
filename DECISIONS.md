@@ -204,6 +204,29 @@ text against 42% on degenerate text, worse than chance, and one arm inverted sig
 because empty text reads as less unkind than a real opinion. A score measured on
 degenerate output is not a small effect, it is a broken instrument.
 
+## 2026-09-12 No comparable registry exists; Neuronpedia has storage, not this
+**Decided:** Build. Checked 2026-09-12: the adjacent work is libraries
+(`steering-vectors`, IBM `activation-steering`, EasySteer) and one vendor catalog
+(`rotalabs-steer`, its own vectors only). Neuronpedia accepts custom vector uploads
+via `NPVector.new()` with `label`, `model_id`, `layer_num`, `hook_type`, `vector`,
+`default_steer_strength`, and steers them, but documents no list, search, plural
+claim on one label, or comparison. Storage and a playground, not a registry.
+**Why:** Closes the open item that was flagged as the single question that could
+save the most work. Their six fields are a strict subset of Intervention: no model
+revision pin, no `chat_template_hash`, no activation norm, no `license_status`, no
+recipe, no eval. The silent-misuse argument is a differentiator, not a claim.
+
+## 2026-09-12 Non-identifiability conditions every behavioral criterion
+**Decided:** Record the constraint and demote cosine similarity from evidence of
+disagreement to a displayed fact. Behavioral criteria characterize the equivalence
+class rather than the direction, and Recipe is promoted as the structural answer
+the authors call for.
+**Why:** Venkatesh and Kurapath, arXiv:2602.06801, report large equivalence classes
+of behaviorally indistinguishable interventions, with orthogonal perturbations at
+near-equivalent efficacy. This supports the plurality premise rather than
+threatening it: if the equivalence class is large, a bare label resolving to one
+artifact is malformed, not merely undesirable. Abstract read; full paper not yet.
+
 ---
 
 ## Open, blocking launch (not code)
@@ -233,9 +256,6 @@ degenerate output is not a small effect, it is a broken instrument.
 
 - **Name.** Undecided deliberately. Deferred until it is known whether this lives
   inside an existing ecosystem's naming conventions.
-- **Whether comparable infrastructure already exists or is planned elsewhere.**
-  Changes whether this is a layer on existing infrastructure or parallel to it.
-  Worth resolving early; the single question that could save the most work.
 - **Interop with existing feature indexes.** Accepting their features as a recipe
   profile, and linking out rather than duplicating.
 - **Adversarial falsification as a validation method.** If a populated arena's
