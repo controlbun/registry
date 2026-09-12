@@ -289,3 +289,11 @@ figure.chart figcaption {
 .table-view { margin-top: .5rem; font-size: .8rem; }
 .table-view summary { color: var(--dim); cursor: pointer; }
 .table-view table { margin-top: .4rem; max-width: 28rem; }
+
+blockquote.origin {
+  margin: 1.4rem 0; padding: .2rem 0 .2rem 1.1rem;
+  border-left: 3px solid var(--accent);
+}
+blockquote.origin p {
+  margin: 0; font-size: 1.08rem; line-height: 1.5; color: var(--ink);
+}
