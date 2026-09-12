@@ -10,7 +10,11 @@ const fmt = (value) => (value === null ? null : value.toFixed(4));
   <thead>
     <tr>
       <th><button data-col="0">Pair</button></th>
-      <th><button data-col="1">Angle similarity</button></th>
+      {/* Not sortable, deliberately. Behaviorally indistinguishable vectors can
+          sit far apart in angle (arXiv:2602.06801), so ordering by this ranks on a
+          quantity that does not mean what the ordering would imply. Every other
+          column is the reader's to sort. */}
+      <th>Angle similarity</th>
       <th>Checked by both</th>
       <th>Checked by only one</th>
     </tr>

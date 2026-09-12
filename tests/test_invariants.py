@@ -145,6 +145,10 @@ def test_no_check_constraint_enumerates_strings():
             offenders.append(f"line {n}: {line.strip()}")
         if re.search(r"\bAS\s+ENUM\b", line, re.I):
             offenders.append(f"line {n}: {line.strip()}")
+    # A closed enum in application code rejects exactly as hard as a CHECK does.
+    offenders += scan(r"\b(ALLOWED|PERMITTED|VALID|SUPPORTED)_\w+\s*=")
+    offenders += scan(r"\.includes\([^)]*\)\s*\)?\s*(\|\||\?|:)?\s*(throw|raise)")
+    offenders += scan(r"(throw|raise)[^\n]*\b(unknown|unsupported|invalid)\s+(kind|hook|profile|method)")
     assert not offenders, (
         "A closed enumeration declares which ways of doing the thing are legitimate, "
         "and whoever invents the next one has nowhere to put it. Document common "
@@ -208,6 +212,9 @@ def test_nothing_resolves_a_label_to_one_artifact():
     # sentence ending in "the best." does not.
     offenders = scan(r"\b(best|winner|canonical|official|top_submission|"
                      r"resolve_label|pick_submission)[\w$]*(?:\s*[(=\[]|\.\w)")
+    # Indexing a claimant list down to one is the same failure under any name.
+    offenders += scan(r"(claimants|submissions|_submissions\([^)]*\))\s*\[0\]")
+    offenders += scan(r"def \w+\([^)]*\blabel\b[^)]*\):[^\n]*\[0\]")
     assert not offenders, (
         "A bare label is a view across claimants, computed on demand, owned by "
         "nobody. Nothing may answer 'give me kindness' with one artifact:\n"
@@ -231,6 +238,10 @@ def test_no_ordering_is_derived_from_an_eval_result():
         offenders += scan(rf"sorted\s*\([^)]*\b{col}\b")
         offenders += scan(rf"key\s*=\s*[^,)]*\b{col}\b")
         offenders += scan(rf"\b(sort|rank|order)\w*\s*[=(][^)]*\b{col}\b")
+        # A JS comparator: .sort((a, b) => b.trait_score - a.trait_score). The
+        # pattern above stops at the first ")", which lands inside the arrow
+        # function's parameters, so the column never gets seen.
+        offenders += scan(rf"\.sort\([^;]*\b{col}\b")
     assert not offenders, (
         "A direction that also moves sentiment and verbosity feels more effective "
         "in use, because more is happening. Ordering on measured effect favors the "
@@ -262,7 +273,11 @@ def test_trait_score_never_renders_without_coherence():
         if p.suffix not in {".html", ".jinja", ".astro"}:
             continue
         text = p.read_text()
-        if "trait_score" in text and "coherence" not in text:
+        # Any spelling of the trait measure, not just the column name. SweepChart
+        # draws `p.trait` and ConfoundChart draws `r.value`; both passed vacuously
+        # under a literal `trait_score` check.
+        draws_trait = re.search(r"\b\w*trait\w*\b", text) is not None
+        if draws_trait and "coherence" not in text:
             offenders.append(str(p.relative_to(ROOT)))
     assert not offenders, (
         "Judge-human agreement ran 81% on coherent text against 42% on degenerate "
@@ -278,8 +293,21 @@ def test_trait_score_never_renders_without_coherence():
 
 
 def test_cosine_is_never_evidence_of_disagreement():
-    offenders = scan(r"(disagree|diverg|differ|conflict)\w*.*cos(ine)?_?sim")
-    offenders += scan(r"sort\w*.*cos(ine)?_?sim")
+    # Every name this project has used or might use for the same quantity. The
+    # previous version matched only `cosine_sim`; the field was renamed to
+    # `angle_similarity` and the test went blind to the code in front of it while
+    # staying green. Match the concept.
+    similarity = r"(cos(ine)?_?sim\w*|angle_similarity|similarity|cosine)"
+    offenders = scan(rf"(disagree|diverg|differ|conflict)\w*.*{similarity}")
+    offenders += scan(rf"sort\w*\s*[=(].*{similarity}")
+    offenders += scan(rf"\.sort\(.*{similarity}")
+    offenders += scan(rf"{similarity}.*\b(desc|descending|rank)\b")
+    # A clickable column header is a sort control whatever the handler is called.
+    # The header itself is allowed to exist: what is banned is making it operable,
+    # so match a button or a header carrying a sort affordance, not plain text.
+    offenders += scan(rf"<button[^>]*>\s*[^<]*(similarity|cosine)")
+    offenders += scan(rf"<th[^>]*data-(col|sort)[^>]*>[^<]*(similarity|cosine)")
+    offenders += scan(rf"data-(col|sort)[^>]*>\s*[^<]*(similarity|cosine)")
     assert not offenders, (
         "Behaviorally indistinguishable vectors can sit far apart in angle "
         "(arXiv:2602.06801). Low cosine similarity is not by itself a finding:\n"

@@ -11,10 +11,11 @@
 // spend the only free channel restating it.
 interface Props {
   trait: number | null;
+  coherence: number | null;
   confounds: Record<string, number> | null;
   traitState: string;
 }
-const { trait, confounds, traitState } = Astro.props;
+const { trait, coherence, confounds, traitState } = Astro.props;
 
 const rows = [
   ...(traitState === "reportable" && trait !== null
@@ -64,6 +65,11 @@ const H = rows.length * (BAR + GAP) + 6;
     <figcaption>
       <span class="key"><span class="swatch series-1-bg"></span>The trait it claims</span>
       <span class="key"><span class="swatch series-2-bg"></span>Collateral axis</span>
+      <span class="key">
+        coherence {coherence === null
+          ? <span class="absent">not measured</span>
+          : coherence.toFixed(4)}
+      </span>
       <span class="synthetic-tag">synthetic, repeated-digit values</span>
     </figcaption>
 
