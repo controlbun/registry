@@ -16,7 +16,7 @@
     "size": 4,
     "threshold": 100
   },
-  "generated_at": "2026-09-12T22:41:14.625990+00:00",
+  "generated_at": "2026-09-12T22:48:23.014983+00:00",
   "kinds": [
     "direction",
     "probe",
@@ -79,6 +79,19 @@
           "steering_position": "all-positions",
           "trait_score": 0.7777,
           "transfer_score": 0.6666,
+          "verifications": [
+            {
+              "coherence_score": 0.8888,
+              "evaluator": "carol",
+              "judge_model": "placeholder/judge-8b",
+              "judge_revision": "0000000000000000000000000000000000000000",
+              "reported_at": "2026-09-12T00:00:00Z",
+              "score_state": "reportable",
+              "suite": "warmth-adversarial@v1",
+              "trait_score": 0.3333,
+              "transfer_score": 0.1111
+            }
+          ],
           "version": "v1"
         },
         {
@@ -126,6 +139,7 @@
           "steering_position": "all-positions",
           "trait_score": 0.4444,
           "transfer_score": null,
+          "verifications": [],
           "version": "v1"
         }
       ],
@@ -187,6 +201,19 @@
           "steering_position": "all-positions",
           "trait_score": 0.6666,
           "transfer_score": 0.2222,
+          "verifications": [
+            {
+              "coherence_score": null,
+              "evaluator": "erik",
+              "judge_model": "placeholder/judge-8b",
+              "judge_revision": "0000000000000000000000000000000000000000",
+              "reported_at": "2026-09-12T00:00:00Z",
+              "score_state": "uninterpretable",
+              "suite": "declination-crosscheck@v1",
+              "trait_score": 0.7777,
+              "transfer_score": null
+            }
+          ],
           "version": "v1"
         },
         {
@@ -233,6 +260,7 @@
           "steering_position": "all-positions",
           "trait_score": 0.5555,
           "transfer_score": null,
+          "verifications": [],
           "version": "v1"
         }
       ],
@@ -326,6 +354,19 @@
               "steering_position": "all-positions",
               "trait_score": 0.7777,
               "transfer_score": 0.6666,
+              "verifications": [
+                {
+                  "coherence_score": 0.8888,
+                  "evaluator": "carol",
+                  "judge_model": "placeholder/judge-8b",
+                  "judge_revision": "0000000000000000000000000000000000000000",
+                  "reported_at": "2026-09-12T00:00:00Z",
+                  "score_state": "reportable",
+                  "suite": "warmth-adversarial@v1",
+                  "trait_score": 0.3333,
+                  "transfer_score": 0.1111
+                }
+              ],
               "version": "v1"
             },
             {
@@ -373,6 +414,7 @@
               "steering_position": "all-positions",
               "trait_score": 0.4444,
               "transfer_score": null,
+              "verifications": [],
               "version": "v1"
             }
           ],
@@ -472,6 +514,19 @@
               "steering_position": "all-positions",
               "trait_score": 0.6666,
               "transfer_score": 0.2222,
+              "verifications": [
+                {
+                  "coherence_score": null,
+                  "evaluator": "erik",
+                  "judge_model": "placeholder/judge-8b",
+                  "judge_revision": "0000000000000000000000000000000000000000",
+                  "reported_at": "2026-09-12T00:00:00Z",
+                  "score_state": "uninterpretable",
+                  "suite": "declination-crosscheck@v1",
+                  "trait_score": 0.7777,
+                  "transfer_score": null
+                }
+              ],
               "version": "v1"
             },
             {
@@ -518,6 +573,7 @@
               "steering_position": "all-positions",
               "trait_score": 0.5555,
               "transfer_score": null,
+              "verifications": [],
               "version": "v1"
             }
           ],

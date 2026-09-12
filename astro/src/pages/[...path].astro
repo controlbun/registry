@@ -2,6 +2,9 @@
 import Base from "../layouts/Base.astro";
 import Claimant from "../components/Claimant.astro";
 import ArtifactCard from "../components/ArtifactCard.astro";
+import Tabs from "../components/Tabs.astro";
+import Verifications from "../components/Verifications.astro";
+import Attacks from "../components/Attacks.astro";
 import Pairs from "../components/Pairs.astro";
 import SubmissionRows from "../components/SubmissionRows.astro";
 import data from "../data/registry.json";
@@ -189,8 +192,47 @@ const released = (iso) =>
       same word</a>, and the registry does not ask it to.
     </p>
 
+    <Tabs tabs={[
+      { id: "artifact", label: "Artifact", count: null },
+      { id: "verifications", label: "Verifications", count: claimant.verifications.length },
+      { id: "attacks", label: "Attacks", count: claimant.attacks.length },
+      { id: "comments", label: "Comments", count: null },
+    ]} />
+
     <div data-pagefind-body>
-      <ArtifactCard claimant={claimant} modelId={model.model_id} />
+      <div data-panel="artifact">
+        <ArtifactCard claimant={claimant} modelId={model.model_id} />
+      </div>
+
+      <div data-panel="verifications" class="hidden">
+        <Verifications
+          verifications={claimant.verifications}
+          author={claimant.author}
+          own={{
+            trait: claimant.trait_score,
+            coherence: claimant.coherence_score,
+            state: claimant.score_state,
+          }}
+        />
+      </div>
+
+      <div data-panel="attacks" class="hidden">
+        <Attacks attacks={claimant.attacks} author={claimant.author} />
+      </div>
+
+      <div data-panel="comments" class="hidden">
+        <p class="note absent-block">
+          No comments, and no way to leave one. Comments need a write path and an
+          account behind it, and this build has neither: it takes no uploads and
+          serves nothing publicly. An empty comment box would imply otherwise.
+        </p>
+        <p class="note">
+          Worth deciding before it gets built: a comment attached to one artifact
+          argues with one author, while the disagreement this registry is about
+          happens between claimants of the same label. Where comments belong is a
+          design question, not a widget.
+        </p>
+      </div>
     </div>
   </Base>
 )}

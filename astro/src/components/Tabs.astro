@@ -1,0 +1,52 @@
+---
+// Tabs over one artifact. Every panel is in the HTML, so Pagefind indexes all of
+// them and a reader arriving from search lands on real content rather than an
+// empty shell. The hash makes a tab linkable without needing its own route.
+interface Props {
+  tabs: { id: string; label: string; count?: number | null }[];
+}
+const { tabs } = Astro.props;
+---
+
+<div class="tabs" role="tablist">
+  {tabs.map((t, i) => (
+    <button
+      role="tab"
+      type="button"
+      id={`tab-${t.id}`}
+      data-tab={t.id}
+      aria-selected={i === 0 ? "true" : "false"}
+      aria-controls={`panel-${t.id}`}
+    >
+      {t.label}
+      {t.count !== null && t.count !== undefined && (
+        <span class="tabcount">{t.count}</span>
+      )}
+    </button>
+  ))}
+</div>
+
+<script>
+  const bar = document.querySelector(".tabs");
+  if (bar) {
+    const buttons = [...bar.querySelectorAll("[data-tab]")];
+    const panels = [...document.querySelectorAll("[data-panel]")];
+
+    const show = (id) => {
+      buttons.forEach((b) =>
+        b.setAttribute("aria-selected", String(b.dataset.tab === id)),
+      );
+      panels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== id));
+    };
+
+    buttons.forEach((b) =>
+      b.addEventListener("click", () => {
+        show(b.dataset.tab);
+        history.replaceState(null, "", `#${b.dataset.tab}`);
+      }),
+    );
+
+    const fromHash = location.hash.replace("#", "");
+    show(buttons.some((b) => b.dataset.tab === fromHash) ? fromHash : buttons[0].dataset.tab);
+  }
+</script>

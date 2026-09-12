@@ -276,6 +276,38 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          0.5555, json.dumps({"topic": 0.4444})),
     )
 
+    # Someone pointing their own eval at a submission that is not theirs. This is
+    # the mechanism that makes scores comparable without anyone mandating a
+    # canonical eval per label, and it is a first-class action rather than a
+    # favour: carol did not ask alice, and alice cannot withdraw it.
+    #
+    # Carol gets a lower trait score than alice reported for the same artifact.
+    # That disagreement is the content. Neither number is corrected against the
+    # other and the registry does not pick.
+    ex("INSERT INTO eval_suite (id,author,name,version,judge_model,judge_revision,"
+       "confound_axes_json) VALUES (?,?,?,?,?,?,?)",
+       ("es_carol", "carol", "warmth-adversarial", "v1",
+        "placeholder/judge-8b", "0" * 40, json.dumps(["sentiment", "length"])))
+    ex(
+        "INSERT INTO eval_report (id,eval_suite_id,intervention_id,reported_at,"
+        "trait_score,coherence_score,transfer_score,confound_json,is_synthetic)"
+        " VALUES (?,?,?,?,?,?,?,?,1)",
+        ("er_carol_on_alice", "es_carol", "iv_alice", "2026-09-12T00:00:00Z",
+         0.3333, 0.8888, 0.1111,
+         json.dumps({"sentiment": 0.8888, "length": 0.2222})),
+    )
+    # And a verification that reports a score with no coherence beside it, so the
+    # verifications tab has to render the uninterpretable state too.
+    ex("INSERT INTO eval_suite (id,author,name,version,judge_model,judge_revision)"
+       " VALUES (?,?,?,?,?,?)",
+       ("es_erik_x", "erik", "declination-crosscheck", "v1",
+        "placeholder/judge-8b", "0" * 40))
+    ex(
+        "INSERT INTO eval_report (id,eval_suite_id,intervention_id,reported_at,"
+        "trait_score,is_synthetic) VALUES (?,?,?,?,?,1)",
+        ("er_erik_on_dana", "es_erik_x", "iv_dana", "2026-09-12T00:00:00Z", 0.7777),
+    )
+
     # The strongest evidence is the kind the author did not choose. Attacker and
     # author disagree about what it means, and both dispositions are recorded.
     ex(

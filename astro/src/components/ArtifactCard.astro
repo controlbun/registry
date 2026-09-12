@@ -99,28 +99,6 @@ const r = c.recipe;
       </p>
     )}
 
-    <h2>Attacks</h2>
-    {c.attacks.length === 0 ? (
-      <p class="note absent-block">
-        Nobody has attacked this yet. That is not evidence it is sound. The
-        strongest evidence available is the kind the author did not choose, and
-        this artifact has none of it.
-      </p>
-    ) : (
-      c.attacks.map((a) => (
-        <div class="attack">
-          <div class="provenance">
-            <strong>{a.attacker}</strong> ran <span class="mono">{a.method}</span>
-          </div>
-          <p class="definition">{a.author_response}</p>
-          <div class="provenance">
-            Attacker calls it <em>{a.attacker_disposition}</em>; author calls it
-            {" "}<em>{a.author_disposition}</em>. Both stand, and the registry does
-            not adjudicate between them.
-          </div>
-        </div>
-      ))
-    )}
   </div>
 
   <aside class="card-rail">

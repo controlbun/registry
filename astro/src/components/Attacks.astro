@@ -1,0 +1,41 @@
+---
+// Attacks against this artifact, by anyone other than its author.
+//
+// The strongest evidence available, because it is the one kind the author did not
+// choose. Attacker and author each state what they think it means and both stand;
+// a registry-assigned disposition would be the registry adjudicating the dispute,
+// which is the one thing it does not do.
+interface Props {
+  attacks: any[];
+  author: string;
+}
+const { attacks, author } = Astro.props;
+---
+
+{attacks.length === 0 ? (
+  <p class="note absent-block">
+    Nobody has attacked this artifact. That is not evidence it is sound, and it is
+    not a clean record. It means the only evidence attached to it is evidence its
+    author selected.
+  </p>
+) : (
+  attacks.map((a) => (
+    <div class="attack">
+      <div class="provenance">
+        <a class="mono" href={`/${a.attacker}/`}>{a.attacker}</a> ran
+        {" "}<span class="mono">{a.method}</span>
+      </div>
+      <p class="definition">{a.author_response}</p>
+      <div class="provenance">
+        Attacker calls it <em>{a.attacker_disposition}</em>; {author} calls it
+        {" "}<em>{a.author_disposition}</em>. Both stand, and the registry does not
+        adjudicate between them.
+      </div>
+    </div>
+  ))
+)}
+
+<p class="note">
+  Publishing an attack needs a write path, and this build has none. Nothing here
+  accepts uploads yet.
+</p>

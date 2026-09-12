@@ -1,0 +1,101 @@
+---
+// Evals run against this artifact by someone other than its author.
+//
+// These are not corrections of the author's numbers and are never reconciled
+// against them. Two people measuring the same artifact and disagreeing is the
+// content: the registry shows both and picks neither.
+interface Props {
+  verifications: any[];
+  author: string;
+  own: { trait: number | null; coherence: number | null; state: string };
+}
+const { verifications, author, own } = Astro.props;
+const fmt = (v) => (v === null || v === undefined ? null : v.toFixed(4));
+const when = (iso) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric", month: "short", day: "numeric",
+  });
+---
+
+{verifications.length === 0 ? (
+  <p class="note absent-block">
+    Nobody other than {author} has evaluated this artifact. The author wrote both
+    the submission and the evaluation it reports, which measures internal
+    consistency and not much else. An independent eval is the cheapest evidence
+    anyone can add here, and this artifact has none.
+  </p>
+) : (
+  <>
+    <table>
+      <thead>
+        <tr>
+          <th>Evaluator</th>
+          <th>Suite</th>
+          <th>Trait</th>
+          <th>Coherence</th>
+          <th>Transfer</th>
+          <th>Reported</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="own-row">
+          <td>
+            <a class="mono" href={`/${author}/`}>{author}</a>
+            <div class="provenance">the author</div>
+          </td>
+          <td class="provenance">their own suite</td>
+          <td>
+            {own.state === "reportable" && fmt(own.trait)}
+            {own.state === "uninterpretable" && (
+              <span class="uninterpretable">uninterpretable</span>
+            )}
+            {own.state === "absent" && <span class="absent">not measured</span>}
+          </td>
+          <td>
+            {own.coherence === null
+              ? <span class="absent">not measured</span>
+              : fmt(own.coherence)}
+          </td>
+          <td class="absent">—</td>
+          <td class="absent">—</td>
+        </tr>
+        {verifications.map((v) => (
+          <tr>
+            <td><a class="mono" href={`/${v.evaluator}/`}>{v.evaluator}</a></td>
+            <td class="mono">{v.suite}</td>
+            <td>
+              {v.score_state === "reportable" && fmt(v.trait_score)}
+              {v.score_state === "uninterpretable" && (
+                <span class="uninterpretable">uninterpretable</span>
+              )}
+              {v.score_state === "absent" && <span class="absent">not measured</span>}
+            </td>
+            <td>
+              {v.coherence_score === null
+                ? <span class="absent">not measured</span>
+                : fmt(v.coherence_score)}
+            </td>
+            <td>
+              {v.transfer_score === null
+                ? <span class="absent">not measured</span>
+                : fmt(v.transfer_score)}
+            </td>
+            <td class="provenance">{when(v.reported_at)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <p class="note">
+      The author's row is first because it is theirs, not because it is the
+      reference. Where these numbers disagree, neither is corrected against the
+      other and the registry does not pick. Two people measuring the same artifact
+      and getting different answers is the disagreement this exists to show.
+    </p>
+    <p class="note">
+      Each evaluator pinned their own judge model and revision. A score produced by
+      a different judge is not the same measurement, which is why the suite is named
+      rather than the numbers being pooled.
+    </p>
+  </>
+)}

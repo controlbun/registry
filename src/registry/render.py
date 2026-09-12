@@ -41,13 +41,34 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "SELECT * FROM intervention WHERE author=? AND label=? AND version=?",
         (row["author"], row["label"], row["version"]),
     ).fetchone()
-    report = (
-        conn.execute(
-            "SELECT * FROM eval_report WHERE intervention_id=?", (iv["id"],)
-        ).fetchone()
-        if iv
-        else None
-    )
+    # An eval whose suite belongs to someone other than the submission's author is
+    # the thing this registry is actually for. Pointing your evaluation at someone
+    # else's submission is how comparability accumulates without anyone mandating a
+    # canonical eval per label, so the two are kept apart rather than averaged.
+    reports = list(conn.execute(
+        "SELECT r.*, s.author AS evaluator, s.name AS suite_name,"
+        " s.version AS suite_version, s.judge_model, s.judge_revision"
+        " FROM eval_report r JOIN eval_suite s ON s.id = r.eval_suite_id"
+        " WHERE r.intervention_id = ?",
+        (iv["id"],),
+    )) if iv else []
+
+    report = next((r for r in reports if r["evaluator"] == row["author"]), None)
+    verifications = [
+        {
+            "evaluator": r["evaluator"],
+            "suite": f"{r['suite_name']}@{r['suite_version']}",
+            "judge_model": r["judge_model"],
+            "judge_revision": r["judge_revision"],
+            "reported_at": r["reported_at"],
+            "trait_score": r["trait_score"],
+            "coherence_score": r["coherence_score"],
+            "transfer_score": r["transfer_score"],
+            "score_state": compare.score_state(r),
+        }
+        for r in reports
+        if r["evaluator"] != row["author"]
+    ]
     axes: list[str] = []
     for r in conn.execute(
         "SELECT confound_axes_json FROM eval_suite WHERE author=?", (row["author"],)
@@ -74,6 +95,7 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         }
 
     return {
+        "verifications": verifications,
         "recipe": recipe,
         "shape": iv["shape"] if iv else None,
         "dtype": iv["dtype"] if iv else None,
