@@ -204,9 +204,9 @@ it rather than quietly choosing one.
 
 ## Manifests and timestamps
 
-The manifests are a closed set. `MANIFEST.sha256` and the lettered snapshots are
-notarized records of past doc states, not a live check, and nothing here is
-restamped as docs change. `shasum -a 256 -c MANIFEST.sha256` is expected to
+The manifests are a closed set. `MANIFEST_FINAL.sha256` and the lettered snapshots
+are notarized records of past doc states, not a live check, and nothing here is
+restamped as docs change. `shasum -a 256 -c MANIFEST_FINAL.sha256` is expected to
 disagree with the working tree, and that disagreement is not an error to fix. Git
 tracks the edits. The stamps exist to date the design, and that is done.
 
@@ -215,7 +215,8 @@ What each one attests:
 - `MANIFEST-a` and `-b`, earlier states of the design docs, anchored in Bitcoin
   blocks 966590 and 966592
 - `MANIFEST-c`, an intermediate state, proof still pending
-- `MANIFEST.sha256`, the last snapshot, covering all six docs
+- `MANIFEST_FINAL.sha256`, the last snapshot, covering all six docs. It replaced
+  the rolling `MANIFEST.sha256`, whose proof was pending and never anchored.
 
 Never regenerate any of them, and never rewrite one to make a checksum verify.
 Rewriting an anchored proof's manifest orphans the proof, which is the only thing
@@ -226,8 +227,8 @@ If something new is ever worth dating, stamp it once and leave it alone until
 a proof discarded before it confirms never existed.
 
 ```
-ots info MANIFEST.sha256.ots      # offline, shows what a proof attests
-ots upgrade MANIFEST.sha256.ots   # network, pending proofs only
+ots info MANIFEST_FINAL.sha256.ots      # offline, shows what a proof attests
+ots upgrade MANIFEST_FINAL.sha256.ots   # network, pending proofs only
 ```
 
 ## Repo
