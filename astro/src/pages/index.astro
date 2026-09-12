@@ -1,175 +1,144 @@
 ---
-import Base from "../layouts/Base.astro";
+import "../styles/app.css";
 import data from "../data/registry.json";
 
-// Models are the front door. An intervention is a tensor in one model's basis at
-// one layer, so a vector for one model does nothing for another, and "which model
-// am I working with" is the first question a reader actually has. Labels live one
-// level in, on the model that carries them.
-const rows = data.model_index.map((m) => ({
-  ...m,
-  evidence: [...new Set(
-    m.labels.flatMap((l) => l.claimants).flatMap((c) => [
-      c.transfer_score === null ? "transfer not measured" : "transfer measured",
-      c.attacks.length ? "attacked by others" : "never attacked",
-      c.score_state === "uninterpretable" ? "score uninterpretable" : null,
-    ]).filter(Boolean),
-  )],
-}));
+// The home page: what this is in the middle, the ways in on the left, what
+// arrived recently on the right.
+//
+// PROSE IS PLACEHOLDER. The sentences in the middle column are lifted from
+// BRIEF.md so the page says something true in the author's own words rather than
+// in mine. Replace them before anyone outside sees this.
 
-const facet = (pick) => {
-  const counts = new Map();
-  for (const row of rows) for (const v of pick(row)) {
-    counts.set(v, (counts.get(v) ?? 0) + 1);
-  }
-  return [...counts.entries()].map(([value, count]) => ({ value, count }));
-};
+const recent = data.model_index
+  .flatMap((m) => m.submissions)
+  .slice()
+  .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  .slice(0, 8);
 
-const kindFacet = facet((r) => r.kinds);
-const hookFacet = facet((r) => r.hook_points);
-const evidenceFacet = facet((r) => r.evidence);
+const released = (iso) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+const belowThreshold = data.corpus.size < data.corpus.threshold;
 ---
 
-<Base title="Registry">
-  <h1 slot="heading">Registry</h1>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Registry</title>
+    <script is:inline>
+      // Applied before paint, so a reader who picked a theme never sees a flash
+      // of the other one.
+      const saved = localStorage.getItem("theme");
+      if (saved) document.documentElement.dataset.theme = saved;
+    </script>
+  </head>
+  <body>
+    <div class="home">
+      <nav class="sidenav">
+        <h3>Browse</h3>
+        <a href="/models/">Models</a>
 
-  <p class="lede">
-    Interpretable interventions and the evidence for and against each, organised by
-    the model they act on. A vector is a tensor in one model's basis at one layer,
-    so it does nothing for another model. Pick the model you are working with.
-  </p>
+        <h3>Account</h3>
+        <span class="soon">Profile</span>
+        <span class="soon">Submissions</span>
+        <span class="soon">Settings</span>
 
-  <div class="scope">
-    <div><span class="k">Models</span>{data.model_index.length}</div>
-    <div><span class="k">Artifacts</span>{data.corpus.size}</div>
-    <div><span class="k">Artifact kinds</span><span class="mono">{data.kinds.join(", ")}</span></div>
-  </div>
+        <h3>Resources</h3>
+        <span class="soon">Getting started</span>
+        <span class="soon">Documentation</span>
+        <span class="soon">Publishing a submission</span>
 
-  <div class="facets">
-    <aside>
-      <input type="search" id="q" placeholder="Search models" />
+        <button class="themetoggle" type="button" id="theme">Dark theme</button>
+      </nav>
 
-      <h3>Artifact kind</h3>
-      {kindFacet.map((f) => (
-        <label>
-          <input type="checkbox" data-facet="kinds" value={f.value} />
-          {f.value} <span class="count">({f.count})</span>
-        </label>
-      ))}
+      <main class="intro">
+        <h1>Registry</h1>
 
-      <h3>Hook point</h3>
-      {hookFacet.map((f) => (
-        <label>
-          <input type="checkbox" data-facet="hooks" value={f.value} />
-          <span class="mono">{f.value}</span> <span class="count">({f.count})</span>
-        </label>
-      ))}
+        <p class="lede">
+          A registry for activation-steering artifacts, in the spirit of GitHub or
+          Hugging Face rather than a curated database.
+        </p>
 
-      <h3>Evidence</h3>
-      {evidenceFacet.map((f) => (
-        <label>
-          <input type="checkbox" data-facet="evidence" value={f.value} />
-          {f.value} <span class="count">({f.count})</span>
-        </label>
-      ))}
-      <p class="note">
-        Filters, not a quality gate. More evidence is not the same as better, and a
-        submission nobody has attacked is not thereby sound.
-      </p>
-    </aside>
+        <h2>A vector is not portable, but a recipe is</h2>
+        <p>
+          A steering vector is a tensor in one model's residual basis at one layer,
+          so a <span class="mono">kindness</span> vector for one model does nothing
+          for another. What travels is the extraction recipe: the contrast data, the
+          author's definition of the trait, the layer sweep, the evaluation.
+        </p>
 
-    <div data-pagefind-body>
-      <table id="models">
-        <thead>
-          <tr>
-            <th><button data-col="0">Model</button></th>
-            <th><button data-col="1">Artifacts</button></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((m) => (
-            <tr
-              data-kinds={m.kinds.join("|")}
-              data-hooks={m.hook_points.join("|")}
-              data-evidence={m.evidence.join("|")}
-            >
-              <td>
-                <a class="mono" href={`/models/${m.model_id}/`}>{m.model_id}</a>
-                <div class="provenance">
-                  {m.revisions.length} revision{m.revisions.length === 1 ? "" : "s"},
-                  layer{m.layers.length === 1 ? "" : "s"} {m.layers.join(", ")}
-                </div>
-              </td>
-              <td>{m.claimant_count}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <h2>Plurality is the product</h2>
+        <p>
+          Ten people will extract <span class="mono">kindness</span> with different
+          contrast data, different theories of what kindness is, and different ideas
+          about what could be confounding it. The registry holds all ten side by
+          side and makes the disagreement legible. It does not pick a winner,
+          mandate a definition, or impose a single evaluation.
+        </p>
 
-      <p class="note" id="empty" hidden>Nothing matches those filters.</p>
+        <p class="pull">
+          The primary object is a submission: one author's complete take,
+          self-contained, comparable to others after the fact rather than conformant
+          to them in advance.
+        </p>
 
-      <p class="note">
-        Artifact count is a fact about how much has been published for a model, not
-        a measure of quality, and a model with one artifact is not worse than a
-        model with four.
-      </p>
-      <p class="note">
-        <span class="mono">kind</span> and <span class="mono">hook_point</span> are
-        open strings. The values in the sidebar are whatever the corpus contains,
-        not a permitted set, and an artifact whose kind nothing recognises is still
-        stored and still shown.
-      </p>
+        <h2>What you will see on a page</h2>
+        <p>
+          A trait score always appears with a coherence measure beside it, or it
+          appears as uninterpretable rather than as a number. Anything an author did
+          not measure reads as not measured, never as zero. Angle similarity between
+          two artifacts is shown as geometry, never as evidence that two authors
+          disagree. Nothing is ranked by a measured result.
+        </p>
+
+        <p class="note">
+          Copy on this page is placeholder, drawn from BRIEF.md.
+        </p>
+      </main>
+
+      <aside class="rail">
+        <div class="panel">
+          <h3>{belowThreshold ? "Recently added" : "Trending"}</h3>
+          <ol>
+            {recent.map((s) => (
+              <li>
+                <a href={`/${s.author}/${s.model_id}/${s.label}/`}>
+                  {s.author}/{s.label}
+                </a>
+                <span class="meta mono">{s.kind} · {s.model_id}</span>
+                <span class="meta">{released(s.created_at)}</span>
+              </li>
+            ))}
+          </ol>
+          <p class="why">
+            {belowThreshold
+              ? `${data.corpus.size} submissions, under the ${data.corpus.threshold} needed before engagement means anything. Newest first until then: there is nothing to trend on yet, and an invented ranking would be worse than none.`
+              : "Evaluations and attacks by people other than the author, decayed by age. Never a measured score, and not downloads."}
+          </p>
+        </div>
+      </aside>
     </div>
-  </div>
-</Base>
 
-<script>
-  // Filtering and reordering are reader actions. Nothing is applied on load.
-  const table = document.querySelector("#models");
-  const body = table.querySelector("tbody");
-  const empty = document.querySelector("#empty");
-  const search = document.querySelector("#q");
+    <script>
+      const button = document.querySelector("#theme");
+      const root = document.documentElement;
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  function refresh() {
-    const picked = {};
-    for (const box of document.querySelectorAll("[data-facet]:checked")) {
-      (picked[box.dataset.facet] ??= []).push(box.value);
-    }
-    const term = (search.value || "").trim().toLowerCase();
-    let shown = 0;
+      const isDark = () =>
+        (root.dataset.theme || (prefersDark ? "dark" : "light")) === "dark";
+      const label = () => {
+        button.textContent = isDark() ? "Light theme" : "Dark theme";
+      };
+      label();
 
-    for (const row of body.rows) {
-      let visible = true;
-      for (const [facet, wanted] of Object.entries(picked)) {
-        const have = (row.dataset[facet] || "").split("|");
-        if (!wanted.some((w) => have.includes(w))) visible = false;
-      }
-      if (visible && term && !row.innerText.toLowerCase().includes(term)) {
-        visible = false;
-      }
-      row.classList.toggle("hidden", !visible);
-      if (visible) shown += 1;
-    }
-    empty.hidden = shown > 0;
-  }
-
-  document.querySelectorAll("[data-facet]").forEach((b) =>
-    b.addEventListener("change", refresh),
-  );
-  search.addEventListener("input", refresh);
-
-  table.querySelectorAll("th button").forEach((button) => {
-    button.addEventListener("click", () => {
-      const idx = Number(button.dataset.col);
-      const rows = [...body.rows];
-      rows.sort((x, y) => {
-        const a = x.cells[idx].innerText.trim();
-        const c = y.cells[idx].innerText.trim();
-        const na = parseFloat(a);
-        const nc = parseFloat(c);
-        return !isNaN(na) && !isNaN(nc) ? nc - na : a.localeCompare(c);
+      button.addEventListener("click", () => {
+        const next = isDark() ? "light" : "dark";
+        root.dataset.theme = next;
+        localStorage.setItem("theme", next);
+        label();
       });
-      rows.forEach((r) => body.appendChild(r));
-    });
-  });
-</script>
+    </script>
+  </body>
+</html>

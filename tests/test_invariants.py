@@ -194,9 +194,20 @@ def test_pin_records_who_when_and_alternatives():
 
 
 def test_nothing_resolves_a_label_to_one_artifact():
-    # No trailing \b: `_` is a word character, so \bbest\b misses best_submission.
+    # Two things this has to get right at once.
+    #
+    # No trailing \b: `_` is a word character, so \bbest\b misses best_submission,
+    # which left this invariant inert once already.
+    #
+    # But templates now carry prose explaining the premise, and that prose has to
+    # be able to say the registry "does not pick a winner". So a match only counts
+    # when the word is being used as an identifier: continuing into a longer name
+    # and then hitting a call, an assignment, a member access or an index. English
+    # is followed by a space or punctuation and does not match.
+    # A dot only counts when a word follows it, so member access matches and a
+    # sentence ending in "the best." does not.
     offenders = scan(r"\b(best|winner|canonical|official|top_submission|"
-                     r"resolve_label|pick_submission)\w*")
+                     r"resolve_label|pick_submission)[\w$]*(?:\s*[(=\[]|\.\w)")
     assert not offenders, (
         "A bare label is a view across claimants, computed on demand, owned by "
         "nobody. Nothing may answer 'give me kindness' with one artifact:\n"

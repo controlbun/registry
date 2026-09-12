@@ -1,0 +1,176 @@
+---
+import Base from "../../layouts/Base.astro";
+import data from "../../data/registry.json";
+
+// Models are the front door. An intervention is a tensor in one model's basis at
+// one layer, so a vector for one model does nothing for another, and "which model
+// am I working with" is the first question a reader actually has. Labels live one
+// level in, on the model that carries them.
+const rows = data.model_index.map((m) => ({
+  ...m,
+  evidence: [...new Set(
+    m.labels.flatMap((l) => l.claimants).flatMap((c) => [
+      c.transfer_score === null ? "transfer not measured" : "transfer measured",
+      c.attacks.length ? "attacked by others" : "never attacked",
+      c.score_state === "uninterpretable" ? "score uninterpretable" : null,
+    ]).filter(Boolean),
+  )],
+}));
+
+const facet = (pick) => {
+  const counts = new Map();
+  for (const row of rows) for (const v of pick(row)) {
+    counts.set(v, (counts.get(v) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([value, count]) => ({ value, count }));
+};
+
+const kindFacet = facet((r) => r.kinds);
+const hookFacet = facet((r) => r.hook_points);
+const evidenceFacet = facet((r) => r.evidence);
+---
+
+<Base title="Models" crumb="home">
+  <h1 slot="heading">Models</h1>
+
+  <p class="lede">
+    Every model something has been published against. This registry hosts none of
+    them; each id is a reference to wherever the model actually lives. A vector is
+    a tensor in one model's basis at one layer, so it does nothing for another
+    model. Pick the one you are working with.
+  </p>
+
+  <div class="scope">
+    <div><span class="k">Models</span>{data.model_index.length}</div>
+    <div><span class="k">Artifacts</span>{data.corpus.size}</div>
+    <div><span class="k">Artifact kinds</span><span class="mono">{data.kinds.join(", ")}</span></div>
+  </div>
+
+  <div class="facets">
+    <aside>
+      <input type="search" id="q" placeholder="Search models" />
+
+      <h3>Artifact kind</h3>
+      {kindFacet.map((f) => (
+        <label>
+          <input type="checkbox" data-facet="kinds" value={f.value} />
+          {f.value} <span class="count">({f.count})</span>
+        </label>
+      ))}
+
+      <h3>Hook point</h3>
+      {hookFacet.map((f) => (
+        <label>
+          <input type="checkbox" data-facet="hooks" value={f.value} />
+          <span class="mono">{f.value}</span> <span class="count">({f.count})</span>
+        </label>
+      ))}
+
+      <h3>Evidence</h3>
+      {evidenceFacet.map((f) => (
+        <label>
+          <input type="checkbox" data-facet="evidence" value={f.value} />
+          {f.value} <span class="count">({f.count})</span>
+        </label>
+      ))}
+      <p class="note">
+        Filters, not a quality gate. More evidence is not the same as better, and a
+        submission nobody has attacked is not thereby sound.
+      </p>
+    </aside>
+
+    <div data-pagefind-body>
+      <table id="models">
+        <thead>
+          <tr>
+            <th><button data-col="0">Model</button></th>
+            <th><button data-col="1">Artifacts</button></th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((m) => (
+            <tr
+              data-kinds={m.kinds.join("|")}
+              data-hooks={m.hook_points.join("|")}
+              data-evidence={m.evidence.join("|")}
+            >
+              <td>
+                <a class="mono" href={`/models/${m.model_id}/`}>{m.model_id}</a>
+                <div class="provenance">
+                  {m.revisions.length} revision{m.revisions.length === 1 ? "" : "s"},
+                  layer{m.layers.length === 1 ? "" : "s"} {m.layers.join(", ")}
+                </div>
+              </td>
+              <td>{m.claimant_count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <p class="note" id="empty" hidden>Nothing matches those filters.</p>
+
+      <p class="note">
+        Artifact count is a fact about how much has been published for a model, not
+        a measure of quality, and a model with one artifact is not worse than a
+        model with four.
+      </p>
+      <p class="note">
+        <span class="mono">kind</span> and <span class="mono">hook_point</span> are
+        open strings. The values in the sidebar are whatever the corpus contains,
+        not a permitted set, and an artifact whose kind nothing recognises is still
+        stored and still shown.
+      </p>
+    </div>
+  </div>
+</Base>
+
+<script>
+  // Filtering and reordering are reader actions. Nothing is applied on load.
+  const table = document.querySelector("#models");
+  const body = table.querySelector("tbody");
+  const empty = document.querySelector("#empty");
+  const search = document.querySelector("#q");
+
+  function refresh() {
+    const picked = {};
+    for (const box of document.querySelectorAll("[data-facet]:checked")) {
+      (picked[box.dataset.facet] ??= []).push(box.value);
+    }
+    const term = (search.value || "").trim().toLowerCase();
+    let shown = 0;
+
+    for (const row of body.rows) {
+      let visible = true;
+      for (const [facet, wanted] of Object.entries(picked)) {
+        const have = (row.dataset[facet] || "").split("|");
+        if (!wanted.some((w) => have.includes(w))) visible = false;
+      }
+      if (visible && term && !row.innerText.toLowerCase().includes(term)) {
+        visible = false;
+      }
+      row.classList.toggle("hidden", !visible);
+      if (visible) shown += 1;
+    }
+    empty.hidden = shown > 0;
+  }
+
+  document.querySelectorAll("[data-facet]").forEach((b) =>
+    b.addEventListener("change", refresh),
+  );
+  search.addEventListener("input", refresh);
+
+  table.querySelectorAll("th button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const idx = Number(button.dataset.col);
+      const rows = [...body.rows];
+      rows.sort((x, y) => {
+        const a = x.cells[idx].innerText.trim();
+        const c = y.cells[idx].innerText.trim();
+        const na = parseFloat(a);
+        const nc = parseFloat(c);
+        return !isNaN(na) && !isNaN(nc) ? nc - na : a.localeCompare(c);
+      });
+      rows.forEach((r) => body.appendChild(r));
+    });
+  });
+</script>
