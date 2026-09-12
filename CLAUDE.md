@@ -202,31 +202,33 @@ Note the tension with the plurality premise and do not resolve it silently: open
 contribution and misuse gating pull against each other. Where they conflict, raise
 it rather than quietly choosing one.
 
-## Repo commands
+## Manifests and timestamps
 
-Docs are hash-manifested and timestamped. Editing any tracked `.md` invalidates
-`MANIFEST.sha256`, so regenerate and restamp in the same commit.
+The manifests are a closed set. `MANIFEST.sha256` and the lettered snapshots are
+notarized records of past doc states, not a live check, and nothing here is
+restamped as docs change. `shasum -a 256 -c MANIFEST.sha256` is expected to
+disagree with the working tree, and that disagreement is not an error to fix. Git
+tracks the edits. The stamps exist to date the design, and that is done.
+
+What each one attests:
+
+- `MANIFEST-a` and `-b`, earlier states of the design docs, anchored in Bitcoin
+  blocks 966590 and 966592
+- `MANIFEST-c`, an intermediate state, proof still pending
+- `MANIFEST.sha256`, the last snapshot, covering all six docs
+
+Never regenerate any of them, and never rewrite one to make a checksum verify.
+Rewriting an anchored proof's manifest orphans the proof, which is the only thing
+it is for. `.ots.bak` files are the pre-upgrade proofs `ots upgrade` sets aside.
+
+If something new is ever worth dating, stamp it once and leave it alone until
+`ots upgrade` anchors it. `ots stamp` refuses to overwrite an existing `.ots`, and
+a proof discarded before it confirms never existed.
 
 ```
-shasum -a 256 -c MANIFEST.sha256              # does the tree match
-shasum -a 256 $(git ls-files '*.md') > MANIFEST.sha256
-ots stamp MANIFEST.sha256
-ots info MANIFEST.sha256.ots                  # offline
-ots upgrade MANIFEST.sha256.ots               # network, once mined
+ots info MANIFEST.sha256.ots      # offline, shows what a proof attests
+ots upgrade MANIFEST.sha256.ots   # network, pending proofs only
 ```
-
-`ots stamp` refuses to overwrite an existing `.ots`. Delete the old proof first or
-the stamp fails and the manifest is left pointing at the previous one.
-
-`MANIFEST.sha256` is the live one and the only one that should match the working
-tree. `MANIFEST-a`, `-b` and `-c` are retired snapshots kept for their timestamps,
-and their hashes are expected to disagree with the current files. Never regenerate
-a lettered manifest to make a checksum verify; `-a` and `-b` have confirmed Bitcoin
-attestations and rewriting one orphans the proof. `.ots.bak` files are the
-pre-upgrade proofs `ots upgrade` sets aside.
-
-Lettered snapshots mark milestones, not edits. Retire one when you would want to
-point at that state later, not every time a file changes.
 
 ## Repo
 
