@@ -60,6 +60,7 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "label": row["label"],
         "version": row["version"],
         "definition": row["definition"],
+        "created_at": row["created_at"],
         "score_state": compare.score_state(report),
         "trait_score": report["trait_score"] if report else None,
         "coherence_score": report["coherence_score"] if report else None,

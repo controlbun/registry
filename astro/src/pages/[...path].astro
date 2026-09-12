@@ -2,13 +2,18 @@
 import Base from "../layouts/Base.astro";
 import Claimant from "../components/Claimant.astro";
 import Pairs from "../components/Pairs.astro";
+import SubmissionRows from "../components/SubmissionRows.astro";
 import data from "../data/registry.json";
 
 // Everything below the index lives under the model, because an intervention is a
 // tensor in one model's basis at one layer and does nothing for another model.
 //
-//   /<org>/<name>/           every intervention published against that model
-//   /<org>/<name>/<label>/   everyone claiming that label, on that model
+//   /<org>/<name>/                      every intervention published against it
+//   /<org>/<name>/<label>/              everyone claiming that label, there
+//   /<owner>/<org>/<name>/<label>/      one owner's complete take
+//
+// `owner` is whoever published the submission and may be a person or an org, the
+// same way a model id may be either. No segment here is a reserved namespace.
 //
 // A label has no page of its own. Claimants of the same word on different models
 // are not comparable: the angle between their vectors is undefined and their evals
@@ -24,20 +29,27 @@ export function getStaticPaths() {
   for (const model of data.model_index) {
     routes.push({
       params: { path: model.model_id },
-      props: { view: "model", model, block: null },
+      props: { view: "model", model, block: null, claimant: null },
     });
 
     for (const block of model.labels) {
       routes.push({
         params: { path: `${model.model_id}/${block.label}` },
-        props: { view: "label", model, block },
+        props: { view: "label", model, block, claimant: null },
       });
+
+      for (const claimant of block.claimants) {
+        routes.push({
+          params: { path: `${claimant.author}/${model.model_id}/${block.label}` },
+          props: { view: "submission", model, block, claimant },
+        });
+      }
     }
   }
   return routes;
 }
 
-const { view, model, block } = Astro.props;
+const { view, model, block, claimant } = Astro.props;
 ---
 
 {view === "model" && (
@@ -109,7 +121,7 @@ const { view, model, block } = Astro.props;
     </p>
 
     <div data-pagefind-body>
-      {block.claimants.map((c) => <Claimant claimant={c} />)}
+      <SubmissionRows claimants={block.claimants} modelId={model.model_id} />
 
       {block.pairs.length > 0 && (
         <>
@@ -117,6 +129,29 @@ const { view, model, block } = Astro.props;
           <Pairs pairs={block.pairs} />
         </>
       )}
+    </div>
+  </Base>
+)}
+
+{view === "submission" && (
+  <Base
+    title={`${claimant.author}/${block.label} on ${model.model_id}`}
+    crumb="all models"
+  >
+    <h1 slot="heading" class="mono">
+      {claimant.author}/{claimant.label}@{claimant.version}
+    </h1>
+
+    <p class="lede">
+      One owner's complete take on <strong>{block.label}</strong>, against
+      {" "}<a class="mono" href={`/${model.model_id}/`}>{model.model_id}</a>.
+      Self-contained and internally consistent. It does not have to agree with
+      {" "}<a href={`/${model.model_id}/${block.label}/`}>anyone else claiming the
+      same word</a>, and the registry does not ask it to.
+    </p>
+
+    <div data-pagefind-body>
+      <Claimant claimant={claimant} />
     </div>
   </Base>
 )}

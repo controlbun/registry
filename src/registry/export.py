@@ -90,6 +90,17 @@ def build(conn: sqlite3.Connection) -> dict:
             })
         model_index.append({
             "model_id": m["model_id"],
+            "submissions": [
+                {
+                    "author": c["author"],
+                    "label": c["label"],
+                    "version": c["version"],
+                    "created_at": c["created_at"],
+                    "kind": c["kind"],
+                    "model_id": c["model_id"],
+                }
+                for b in blocks for c in b["claimants"]
+            ],
             "revisions": sorted(m["revisions"]),
             "kinds": sorted(m["kinds"]),
             "hook_points": sorted(m["hook_points"]),

@@ -1,0 +1,73 @@
+---
+// A label page is a list, not a stack of full cards. Author, when they released
+// it, and the two social columns.
+//
+// Stars and views render as not tracked rather than as 0. A zero here would read
+// as a measurement saying nobody starred it, which is a different claim from
+// nothing counting. There is no rating mechanism (DECISIONS.md settled against
+// user ratings: a confounded direction feels more effective in use, so ratings
+// would systematically favour it) and nothing is serving pages to count views of.
+interface Props {
+  claimants: any[];
+  modelId: string;
+}
+const { claimants, modelId } = Astro.props;
+
+const released = (iso) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric", month: "short", day: "numeric",
+  });
+---
+
+<table class="submissions">
+  <thead>
+    <tr>
+      <th><button data-col="0">Author</button></th>
+      <th><button data-col="1">Released</button></th>
+      <th>Stars</th>
+      <th>Views</th>
+    </tr>
+  </thead>
+  <tbody>
+    {claimants.map((c) => (
+      <tr>
+        <td>
+          <a href={`/${c.author}/${modelId}/${c.label}/`}>{c.author}</a>
+          <span class="provenance mono">@{c.version}</span>
+        </td>
+        <td>
+          <time datetime={c.created_at}>{released(c.created_at)}</time>
+        </td>
+        <td><span class="absent">not tracked</span></td>
+        <td><span class="absent">not tracked</span></td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+<p class="note">
+  Stars and views are not counted. There is no rating mechanism, and nothing is
+  serving pages to count views of, so both read as untracked rather than as zero.
+  A zero would be a measurement claiming nobody starred it.
+</p>
+
+<script>
+  document.querySelectorAll("table.submissions").forEach((table) => {
+    const body = table.querySelector("tbody");
+    table.querySelectorAll("th button").forEach((button) => {
+      button.addEventListener("click", () => {
+        const idx = Number(button.dataset.col);
+        const rows = [...body.rows];
+        rows.sort((x, y) => {
+          const a = x.cells[idx];
+          const c = y.cells[idx];
+          const ta = a.querySelector("time")?.getAttribute("datetime");
+          const tc = c.querySelector("time")?.getAttribute("datetime");
+          if (ta && tc) return tc.localeCompare(ta);
+          return a.innerText.trim().localeCompare(c.innerText.trim());
+        });
+        rows.forEach((r) => body.appendChild(r));
+      });
+    });
+  });
+</script>
