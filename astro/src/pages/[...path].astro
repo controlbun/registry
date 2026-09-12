@@ -204,10 +204,7 @@ const released = (iso) =>
     <h1 slot="heading" class="mono">{owner.owner}</h1>
 
     <p class="lede">
-      Everything {owner.owner} has published. All of it public, which is the only
-      state a submission here has: one nobody can see cannot be attacked,
-      evaluated by someone else, or compared, so it would carry none of the
-      evidence a registry entry is for.
+      Everything {owner.owner} has published.
     </p>
 
     <div class="scope">
@@ -232,7 +229,7 @@ const released = (iso) =>
             <tr>
               <td>
                 <a href={`/${owner.owner}/${s.model_id}/${s.label}/`}>{s.label}</a>
-                <span class="provenance mono">{s.kind} @{s.version}</span>
+                <div class="provenance mono">{s.kind} @{s.version}</div>
               </td>
               <td class="mono">
                 <a href={`/models/${s.model_id}/`}>{s.model_id}</a>
@@ -257,9 +254,10 @@ const released = (iso) =>
       </table>
 
       <p class="note">
-        Attacks received is a count of scrutiny, not of failure. An owner with
-        attacks against their work has more evidence attached to it than one with
-        none, and none of these numbers order anybody.
+        {owner.attacks_received > 0
+          ? "Attacks received is a count of scrutiny, not of failure. Work that has been attacked carries more evidence than work nobody has looked at."
+          : "Nothing here has been attacked yet, which is not evidence that any of it is sound. The strongest evidence available is the kind an author does not choose."}
+        {" "}None of these numbers order anybody.
       </p>
     </div>
   </Base>

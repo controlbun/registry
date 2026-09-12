@@ -63,7 +63,7 @@ const corpus = data.corpus;
         ))}
         <span class="why">
           {corpus.size < corpus.threshold
-            ? `${corpus.size} submissions, under the ${corpus.threshold} needed before engagement means anything, so newest first is the whole signal.`
+            ? `The registry holds ${corpus.size} submissions in total, under the ${corpus.threshold} at which engagement starts to mean anything, so every list is newest-first for now.`
             : "Trending weighs evaluations and attacks by people other than the author, decayed by age. Never a measured result, and not downloads."}
           {" "}It is a starting point you can change, not a verdict.
         </span>
