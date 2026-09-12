@@ -238,19 +238,36 @@ def seed(conn, vectors: dict[str, Path]) -> None:
     # a gap to be filled with a zero.
     ex(
         "INSERT INTO eval_report (id,eval_suite_id,intervention_id,reported_at,"
-        "trait_score,coherence_score,transfer_score,confound_json,is_synthetic)"
-        " VALUES (?,?,?,?,?,?,?,?,1)",
+        "trait_score,coherence_score,transfer_score,confound_json,coeff_curve_json,"
+        "is_synthetic) VALUES (?,?,?,?,?,?,?,?,?,1)",
         ("er_alice", "es_alice", "iv_alice", "2026-09-12T00:00:00Z",
          0.7777, 0.8888, 0.6666,
-         json.dumps({"sentiment": 0.5555, "verbosity": 0.1111})),
+         json.dumps({"sentiment": 0.5555, "verbosity": 0.1111}),
+         # The shape is the claim: the trait keeps climbing after coherence has
+         # started to fall, so the headline score at coefficient 1.5 is measured
+         # on text that is already coming apart.
+         json.dumps([
+             {"coefficient": 0.0, "trait": 0.1111, "coherence": 0.9999},
+             {"coefficient": 0.5, "trait": 0.4444, "coherence": 0.9999},
+             {"coefficient": 1.0, "trait": 0.6666, "coherence": 0.8888},
+             {"coefficient": 1.5, "trait": 0.7777, "coherence": 0.5555},
+             {"coefficient": 2.0, "trait": 0.8888, "coherence": 0.2222},
+         ])),
     )
     ex(
         "INSERT INTO eval_report (id,eval_suite_id,intervention_id,reported_at,"
-        "trait_score,coherence_score,confound_json,is_synthetic)"
-        " VALUES (?,?,?,?,?,?,?,1)",
+        "trait_score,coherence_score,confound_json,coeff_curve_json,is_synthetic)"
+        " VALUES (?,?,?,?,?,?,?,?,1)",
         ("er_bob", "es_bob", "iv_bob", "2026-09-12T00:00:00Z",
          0.4444, 0.9999,
-         json.dumps({"refusal_rate": 0.2222, "formality": 0.3333})),
+         json.dumps({"refusal_rate": 0.2222, "formality": 0.3333}),
+         json.dumps([
+             {"coefficient": 0.0, "trait": 0.1111, "coherence": 0.9999},
+             {"coefficient": 0.5, "trait": 0.2222, "coherence": 0.9999},
+             {"coefficient": 1.0, "trait": 0.3333, "coherence": 0.9999},
+             {"coefficient": 1.5, "trait": 0.4444, "coherence": 0.8888},
+             {"coefficient": 2.0, "trait": 0.4444, "coherence": 0.8888},
+         ])),
     )
 
     ex("INSERT INTO eval_suite (id,author,name,version,confound_axes_json) VALUES (?,?,?,?,?)",

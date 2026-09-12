@@ -1,0 +1,77 @@
+---
+// The trait score beside the axes the author checked for collateral movement.
+//
+// One figure, not two, and not a separate tab. This is the Concept Sliders lesson
+// verified against the papers: the erasure work shows an edit alongside its effect
+// on concepts it did not target, in the same figure. A trait score shown alone
+// invites the reader to assume the rest held still.
+//
+// Two hues carry identity, the targeted trait against collateral axes, not
+// magnitude. Bar length already encodes magnitude and colouring by value would
+// spend the only free channel restating it.
+interface Props {
+  trait: number | null;
+  confounds: Record<string, number> | null;
+  traitState: string;
+}
+const { trait, confounds, traitState } = Astro.props;
+
+const rows = [
+  ...(traitState === "reportable" && trait !== null
+    ? [{ name: "trait", value: trait, targeted: true }]
+    : []),
+  ...Object.entries(confounds ?? {}).map(([name, value]) => ({
+    name, value, targeted: false,
+  })),
+];
+
+const BAR = 22, GAP = 10, LABEL = 104, TRACK = 300;
+const H = rows.length * (BAR + GAP) + 6;
+---
+
+{rows.length === 0 ? (
+  <p class="note absent-block">
+    No confound axes were checked, so nothing here rules out the direction moving
+    something other than what its label names. Mean-difference extraction encodes
+    sentiment, verbosity or a template artifact as readily as the trait, and an
+    unchecked axis is not a passed one.
+  </p>
+) : (
+  <figure class="viz-root chart">
+    <svg viewBox={`0 0 ${LABEL + TRACK + 56} ${H}`} role="img"
+         aria-label="Trait score beside each confound axis the author measured">
+      {rows.map((r, i) => {
+        const yTop = i * (BAR + GAP);
+        return (
+          <>
+            <text class="tick" x={LABEL - 10} y={yTop + BAR / 2 + 4} text-anchor="end">
+              {r.name}
+            </text>
+            <rect class="track" x={LABEL} y={yTop} width={TRACK} height={BAR} rx="4" />
+            <rect
+              class={r.targeted ? "series-1-bg bar" : "series-2-bg bar"}
+              x={LABEL} y={yTop} width={Math.max(r.value * TRACK, 3)} height={BAR} rx="4"
+            />
+            <text class="direct" x={LABEL + Math.max(r.value * TRACK, 3) + 8}
+                  y={yTop + BAR / 2 + 4}>
+              {r.value.toFixed(4)}
+            </text>
+          </>
+        );
+      })}
+    </svg>
+
+    <figcaption>
+      <span class="key"><span class="swatch series-1-bg"></span>The trait it claims</span>
+      <span class="key"><span class="swatch series-2-bg"></span>Collateral axis</span>
+      <span class="synthetic-tag">synthetic, repeated-digit values</span>
+    </figcaption>
+
+    <p class="note">
+      A direction that moves the trait hard and everything else with it is a worse
+      artifact than one that moves it modestly and nothing else. These bars are the
+      author's own measurements of their own artifact; someone else measuring the
+      same axes is under Verifications.
+    </p>
+  </figure>
+)}

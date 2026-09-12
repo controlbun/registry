@@ -6,6 +6,9 @@
 // two submissions interpretable rather than just a number gap. The rail carries
 // the application contract, because a vector downloaded without it gets applied
 // wrong and then appears not to work.
+import SweepChart from "./SweepChart.astro";
+import ConfoundChart from "./ConfoundChart.astro";
+
 interface Props {
   claimant: any;
   modelId: string;
@@ -98,6 +101,16 @@ const r = c.recipe;
         than a small effect.
       </p>
     )}
+
+    <h2>Coefficient sweep</h2>
+    <SweepChart curve={c.coeff_curve} />
+
+    <h2>Trait against its collateral axes</h2>
+    <ConfoundChart
+      trait={c.trait_score}
+      confounds={c.confounds}
+      traitState={c.score_state}
+    />
 
   </div>
 

@@ -16,7 +16,7 @@
     "size": 4,
     "threshold": 100
   },
-  "generated_at": "2026-09-12T22:48:23.014983+00:00",
+  "generated_at": "2026-09-12T23:00:04.061005+00:00",
   "kinds": [
     "direction",
     "probe",
@@ -44,9 +44,40 @@
             "verbosity"
           ],
           "chat_template_hash": "sha256:eeeeeeee",
+          "coeff_curve": [
+            {
+              "coefficient": 0.0,
+              "coherence": 0.9999,
+              "trait": 0.1111
+            },
+            {
+              "coefficient": 0.5,
+              "coherence": 0.9999,
+              "trait": 0.4444
+            },
+            {
+              "coefficient": 1.0,
+              "coherence": 0.8888,
+              "trait": 0.6666
+            },
+            {
+              "coefficient": 1.5,
+              "coherence": 0.5555,
+              "trait": 0.7777
+            },
+            {
+              "coefficient": 2.0,
+              "coherence": 0.2222,
+              "trait": 0.8888
+            }
+          ],
           "coeff_high": 1.5,
           "coeff_low": 0.5,
           "coherence_score": 0.8888,
+          "confounds": {
+            "sentiment": 0.5555,
+            "verbosity": 0.1111
+          },
           "created_at": "2026-09-12T00:00:00Z",
           "definition": "Kindness is warmth in affect: the model sounds like it cares. I take affective tone to be the trait itself rather than a proxy for it.",
           "dtype": "float32",
@@ -104,9 +135,40 @@
             "refusal_rate"
           ],
           "chat_template_hash": "sha256:eeeeeeee",
+          "coeff_curve": [
+            {
+              "coefficient": 0.0,
+              "coherence": 0.9999,
+              "trait": 0.1111
+            },
+            {
+              "coefficient": 0.5,
+              "coherence": 0.9999,
+              "trait": 0.2222
+            },
+            {
+              "coefficient": 1.0,
+              "coherence": 0.9999,
+              "trait": 0.3333
+            },
+            {
+              "coefficient": 1.5,
+              "coherence": 0.8888,
+              "trait": 0.4444
+            },
+            {
+              "coefficient": 2.0,
+              "coherence": 0.8888,
+              "trait": 0.4444
+            }
+          ],
           "coeff_high": 1.5,
           "coeff_low": 0.5,
           "coherence_score": 0.9999,
+          "confounds": {
+            "formality": 0.3333,
+            "refusal_rate": 0.2222
+          },
           "created_at": "2026-09-12T00:00:00Z",
           "definition": "Kindness is costly help: the model gives up something to benefit the user. Warmth without cost is politeness, and I treat it as a confound rather than as the trait.",
           "dtype": "float32",
@@ -179,9 +241,14 @@
             "verbosity"
           ],
           "chat_template_hash": "sha256:eeeeeeee",
+          "coeff_curve": null,
           "coeff_high": 1.5,
           "coeff_low": 0.5,
           "coherence_score": 0.7777,
+          "confounds": {
+            "topic": 0.8888,
+            "verbosity": 0.1111
+          },
           "created_at": "2026-09-12T00:00:00Z",
           "definition": "Refusal is the model declining a request it parsed and understood. I read it off an SAE latent that fires on declination rather than on topic.",
           "dtype": "float32",
@@ -225,9 +292,13 @@
             "topic"
           ],
           "chat_template_hash": "sha256:eeeeeeee",
+          "coeff_curve": null,
           "coeff_high": 1.5,
           "coeff_low": 0.5,
           "coherence_score": null,
+          "confounds": {
+            "topic": 0.4444
+          },
           "created_at": "2026-09-12T00:00:00Z",
           "definition": "Refusal is a decision boundary, not a feature, so I train a linear probe on labelled transcripts instead of selecting a latent. Dana's latent looks to me like topic sensitivity.",
           "dtype": "float32",
@@ -319,9 +390,40 @@
                 "verbosity"
               ],
               "chat_template_hash": "sha256:eeeeeeee",
+              "coeff_curve": [
+                {
+                  "coefficient": 0.0,
+                  "coherence": 0.9999,
+                  "trait": 0.1111
+                },
+                {
+                  "coefficient": 0.5,
+                  "coherence": 0.9999,
+                  "trait": 0.4444
+                },
+                {
+                  "coefficient": 1.0,
+                  "coherence": 0.8888,
+                  "trait": 0.6666
+                },
+                {
+                  "coefficient": 1.5,
+                  "coherence": 0.5555,
+                  "trait": 0.7777
+                },
+                {
+                  "coefficient": 2.0,
+                  "coherence": 0.2222,
+                  "trait": 0.8888
+                }
+              ],
               "coeff_high": 1.5,
               "coeff_low": 0.5,
               "coherence_score": 0.8888,
+              "confounds": {
+                "sentiment": 0.5555,
+                "verbosity": 0.1111
+              },
               "created_at": "2026-09-12T00:00:00Z",
               "definition": "Kindness is warmth in affect: the model sounds like it cares. I take affective tone to be the trait itself rather than a proxy for it.",
               "dtype": "float32",
@@ -379,9 +481,40 @@
                 "refusal_rate"
               ],
               "chat_template_hash": "sha256:eeeeeeee",
+              "coeff_curve": [
+                {
+                  "coefficient": 0.0,
+                  "coherence": 0.9999,
+                  "trait": 0.1111
+                },
+                {
+                  "coefficient": 0.5,
+                  "coherence": 0.9999,
+                  "trait": 0.2222
+                },
+                {
+                  "coefficient": 1.0,
+                  "coherence": 0.9999,
+                  "trait": 0.3333
+                },
+                {
+                  "coefficient": 1.5,
+                  "coherence": 0.8888,
+                  "trait": 0.4444
+                },
+                {
+                  "coefficient": 2.0,
+                  "coherence": 0.8888,
+                  "trait": 0.4444
+                }
+              ],
               "coeff_high": 1.5,
               "coeff_low": 0.5,
               "coherence_score": 0.9999,
+              "confounds": {
+                "formality": 0.3333,
+                "refusal_rate": 0.2222
+              },
               "created_at": "2026-09-12T00:00:00Z",
               "definition": "Kindness is costly help: the model gives up something to benefit the user. Warmth without cost is politeness, and I treat it as a confound rather than as the trait.",
               "dtype": "float32",
@@ -492,9 +625,14 @@
                 "verbosity"
               ],
               "chat_template_hash": "sha256:eeeeeeee",
+              "coeff_curve": null,
               "coeff_high": 1.5,
               "coeff_low": 0.5,
               "coherence_score": 0.7777,
+              "confounds": {
+                "topic": 0.8888,
+                "verbosity": 0.1111
+              },
               "created_at": "2026-09-12T00:00:00Z",
               "definition": "Refusal is the model declining a request it parsed and understood. I read it off an SAE latent that fires on declination rather than on topic.",
               "dtype": "float32",
@@ -538,9 +676,13 @@
                 "topic"
               ],
               "chat_template_hash": "sha256:eeeeeeee",
+              "coeff_curve": null,
               "coeff_high": 1.5,
               "coeff_low": 0.5,
               "coherence_score": null,
+              "confounds": {
+                "topic": 0.4444
+              },
               "created_at": "2026-09-12T00:00:00Z",
               "definition": "Refusal is a decision boundary, not a feature, so I train a linear probe on labelled transcripts instead of selecting a latent. Dana's latent looks to me like topic sensitivity.",
               "dtype": "float32",

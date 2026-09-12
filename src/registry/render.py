@@ -116,6 +116,17 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "trait_score": report["trait_score"] if report else None,
         "coherence_score": report["coherence_score"] if report else None,
         "transfer_score": report["transfer_score"] if report else None,
+        # Absent for most artifacts, which is the normal case: a single score at
+        # one coefficient is what most people report. The page has to say so
+        # rather than draw an empty axis.
+        "coeff_curve": (
+            json.loads(report["coeff_curve_json"])
+            if report and report["coeff_curve_json"] else None
+        ),
+        "confounds": (
+            json.loads(report["confound_json"])
+            if report and report["confound_json"] else None
+        ),
         "kind": iv["kind"] if iv else None,
         "model_id": iv["model_id"] if iv else None,
         "model_revision": iv["model_revision"][:12] if iv else None,

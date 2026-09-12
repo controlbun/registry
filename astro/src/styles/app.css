@@ -226,3 +226,66 @@ dl.spec dd .meta { color: var(--faint); font-size: .75rem; margin-left: .35rem; 
   border-radius: 999px; padding: 0 .4rem;
 }
 .own-row td { background: var(--wash); }
+
+/* --------------------------------------------------------------- charts */
+/* Validated with scripts/validate_palette.js against this site's own
+   surfaces (#ffffff / #0d0d10), not the reference ones. Both modes pass all
+   six checks: lightness band, chroma floor, CVD separation, normal-vision
+   floor, contrast. Worst adjacent CVD dE 24.7 light / 26.8 dark. */
+
+.viz-root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --viz-grid: #ececf0;
+  --viz-track: #f4f4f6;
+  --viz-tick: var(--faint);
+  --viz-ink: var(--dim);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --viz-grid: #24242a;
+    --viz-track: #1a1a1f;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --viz-grid: #24242a;
+  --viz-track: #1a1a1f;
+}
+
+figure.chart { margin: 0 0 1.4rem; }
+figure.chart svg { width: 100%; height: auto; overflow: visible; }
+
+.chart .grid { stroke: var(--viz-grid); stroke-width: 1; }
+.chart .track { fill: var(--viz-track); }
+.chart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .dot { stroke: #fff; stroke-width: 2; }
+:root[data-theme="dark"] .chart .dot { stroke: #0d0d10; }
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .chart .dot { stroke: #0d0d10; }
+}
+.chart .bar { stroke: none; }
+
+.chart .series-1 { stroke: var(--series-1); }
+.chart .series-2 { stroke: var(--series-2); }
+.chart .series-1.dot, .chart .series-1-bg { fill: var(--series-1); }
+.chart .series-2.dot, .chart .series-2-bg { fill: var(--series-2); }
+
+/* Text wears text tokens, never the series colour. */
+.chart .tick { fill: var(--viz-tick); font-size: 11px; font-family: ui-sans-serif, system-ui, sans-serif; }
+.chart .direct { fill: var(--viz-ink); font-size: 11px; font-family: ui-sans-serif, system-ui, sans-serif; }
+
+figure.chart figcaption {
+  display: flex; gap: 1.1rem; flex-wrap: wrap; align-items: center;
+  font-size: .78rem; color: var(--dim); margin-top: .5rem;
+}
+.chart .key { display: inline-flex; align-items: center; gap: .35rem; }
+.chart .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.chart .synthetic-tag { color: var(--warn); }
+
+.table-view { margin-top: .5rem; font-size: .8rem; }
+.table-view summary { color: var(--dim); cursor: pointer; }
+.table-view table { margin-top: .4rem; max-width: 28rem; }

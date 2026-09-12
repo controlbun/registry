@@ -1,0 +1,99 @@
+---
+// Coefficient sweep: trait score and coherence against the coefficient.
+//
+// One axis, deliberately. Both series are scores on the same 0-1 scale, so there
+// is no excuse for a second y-scale, and a dual axis would invent a relationship
+// between them that is not in the data.
+//
+// The shape is the claim. A direction whose trait score keeps climbing after
+// coherence has started to fall is reporting its headline number on text that is
+// already coming apart, and a single score at one coefficient hides exactly that.
+interface Props {
+  curve: { coefficient: number; trait: number; coherence: number }[] | null;
+}
+const { curve } = Astro.props;
+
+const W = 560, H = 240;
+const PAD = { top: 18, right: 86, bottom: 48, left: 40 };
+const plotW = W - PAD.left - PAD.right;
+const plotH = H - PAD.top - PAD.bottom;
+
+const xs = curve?.map((p) => p.coefficient) ?? [];
+const xMax = xs.length ? Math.max(...xs) : 1;
+const x = (v: number) => PAD.left + (v / xMax) * plotW;
+const y = (v: number) => PAD.top + (1 - v) * plotH;
+
+const path = (key: "trait" | "coherence") =>
+  (curve ?? []).map((p, i) => `${i ? "L" : "M"}${x(p.coefficient)},${y(p[key])}`).join(" ");
+
+const ticks = [0, 0.25, 0.5, 0.75, 1];
+const last = curve?.[curve.length - 1];
+---
+
+{!curve ? (
+  <p class="note absent-block">
+    No coefficient sweep. This artifact reports its scores at a single coefficient
+    chosen by its author, so nothing here shows where the effect starts, where it
+    saturates, or where coherence gives out. A sweep is the cheapest way to make a
+    trait score interpretable and this one does not have it.
+  </p>
+) : (
+  <figure class="viz-root chart">
+    <svg viewBox={`0 0 ${W} ${H}`} role="img"
+         aria-label="Trait score and coherence plotted against steering coefficient">
+      {ticks.map((t) => (
+        <>
+          <line class="grid" x1={PAD.left} x2={PAD.left + plotW} y1={y(t)} y2={y(t)} />
+          <text class="tick" x={PAD.left - 8} y={y(t) + 4} text-anchor="end">{t}</text>
+        </>
+      ))}
+      {(curve ?? []).map((p) => (
+        <text class="tick" x={x(p.coefficient)} y={H - 12} text-anchor="middle">
+          {p.coefficient}
+        </text>
+      ))}
+      <text class="tick" x={PAD.left + plotW / 2} y={H - 0} text-anchor="middle">
+        steering coefficient
+      </text>
+
+      <path class="series-1 line" d={path("trait")} />
+      <path class="series-2 line" d={path("coherence")} />
+
+      {(curve ?? []).map((p) => (
+        <>
+          <circle class="series-1 dot" cx={x(p.coefficient)} cy={y(p.trait)} r="4.5" />
+          <circle class="series-2 dot" cx={x(p.coefficient)} cy={y(p.coherence)} r="4.5" />
+        </>
+      ))}
+
+      <text class="direct" x={x(last.coefficient) + 10} y={y(last.trait) + 4}>Trait</text>
+      <text class="direct" x={x(last.coefficient) + 10} y={y(last.coherence) + 4}>
+        Coherence
+      </text>
+    </svg>
+
+    <figcaption>
+      <span class="key"><span class="swatch series-1-bg"></span>Trait score</span>
+      <span class="key"><span class="swatch series-2-bg"></span>Coherence</span>
+      <span class="synthetic-tag">synthetic, repeated-digit values</span>
+    </figcaption>
+
+    <details class="table-view">
+      <summary>Table</summary>
+      <table>
+        <thead>
+          <tr><th>Coefficient</th><th>Trait score</th><th>Coherence</th></tr>
+        </thead>
+        <tbody>
+          {curve.map((p) => (
+            <tr>
+              <td>{p.coefficient}</td>
+              <td>{p.trait.toFixed(4)}</td>
+              <td>{p.coherence.toFixed(4)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  </figure>
+)}
