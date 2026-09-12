@@ -120,13 +120,15 @@ here. The registry records which were used; it does not require any of them.
 
 4. **Necessity, not just sufficiency.** Addition shows `d` is sufficient to push
    the behavior. Ablating or projecting out `d` and showing the behavior degrades
-   shows it is load-bearing. Causal mediation is the established tool. More expensive, much harder to fake.
+   shows it is load-bearing. Causal mediation is the established tool. More
+   expensive, much harder to fake.
 
 5. **Cross-model recipe agreement.** Run one recipe on several models. The
    directions are not comparable as tensors, but the behavioral effects are. If
    the same recipe produces the trait in four models, the recipe encodes something
-   real; if it works on one, suspect the model-specific artifact. This falls out of
-   the v1 CI fanout for free, which is an argument for building the fanout early.
+   real; if it works on one, suspect the model-specific artifact. Expensive today,
+   since it means running the recipe several times; cheap if a fanout runner ever
+   exists.
 
 6. **Adversarial falsification.** A populated arena where many players reach high
    SCORE 1 while the behavior tapes show no corresponding change in output is
@@ -156,14 +158,13 @@ Two transferable lessons:
   modestly and nothing else. Whatever the headline number on an artifact page is, it
   should be a precision measure rather than an effect size.
 
-Both are matters of what gets rendered, so they constrain the schema. See
-`CONTEXT.md` for who to ask.
+Both are matters of what gets rendered, so they constrain the schema.
 
 ---
 
 ## Open questions to take to others
 
-Ordered by who is best placed to answer. 
+Each needs someone with relevant expertise rather than more reasoning from here.
 
 - **Does adversarial prompt search constitute evidence about a direction's
   validity, or only about the search space?** If the arena's anti-correlation
