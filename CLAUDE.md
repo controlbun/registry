@@ -3,6 +3,11 @@
 Project brief is in `BRIEF.md`. Settled decisions are in `DECISIONS.md`, which is
 authoritative: do not contradict it, and add to it whenever something is decided.
 
+**`DECISIONS.md` keeps superseded entries on purpose.** Check an entry for a
+`**Superseded by:**` or `**Amended by:**` line before acting on it. Five carry one
+today, and two of those read as live rules when they are not: transfer as a
+required eval field, and ranking by precision and attack survival.
+
 ## The premise, which you will violate by accident
 
 **Plurality is the product. The registry never designates; consumers pin,
@@ -77,6 +82,8 @@ design. Tests that fail the build:
 - Absence of an eval renders as its own state, not as an error
 - No closed enum on any user-supplied field. Document common values; reject none.
   Schema `CHECK` constraints listing permitted strings fail the build.
+- A judged score renders with a coherence measure beside it or renders as
+  uninterpretable, never as a bare number
 
 Add one whenever a new invariant is settled. An invariant that is only in prose
 is not an invariant.
@@ -95,6 +102,32 @@ section that named it.
 The arena has `_advocate/`, which argues the opposing case. Keep the pattern here.
 When a design decision is being settled, one pass should argue for the plural
 reading explicitly, as a role rather than as a disclaimer.
+
+## The object graph
+
+`BRIEF.md` is authoritative on conflict. This is a map, not a spec.
+
+- **Label**, namespaced `author/label`, free to claim, carries the author's own
+  definition. A bare label is a computed view across claimants, owned by nobody.
+  `interprets:` and `distinguishes-from:` pointers let taxonomy emerge from claims.
+- **Submission**, the primary object. One author's complete take, versioned and
+  immutable. `author/label@version` resolves to one frozen submission forever.
+- **Recipe**, optional. Declares a namespaced versioned `profile` plus a payload,
+  plus a pinned entrypoint and container digest. Never a method list.
+- **Intervention**, the artifact. Open `kind`, model id plus revision, layer with
+  stated indexing convention, open `hook_point`, chat template hash, norms,
+  `license_status`. safetensors on ingest, always.
+- **EvalSuite**, authored and pointable at anyone's submission. **Attack** is the
+  adversarial case of the same mechanism, with attacker and author dispositions
+  both displayed.
+- **Comparison**, derived and never authored. The asymmetry in which confound axes
+  each author checked is the informative cell.
+- **Run** and **Reproduction**, provenance, and a reproduction reports its delta
+  rather than a pass.
+
+v0 is schema, storage on the HF Hub, Postgres metadata, Python client, Comparison,
+views, and the ported falsifier. Build against fixtures labeled synthetic. Seed
+with competing claimants on one label, not coverage across ten labels.
 
 ## Before writing any code
 
@@ -168,6 +201,32 @@ that assume it before it exists.
 Note the tension with the plurality premise and do not resolve it silently: open
 contribution and misuse gating pull against each other. Where they conflict, raise
 it rather than quietly choosing one.
+
+## Repo commands
+
+Docs are hash-manifested and timestamped. Editing any tracked `.md` invalidates
+`MANIFEST.sha256`, so regenerate and restamp in the same commit.
+
+```
+shasum -a 256 -c MANIFEST.sha256              # does the tree match
+shasum -a 256 $(git ls-files '*.md') > MANIFEST.sha256
+ots stamp MANIFEST.sha256
+ots info MANIFEST.sha256.ots                  # offline
+ots upgrade MANIFEST.sha256.ots               # network, once mined
+```
+
+`ots stamp` refuses to overwrite an existing `.ots`. Delete the old proof first or
+the stamp fails and the manifest is left pointing at the previous one.
+
+`MANIFEST.sha256` is the live one and the only one that should match the working
+tree. `MANIFEST-a`, `-b` and `-c` are retired snapshots kept for their timestamps,
+and their hashes are expected to disagree with the current files. Never regenerate
+a lettered manifest to make a checksum verify; `-a` and `-b` have confirmed Bitcoin
+attestations and rewriting one orphans the proof. `.ots.bak` files are the
+pre-upgrade proofs `ots upgrade` sets aside.
+
+Lettered snapshots mark milestones, not edits. Retire one when you would want to
+point at that state later, not every time a file changes.
 
 ## Repo
 
