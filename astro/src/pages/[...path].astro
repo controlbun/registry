@@ -64,7 +64,7 @@ const { view, model, block, claimant } = Astro.props;
 ---
 
 {view === "model" && (
-  <Base title={`${model.model_id} — interventions`} crumb="all models">
+  <Base title={`${model.model_id} — interventions`} crumb="all models" ordering>
     <h1 slot="heading" class="mono">{model.model_id}</h1>
 
     <p class="lede">
@@ -123,6 +123,7 @@ const { view, model, block, claimant } = Astro.props;
   <Base
     title={`${block.label} on ${model.model_id}`}
     crumb="all models"
+    ordering
   >
     <h1 slot="heading">{block.label}</h1>
 
