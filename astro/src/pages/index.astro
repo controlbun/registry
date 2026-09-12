@@ -84,8 +84,6 @@ const evidenceFacet = facet((r) => r.evidence);
           <tr>
             <th><button data-col="0">Model</button></th>
             <th><button data-col="1">Artifacts</button></th>
-            <th>Kinds</th>
-            <th>Hook points</th>
           </tr>
         </thead>
         <tbody>
@@ -103,8 +101,6 @@ const evidenceFacet = facet((r) => r.evidence);
                 </div>
               </td>
               <td>{m.claimant_count}</td>
-              <td class="mono">{m.kinds.join(", ")}</td>
-              <td class="mono">{m.hook_points.join(", ")}</td>
             </tr>
           ))}
         </tbody>
