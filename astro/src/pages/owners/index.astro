@@ -1,0 +1,74 @@
+---
+import Base from "../../layouts/Base.astro";
+import data from "../../data/registry.json";
+
+// Everyone who has published. An owner may be a person or an org; nothing here
+// distinguishes them, because nothing about a submission depends on which it is.
+const owners = data.owner_index;
+
+const released = (iso) =>
+  new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+---
+
+<Base title="Owners" trail={[{ text: "Registry", href: "/" }]} ordering>
+  <h1 slot="heading">Owners</h1>
+
+  <p class="lede">
+    Everyone who has published a submission. An owner is a person or an org, and
+    nothing about a submission depends on which. Everything published here is
+    public: a submission nobody can see cannot be attacked, evaluated by anyone
+    else, or compared, so it would carry none of the evidence a registry entry is
+    for.
+  </p>
+
+  <div data-pagefind-body>
+    <table id="owners">
+      <thead>
+        <tr>
+          <th><button data-col="0">Owner</button></th>
+          <th><button data-col="1">Submissions</button></th>
+          <th>Labels claimed</th>
+          <th>Latest</th>
+        </tr>
+      </thead>
+      <tbody>
+        {owners.map((o) => (
+          <tr>
+            <td><a class="mono" href={`/${o.owner}/`}>{o.owner}</a></td>
+            <td>{o.submissions.length}</td>
+            <td>{o.labels.join(", ")}</td>
+            <td>
+              <time datetime={o.submissions[0].created_at}>
+                {released(o.submissions[0].created_at)}
+              </time>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <p class="note">
+      Submission count is a fact about how much someone has published, not a
+      measure of how good any of it is. Nothing here ranks owners.
+    </p>
+  </div>
+</Base>
+
+<script>
+  const table = document.querySelector("#owners");
+  const body = table.querySelector("tbody");
+  table.querySelectorAll("th button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const idx = Number(button.dataset.col);
+      const rows = [...body.rows];
+      rows.sort((x, y) => {
+        const a = x.cells[idx].innerText.trim();
+        const c = y.cells[idx].innerText.trim();
+        const na = parseFloat(a);
+        const nc = parseFloat(c);
+        return !isNaN(na) && !isNaN(nc) ? nc - na : a.localeCompare(c);
+      });
+      rows.forEach((r) => body.appendChild(r));
+    });
+  });
+</script>

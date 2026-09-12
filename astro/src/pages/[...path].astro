@@ -57,21 +57,35 @@ export function getStaticPaths() {
       }
     }
   }
+
+  for (const owner of data.owner_index) {
+    routes.push({
+      params: { path: owner.owner },
+      props: { view: "owner", model: null, block: null, claimant: null, owner },
+    });
+  }
+
   return routes;
 }
 
-const { view, model, block, claimant } = Astro.props;
+const { view, model, block, claimant, owner } = Astro.props;
 
 // Built once, sliced per view, so a segment can never link somewhere its text
 // does not describe.
 const crumbs = {
   registry: { text: "Registry", href: "/" },
   models: { text: "Models", href: "/models/" },
-  model: { text: model.model_id, href: `/models/${model.model_id}/` },
-  label: block
+  owners: { text: "Owners", href: "/owners/" },
+  model: model ? { text: model.model_id, href: `/models/${model.model_id}/` } : null,
+  label: model && block
     ? { text: block.label, href: `/models/${model.model_id}/${block.label}/` }
     : null,
 };
+
+const released = (iso) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric", month: "short", day: "numeric",
+  });
 ---
 
 {view === "model" && (
@@ -177,6 +191,76 @@ const crumbs = {
 
     <div data-pagefind-body>
       <ArtifactCard claimant={claimant} modelId={model.model_id} />
+    </div>
+  </Base>
+)}
+
+{view === "owner" && (
+  <Base
+    title={`${owner.owner} — submissions`}
+    trail={[crumbs.registry, crumbs.owners]}
+    ordering
+  >
+    <h1 slot="heading" class="mono">{owner.owner}</h1>
+
+    <p class="lede">
+      Everything {owner.owner} has published. All of it public, which is the only
+      state a submission here has: one nobody can see cannot be attacked,
+      evaluated by someone else, or compared, so it would carry none of the
+      evidence a registry entry is for.
+    </p>
+
+    <div class="scope">
+      <div><span class="k">Submissions</span>{owner.submissions.length}</div>
+      <div><span class="k">Labels claimed</span>{owner.labels.join(", ")}</div>
+      <div><span class="k">Kinds</span><span class="mono">{owner.kinds.join(", ")}</span></div>
+      <div><span class="k">Attacks received</span>{owner.attacks_received}</div>
+    </div>
+
+    <div data-pagefind-body>
+      <table class="submissions">
+        <thead>
+          <tr>
+            <th><button data-col="0">Label</button></th>
+            <th><button data-col="1">Model</button></th>
+            <th>Released</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {owner.submissions.map((s) => (
+            <tr>
+              <td>
+                <a href={`/${owner.owner}/${s.model_id}/${s.label}/`}>{s.label}</a>
+                <span class="provenance mono">{s.kind} @{s.version}</span>
+              </td>
+              <td class="mono">
+                <a href={`/models/${s.model_id}/`}>{s.model_id}</a>
+              </td>
+              <td><time datetime={s.created_at}>{released(s.created_at)}</time></td>
+              <td class="provenance">
+                {s.score_state === "uninterpretable"
+                  ? <span class="uninterpretable">score uninterpretable</span>
+                  : s.score_state === "absent"
+                    ? <span class="absent">no score</span>
+                    : "score reported"}
+                {", "}
+                {s.has_recipe ? "recipe" : <span class="absent">no recipe</span>}
+                {", "}
+                {s.attacks
+                  ? `${s.attacks} attack${s.attacks === 1 ? "" : "s"}`
+                  : <span class="absent">never attacked</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <p class="note">
+        Attacks received is a count of scrutiny, not of failure. An owner with
+        attacks against their work has more evidence attached to it than one with
+        none, and none of these numbers order anybody.
+      </p>
     </div>
   </Base>
 )}

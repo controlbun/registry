@@ -110,6 +110,54 @@ def build(conn: sqlite3.Connection) -> dict:
             "labels": blocks,
         })
 
+    # Owners. Everything published here is public: a submission nobody can see
+    # cannot be attacked, cannot have someone else's eval pointed at it, and cannot
+    # appear in a Comparison, so it has none of the properties that make a registry
+    # entry evidence rather than a file. There is no visibility field and
+    # deliberately so. Dual-use gating, if it ever exists, is registry policy and a
+    # different mechanism with a different owner.
+    owners: dict[str, dict] = {}
+    for entry in labels:
+        for c in entry["claimants"]:
+            o = owners.setdefault(c["author"], {
+                "owner": c["author"],
+                "submissions": [],
+                "models": set(),
+                "kinds": set(),
+                "labels": set(),
+                "attacks_received": 0,
+            })
+            o["submissions"].append({
+                "label": c["label"],
+                "version": c["version"],
+                "created_at": c["created_at"],
+                "kind": c["kind"],
+                "model_id": c["model_id"],
+                "score_state": c["score_state"],
+                "has_recipe": c["recipe"] is not None,
+                "attacks": len(c["attacks"]),
+            })
+            if c["model_id"]:
+                o["models"].add(c["model_id"])
+            if c["kind"]:
+                o["kinds"].add(c["kind"])
+            o["labels"].add(c["label"])
+            o["attacks_received"] += len(c["attacks"])
+
+    owner_index = [
+        {
+            "owner": o["owner"],
+            "submissions": sorted(
+                o["submissions"], key=lambda s: s["created_at"], reverse=True
+            ),
+            "models": sorted(o["models"]),
+            "kinds": sorted(o["kinds"]),
+            "labels": sorted(o["labels"]),
+            "attacks_received": o["attacks_received"],
+        }
+        for o in owners.values()
+    ]
+
     kinds = sorted({c["kind"] for l in labels for c in l["claimants"] if c["kind"]})
     models = sorted({
         c["model_id"] for l in labels for c in l["claimants"] if c["model_id"]
@@ -133,6 +181,7 @@ def build(conn: sqlite3.Connection) -> dict:
         "kinds": kinds,
         "models": models,
         "model_index": model_index,
+        "owner_index": owner_index,
         "labels": labels,
     }
 
@@ -152,6 +201,7 @@ def main() -> None:
 
     print(f"wrote {out}")
     print(f"  models     {len(payload['model_index'])}")
+    print(f"  owners     {len(payload['owner_index'])}")
     print(f"  labels     {len(payload['labels'])}")
     print(f"  claimants  {payload['corpus']['size']}")
     print(f"  ordering   {payload['corpus']['active_order']}")

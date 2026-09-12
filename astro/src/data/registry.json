@@ -16,7 +16,7 @@
     "size": 4,
     "threshold": 100
   },
-  "generated_at": "2026-09-12T22:31:34.293486+00:00",
+  "generated_at": "2026-09-12T22:41:14.625990+00:00",
   "kinds": [
     "direction",
     "probe",
@@ -574,5 +574,107 @@
   "models": [
     "placeholder/does-not-resolve-1b",
     "placeholder/other-architecture-7b"
+  ],
+  "owner_index": [
+    {
+      "attacks_received": 1,
+      "kinds": [
+        "direction"
+      ],
+      "labels": [
+        "kindness"
+      ],
+      "models": [
+        "placeholder/does-not-resolve-1b"
+      ],
+      "owner": "alice",
+      "submissions": [
+        {
+          "attacks": 1,
+          "created_at": "2026-09-12T00:00:00Z",
+          "has_recipe": true,
+          "kind": "direction",
+          "label": "kindness",
+          "model_id": "placeholder/does-not-resolve-1b",
+          "score_state": "reportable",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "attacks_received": 0,
+      "kinds": [
+        "direction"
+      ],
+      "labels": [
+        "kindness"
+      ],
+      "models": [
+        "placeholder/does-not-resolve-1b"
+      ],
+      "owner": "bob",
+      "submissions": [
+        {
+          "attacks": 0,
+          "created_at": "2026-09-12T00:00:00Z",
+          "has_recipe": true,
+          "kind": "direction",
+          "label": "kindness",
+          "model_id": "placeholder/does-not-resolve-1b",
+          "score_state": "reportable",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "attacks_received": 0,
+      "kinds": [
+        "sae-latent"
+      ],
+      "labels": [
+        "refusal"
+      ],
+      "models": [
+        "placeholder/other-architecture-7b"
+      ],
+      "owner": "dana",
+      "submissions": [
+        {
+          "attacks": 0,
+          "created_at": "2026-09-12T00:00:00Z",
+          "has_recipe": false,
+          "kind": "sae-latent",
+          "label": "refusal",
+          "model_id": "placeholder/other-architecture-7b",
+          "score_state": "reportable",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "attacks_received": 0,
+      "kinds": [
+        "probe"
+      ],
+      "labels": [
+        "refusal"
+      ],
+      "models": [
+        "placeholder/other-architecture-7b"
+      ],
+      "owner": "erik",
+      "submissions": [
+        {
+          "attacks": 0,
+          "created_at": "2026-09-12T00:00:00Z",
+          "has_recipe": true,
+          "kind": "probe",
+          "label": "refusal",
+          "model_id": "placeholder/other-architecture-7b",
+          "score_state": "uninterpretable",
+          "version": "v1"
+        }
+      ]
+    }
   ]
 }
