@@ -1,6 +1,9 @@
 .env
 .env.*
 NOTES-private.md
+
+# private working material, never committed
+_local/
 __pycache__/
 *.pyc
 .DS_Store

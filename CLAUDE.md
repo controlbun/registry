@@ -239,3 +239,11 @@ Private. Assume it may go public or gain collaborators later, so write nothing t
 would need a history rewrite to remove. This includes personal, financial and
 immigration details: keep them out of the repo entirely. Secrets in `.env` from the
 first commit, `.env` gitignored before the first file exists.
+
+Private working material goes in `_local/`, which is gitignored and never
+committed. Do not copy anything out of it into a tracked file.
+
+Not hosted on GitHub. No Actions, no GitHub remote, no `gh` workflows. The
+falsifier and the invariant tests are enforced by a local gate instead: a
+`make verify` target and a pre-push hook, both tracked so a collaborator
+inherits them.
