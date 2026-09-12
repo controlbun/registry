@@ -1,0 +1,165 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>{{ label }} — claimants</title>
+<style>
+  :root { --ink:#1a1a1a; --dim:#6b6b6b; --line:#e2e2e2; --absent:#8a8a8a; --warn:#8a5a00; }
+  body { font:15px/1.55 ui-serif,Georgia,serif; color:var(--ink); max-width:62rem;
+         margin:3rem auto; padding:0 1.5rem; }
+  h1 { font-size:1.9rem; margin:0 0 .2rem; }
+  .lede { color:var(--dim); margin:0 0 2rem; }
+  .synthetic { background:#fff6d6; border:1px solid #e6d38a; padding:.6rem .9rem;
+               margin-bottom:2rem; font-size:.85rem; }
+  .claimant { border-top:1px solid var(--line); padding:1.4rem 0; }
+  .who { font-family:ui-monospace,monospace; font-size:1rem; }
+  .definition { margin:.5rem 0 .9rem; }
+  .row { display:flex; gap:2.2rem; flex-wrap:wrap; font-size:.88rem; }
+  .k { color:var(--dim); display:block; font-size:.76rem; letter-spacing:.04em;
+       text-transform:uppercase; }
+  .absent { color:var(--absent); font-style:italic; }
+  .uninterpretable { color:var(--warn); }
+  table { border-collapse:collapse; width:100%; font-size:.88rem; margin-top:.6rem; }
+  th,td { text-align:left; padding:.5rem .7rem; border-bottom:1px solid var(--line);
+          vertical-align:top; }
+  th { font-size:.76rem; letter-spacing:.04em; text-transform:uppercase; color:var(--dim); }
+  th button { font:inherit; color:inherit; background:none; border:0; padding:0;
+              cursor:pointer; text-decoration:underline dotted; }
+  .note { color:var(--dim); font-size:.82rem; margin-top:.5rem; }
+  .gap { font-family:ui-monospace,monospace; font-size:.84rem; }
+</style>
+
+<h1>{{ label }}</h1>
+<p class="lede">
+  A view across everyone claiming this label, computed on demand and owned by
+  nobody. It does not resolve to an artifact. {{ claimants|length }} claimants.
+</p>
+
+{% if any_synthetic %}
+<div class="synthetic">
+  <strong>Synthetic corpus.</strong> Every figure below is fabricated to exercise the
+  interface. Scores are repeated-digit decimals and vectors are integer ramps. Nothing
+  here is a measurement.
+</div>
+{% endif %}
+
+{% for c in claimants %}
+<div class="claimant">
+  <div class="who">{{ c.author }}/{{ c.label }}@{{ c.version }}</div>
+  <p class="definition">{{ c.definition }}</p>
+  <div class="row">
+    <div>
+      <span class="k">Trait score</span>
+      {% if c.score_state == "reportable" %}
+        {{ "%.4f"|format(c.trait_score) }}
+      {% elif c.score_state == "uninterpretable" %}
+        <span class="uninterpretable">uninterpretable</span>
+      {% else %}
+        <span class="absent">not measured</span>
+      {% endif %}
+    </div>
+    <div>
+      <span class="k">Coherence</span>
+      {% if c.coherence_score is not none %}
+        {{ "%.4f"|format(c.coherence_score) }}
+      {% else %}
+        <span class="absent">not measured</span>
+      {% endif %}
+    </div>
+    <div>
+      <span class="k">Out-of-template transfer</span>
+      {% if c.transfer_score is not none %}
+        {{ "%.4f"|format(c.transfer_score) }}
+      {% else %}
+        <span class="absent">not measured</span>
+      {% endif %}
+    </div>
+    <div>
+      <span class="k">Confound axes checked</span>
+      {% if c.axes %}{{ c.axes|join(", ") }}{% else %}<span class="absent">none declared</span>{% endif %}
+    </div>
+    <div>
+      <span class="k">Attacks against it</span>
+      {% if c.attacks %}{{ c.attacks|length }}{% else %}<span class="absent">none yet</span>{% endif %}
+    </div>
+  </div>
+
+  {% if c.score_state == "uninterpretable" %}
+  <p class="note">
+    A trait score was reported without a coherence measure beside it, so it is shown
+    as uninterpretable rather than as a number. Judge agreement collapses on
+    degenerate text, which makes an unpaired score a broken instrument rather than a
+    small effect.
+  </p>
+  {% endif %}
+
+  {% for a in c.attacks %}
+  <p class="note">
+    <strong>{{ a.attacker }}</strong> ran <span class="gap">{{ a.method }}</span>.
+    Attacker calls it <em>{{ a.attacker_disposition }}</em>; author calls it
+    <em>{{ a.author_disposition }}</em>. Both stand; the registry does not adjudicate.
+  </p>
+  {% endfor %}
+</div>
+{% endfor %}
+
+<h2>Between claimants</h2>
+<table id="pairs">
+  <thead><tr>
+    <th><button data-col="0">Pair</button></th>
+    <th><button data-col="1">Angle similarity</button></th>
+    <th>Checked by both</th>
+    <th>Checked by only one</th>
+  </tr></thead>
+  <tbody>
+  {% for p in pairs %}
+    <tr>
+      <td class="gap">{{ p.a }}<br>{{ p.b }}</td>
+      <td>
+        {% if p.angle_similarity is not none %}
+          {{ "%.4f"|format(p.angle_similarity) }}
+        {% else %}
+          <span class="absent">not comparable</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if p.axes_both_checked %}{{ p.axes_both_checked|join(", ") }}
+        {% else %}<span class="absent">nothing</span>{% endif %}
+      </td>
+      <td class="gap">
+        {% for ax in p.axes_only_a_checked %}{{ ax }} (a only)<br>{% endfor %}
+        {% for ax in p.axes_only_b_checked %}{{ ax }} (b only)<br>{% endfor %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<p class="note">
+  Angle similarity is geometry and nothing else. Vectors that are indistinguishable
+  in behavior can sit far apart in angle, so a low number here is not evidence that
+  two authors disagree (arXiv:2602.06801). The rightmost column usually carries more:
+  it is what one author thought to check and the other did not.
+</p>
+<p class="note">
+  Rows are in storage order. Nothing is ranked, and no column is applied until you
+  pick one. Composing these into a single number is the judgment being handed to you
+  rather than made for you.
+</p>
+
+<script>
+// Column headers reorder on click. Nothing is applied on load: the page arrives
+// unordered on purpose, and the reader chooses the axis.
+document.querySelectorAll("#pairs th button").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var idx = +b.dataset.col;
+    var body = document.querySelector("#pairs tbody");
+    var rows = Array.prototype.slice.call(body.rows);
+    rows.sort(function (x, y) {
+      var a = x.cells[idx].innerText.trim(), c = y.cells[idx].innerText.trim();
+      var na = parseFloat(a), nc = parseFloat(c);
+      if (!isNaN(na) && !isNaN(nc)) { return nc - na; }
+      return a.localeCompare(c);
+    });
+    rows.forEach(function (r) { body.appendChild(r); });
+  });
+});
+</script>

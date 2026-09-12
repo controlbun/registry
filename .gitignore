@@ -24,3 +24,6 @@ __pycache__/
 
 # generated database, rebuild with fixtures/build.py
 registry.db
+
+# generated site
+site/
