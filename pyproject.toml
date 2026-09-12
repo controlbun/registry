@@ -3,7 +3,10 @@ name = "registry"
 version = "0.0.0"
 description = "A registry for activation-steering artifacts. Plurality is the product."
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "safetensors==0.8.0",
+    "numpy==2.5.3",
+]
 
 [project.optional-dependencies]
 dev = ["pytest==8.4.2"]
