@@ -220,7 +220,7 @@ What each one attests:
 
 - `MANIFEST-a` and `-b`, earliest states of the design docs, anchored in Bitcoin
   blocks 966590 and 966592
-- `MANIFEST-c`, an intermediate state, proof pending
+- `MANIFEST-c`, an intermediate state, anchored in blocks 966605, 966608 and 966636
 - `MANIFEST_FINAL_<date>_<time>`, all tracked docs at that moment
 - `MANIFEST_BRIEF_<date>_<time>`, `BRIEF.md` alone, so the brief can be handed to
   someone and dated without disclosing the rest of the set
@@ -252,7 +252,9 @@ first commit, `.env` gitignored before the first file exists.
 Private working material goes in `_local/`, which is gitignored and never
 committed. Do not copy anything out of it into a tracked file.
 
-Not hosted on GitHub. No Actions, no GitHub remote, no `gh` workflows. The
-falsifier and the invariant tests are enforced by a local gate instead: a
-`make verify` target and a pre-push hook, both tracked so a collaborator
-inherits them.
+A private GitHub repo exists as an off-site backup and is fine as such. Not
+*hosted* there in any other sense: no Actions, no public push, no `gh`
+workflows. The falsifier and the invariant tests are enforced by a local gate
+instead: a `make verify` target and a pre-push hook, both tracked so a
+collaborator inherits them. This is settled; do not re-raise the remote as a
+finding.
