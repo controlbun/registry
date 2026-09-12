@@ -8,12 +8,22 @@ import data from "../data/registry.json";
 // Everything below the index lives under the model, because an intervention is a
 // tensor in one model's basis at one layer and does nothing for another model.
 //
-//   /<org>/<name>/                      every intervention published against it
-//   /<org>/<name>/<label>/              everyone claiming that label, there
-//   /<owner>/<org>/<name>/<label>/      one owner's complete take
+//   /models/<model>/                 our reference page for a model
+//   /models/<model>/<label>/         everyone claiming that label, there
+//   /<owner>/<model>/<label>/        that owner's submission
 //
-// `owner` is whoever published the submission and may be a person or an org, the
-// same way a model id may be either. No segment here is a reserved namespace.
+// Models live under /models/ and not at the root, because a root-level
+// /some-org/some-model/ reads as a repository this site hosts. It does not host
+// any: a model id here is a reference to somewhere else, and the page is our index
+// entry for it.
+//
+// The shape is also unambiguous, which a root-level model id was not. Owner is the
+// first segment and label is the last, so the variable-depth model id is always
+// what sits between them. Without that, /alice/gpt2/bar/ was both "the model
+// alice/gpt2, label bar" and "owner alice, model gpt2, label bar", since model ids
+// are not always org/name: gpt2 and bert-base-uncased are a single segment.
+//
+// `owner` is whoever published the submission and may be a person or an org.
 //
 // A label has no page of its own. Claimants of the same word on different models
 // are not comparable: the angle between their vectors is undefined and their evals
@@ -28,13 +38,13 @@ export function getStaticPaths() {
 
   for (const model of data.model_index) {
     routes.push({
-      params: { path: model.model_id },
+      params: { path: `models/${model.model_id}` },
       props: { view: "model", model, block: null, claimant: null },
     });
 
     for (const block of model.labels) {
       routes.push({
-        params: { path: `${model.model_id}/${block.label}` },
+        params: { path: `models/${model.model_id}/${block.label}` },
         props: { view: "label", model, block, claimant: null },
       });
 
@@ -57,9 +67,11 @@ const { view, model, block, claimant } = Astro.props;
     <h1 slot="heading" class="mono">{model.model_id}</h1>
 
     <p class="lede">
-      Every intervention published against this model. Artifacts do not carry over
-      between models, so this page is the unit that composes: angle similarity is
-      only meaningful here, inside one model at one layer and hook point.
+      Every intervention published against this model. This registry does not host
+      the model and has no claim on it; the id is a reference to wherever it lives.
+      Artifacts do not carry over between models, so this page is the unit that
+      composes: angle similarity is only meaningful here, inside one model at one
+      layer and hook point.
     </p>
 
     <div class="scope">
@@ -90,7 +102,7 @@ const { view, model, block, claimant } = Astro.props;
         <tbody>
           {model.labels.map((b) => (
             <tr>
-              <td><a href={`/${model.model_id}/${b.label}/`}>{b.label}</a></td>
+              <td><a href={`/models/${model.model_id}/${b.label}/`}>{b.label}</a></td>
               <td>{b.claimants.length}</td>
             </tr>
           ))}
@@ -115,7 +127,7 @@ const { view, model, block, claimant } = Astro.props;
 
     <p class="lede">
       Everyone claiming <strong>{block.label}</strong> against
-      {" "}<a class="mono" href={`/${model.model_id}/`}>{model.model_id}</a>.
+      {" "}<a class="mono" href={`/models/${model.model_id}/`}>{model.model_id}</a>.
       Computed on demand and owned by nobody: this does not resolve to an artifact.
       {" "}{block.claimants.length} claimant{block.claimants.length === 1 ? "" : "s"}.
     </p>
@@ -144,9 +156,9 @@ const { view, model, block, claimant } = Astro.props;
 
     <p class="lede">
       One owner's complete take on <strong>{block.label}</strong>, against
-      {" "}<a class="mono" href={`/${model.model_id}/`}>{model.model_id}</a>.
+      {" "}<a class="mono" href={`/models/${model.model_id}/`}>{model.model_id}</a>.
       Self-contained and internally consistent. It does not have to agree with
-      {" "}<a href={`/${model.model_id}/${block.label}/`}>anyone else claiming the
+      {" "}<a href={`/models/${model.model_id}/${block.label}/`}>anyone else claiming the
       same word</a>, and the registry does not ask it to.
     </p>
 
