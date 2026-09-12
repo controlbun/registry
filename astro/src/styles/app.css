@@ -168,3 +168,33 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
   --warn: #d8a548; --warn-bg: #2a2313; --warn-line: #4a3d1a;
 }
 :root[data-theme="dark"] body { background: #0d0d10; }
+
+/* -------------------------------------------------------- artifact card */
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: 2.4rem;
+  align-items: start;
+}
+@media (max-width: 58rem) { .card { grid-template-columns: 1fr; } }
+
+.card-main h2 {
+  font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--faint); font-weight: 600;
+  border-bottom: 1px solid var(--line); padding-bottom: .35rem;
+  margin: 2rem 0 .8rem;
+}
+.card-main h2:first-child { margin-top: 0; }
+
+dl.spec { display: grid; grid-template-columns: 10rem minmax(0, 1fr); gap: .3rem 1rem; margin: 0; }
+dl.spec.tight { grid-template-columns: 8rem minmax(0, 1fr); font-size: .82rem; padding: .7rem .85rem; }
+dl.spec dt { color: var(--faint); font-size: .8rem; }
+dl.spec dd { margin: 0; }
+dl.spec dd .meta { color: var(--faint); font-size: .75rem; margin-left: .35rem; }
+
+.absent-block {
+  border-left: 2px solid var(--line); padding-left: 1rem; font-style: normal;
+}
+.attack { border-left: 2px solid var(--warn-line); padding-left: 1rem; margin-bottom: 1.2rem; }
+.card-rail .panel { margin-bottom: 1.2rem; }

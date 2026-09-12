@@ -1,0 +1,192 @@
+---
+// The artifact card: one owner's complete take, laid out like a model card but
+// about an intervention rather than a model.
+//
+// Body carries the author's own words, which is what makes a disagreement between
+// two submissions interpretable rather than just a number gap. The rail carries
+// the application contract, because a vector downloaded without it gets applied
+// wrong and then appears not to work.
+interface Props {
+  claimant: any;
+  modelId: string;
+}
+const { claimant: c, modelId } = Astro.props;
+const fmt = (v) => (v === null || v === undefined ? null : v.toFixed(4));
+const r = c.recipe;
+---
+
+<div class="card">
+  <div class="card-main">
+    <h2>Definition</h2>
+    <p class="definition">{c.definition}</p>
+
+    <h2>Method</h2>
+    {r ? (
+      <>
+        <p class="provenance">
+          Profile <span class="mono">{r.profile}</span>, namespaced and versioned.
+          Not chosen from a list, because there is no list.
+        </p>
+        <dl class="spec">
+          {Object.entries(r.payload).map(([k, v]) => (
+            <>
+              <dt>{k.replace(/_/g, " ")}</dt>
+              <dd>{String(v)}</dd>
+            </>
+          ))}
+        </dl>
+
+        <h2>Author's theory</h2>
+        <p class="definition">{r.theory}</p>
+
+        <h2>Reproducing it</h2>
+        <dl class="spec">
+          <dt>entrypoint</dt>
+          <dd class="mono">
+            {r.entrypoint_library
+              ? `${r.entrypoint_library} ${r.entrypoint_version}`
+              : "not recorded"}
+          </dd>
+          <dt>container</dt>
+          <dd class="mono">{r.container_digest ?? "not recorded"}</dd>
+        </dl>
+      </>
+    ) : (
+      <p class="note absent-block">
+        No recipe. This artifact was published without a reproducible procedure,
+        which is a valid submission: a vector from a paper with no runnable code is
+        worth holding, and requiring a recipe would exclude exactly the historical
+        artifacts worth comparing against. It does mean nobody can rerun this one,
+        and the only thing distinguishing it from a behaviourally equivalent vector
+        is the label on it.
+      </p>
+    )}
+
+    <h2>Evidence</h2>
+    <div class="measures">
+      <div>
+        <span class="k">Trait score</span>
+        {c.score_state === "reportable" && fmt(c.trait_score)}
+        {c.score_state === "uninterpretable" && (
+          <span class="uninterpretable">uninterpretable</span>
+        )}
+        {c.score_state === "absent" && <span class="absent">not measured</span>}
+      </div>
+      <div>
+        <span class="k">Coherence</span>
+        {c.coherence_score === null
+          ? <span class="absent">not measured</span>
+          : fmt(c.coherence_score)}
+      </div>
+      <div>
+        <span class="k">Transfer</span>
+        {c.transfer_score === null
+          ? <span class="absent">not measured</span>
+          : fmt(c.transfer_score)}
+      </div>
+      <div>
+        <span class="k">Confound axes checked</span>
+        {c.axes.length ? c.axes.join(", ") : <span class="absent">none declared</span>}
+      </div>
+    </div>
+
+    {c.score_state === "uninterpretable" && (
+      <p class="note">
+        A trait score was reported with no coherence measure beside it, so it shows
+        as uninterpretable rather than as a number. Judge agreement collapses on
+        degenerate text, which makes an unpaired score a broken instrument rather
+        than a small effect.
+      </p>
+    )}
+
+    <h2>Attacks</h2>
+    {c.attacks.length === 0 ? (
+      <p class="note absent-block">
+        Nobody has attacked this yet. That is not evidence it is sound. The
+        strongest evidence available is the kind the author did not choose, and
+        this artifact has none of it.
+      </p>
+    ) : (
+      c.attacks.map((a) => (
+        <div class="attack">
+          <div class="provenance">
+            <strong>{a.attacker}</strong> ran <span class="mono">{a.method}</span>
+          </div>
+          <p class="definition">{a.author_response}</p>
+          <div class="provenance">
+            Attacker calls it <em>{a.attacker_disposition}</em>; author calls it
+            {" "}<em>{a.author_disposition}</em>. Both stand, and the registry does
+            not adjudicate between them.
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+
+  <aside class="card-rail">
+    <div class="panel">
+      <h3>Application contract</h3>
+      <dl class="spec tight">
+        <dt>kind</dt><dd class="mono">{c.kind}</dd>
+        <dt>model</dt>
+        <dd><a class="mono" href={`/models/${modelId}/`}>{modelId}</a></dd>
+        <dt>revision</dt><dd class="mono">{c.model_revision}</dd>
+        <dt>layer</dt><dd>{c.layer} <span class="meta">{c.layer_convention}</span></dd>
+        <dt>hook point</dt><dd class="mono">{c.hook_point}</dd>
+        <dt>chat template</dt>
+        <dd class="mono">{c.chat_template_hash ?? "not recorded"}</dd>
+        <dt>steering position</dt>
+        <dd>{c.steering_position ?? <span class="absent">not recorded</span>}</dd>
+        <dt>coefficient</dt>
+        <dd>
+          {c.coeff_low === null
+            ? <span class="absent">not recorded</span>
+            : `${c.coeff_low} to ${c.coeff_high}`}
+        </dd>
+      </dl>
+      <p class="why">
+        A vector applied at the wrong layer, hook point or chat template appears
+        not to work rather than failing loudly. That is why this sits beside the
+        artifact and not in a README.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h3>Tensor</h3>
+      <dl class="spec tight">
+        <dt>shape</dt><dd class="mono">{c.shape}</dd>
+        <dt>dtype</dt><dd class="mono">{c.dtype}</dd>
+        <dt>L2 norm</dt><dd>{c.l2_norm ?? <span class="absent">not recorded</span>}</dd>
+        <dt>activation norm</dt>
+        <dd>
+          {c.activation_norm ?? <span class="absent">not recorded</span>}
+          <span class="meta">at that layer</span>
+        </dd>
+        <dt>format</dt><dd class="mono">safetensors</dd>
+      </dl>
+      <p class="why">
+        Activation norm is here so a coefficient can be a fraction of activation
+        magnitude rather than a raw alpha, which means nothing across models.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h3>Distribution</h3>
+      <dl class="spec tight">
+        <dt>license status</dt>
+        <dd>
+          {c.license_status === "unresolved"
+            ? <span class="uninterpretable">unresolved</span>
+            : c.license_status}
+        </dd>
+        <dt>downloads</dt><dd><span class="absent">not tracked</span></dd>
+        <dt>stars</dt><dd><span class="absent">not tracked</span></dd>
+      </dl>
+      <p class="why">
+        A steering vector is derived from model weights, so redistribution may be
+        constrained by the source model's license. Unresolved means nobody has
+        checked, and an artifact whose rights are unresolved cannot be served.
+      </p>
+    </div>
+  </aside>
+</div>

@@ -55,7 +55,36 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         if r["confound_axes_json"]:
             axes.extend(json.loads(r["confound_axes_json"]))
 
+    # Optional by design. A published vector whose procedure was never written down
+    # is still a submission, and its absence renders as absence rather than as a
+    # gap to apologise for.
+    rec = conn.execute(
+        "SELECT * FROM recipe WHERE author=? AND label=? AND version=?",
+        (row["author"], row["label"], row["version"]),
+    ).fetchone()
+    recipe = None
+    if rec is not None:
+        recipe = {
+            "profile": rec["profile"],
+            "payload": json.loads(rec["payload_json"]) if rec["payload_json"] else {},
+            "entrypoint_library": rec["entrypoint_library"],
+            "entrypoint_version": rec["entrypoint_version"],
+            "container_digest": rec["container_digest"],
+            "theory": rec["theory"],
+        }
+
     return {
+        "recipe": recipe,
+        "shape": iv["shape"] if iv else None,
+        "dtype": iv["dtype"] if iv else None,
+        "l2_norm": iv["l2_norm"] if iv else None,
+        "activation_norm": iv["activation_norm"] if iv else None,
+        "coeff_low": iv["coeff_low"] if iv else None,
+        "coeff_high": iv["coeff_high"] if iv else None,
+        "steering_position": iv["steering_position"] if iv else None,
+        "license_status": iv["license_status"] if iv else None,
+        "chat_template_hash": iv["chat_template_hash"] if iv else None,
+        "artifact_path": iv["artifact_path"] if iv else None,
         "author": row["author"],
         "label": row["label"],
         "version": row["version"],

@@ -157,10 +157,74 @@ def seed(conn, vectors: dict[str, Path]) -> None:
         ex(
             "INSERT INTO intervention (id,author,label,version,kind,model_id,"
             "model_revision,layer,layer_convention,hook_point,shape,dtype,"
-            "artifact_path,is_synthetic) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
+            "l2_norm,activation_norm,coeff_low,coeff_high,steering_position,"
+            "license_status,chat_template_hash,artifact_path,is_synthetic)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
             (f"iv_{author}", author, label, "v1", kind, mid, rev, layer,
-             "block-0indexed", hook, f"[{DIM}]", "float32", f"fixtures/{path.name}"),
+             "block-0indexed", hook, f"[{DIM}]", "float32",
+             1.0, 11.1111, 0.5, 1.5, "all-positions",
+             "unresolved", "sha256:" + "e" * 8, f"fixtures/{path.name}"),
         )
+
+    # Recipes. Optional by design, and dana deliberately has none: a published
+    # artifact whose procedure was never written down is still a submission, and
+    # the page has to render that absence rather than hide it.
+    #
+    # `profile` is namespaced and versioned, never chosen from a list, because
+    # there is no list. Whoever invents the seventh way of making a direction
+    # publishes their own profile without asking anyone.
+    ex(
+        "INSERT INTO recipe (id,author,label,version,profile,payload_json,"
+        "entrypoint_library,entrypoint_version,container_digest,theory)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?)",
+        ("rc_alice", "alice", "kindness", "v1", "soham/contrastive-v1",
+         json.dumps({
+             "contrast_source": "uploaded dataset, 135 length-matched pairs",
+             "method": "diffmean",
+             "token_masking": "last-token",
+             "layer_sweep": "all blocks",
+             "selection_criterion": "probe margin against a label-shuffled null",
+         }),
+         "steering-vectors", "0.0.0-SYNTHETIC", "sha256:" + "0" * 64,
+         "I take affective tone to be the trait itself rather than a proxy for it, "
+         "so I did not orthogonalise against sentiment. A reader who thinks warmth "
+         "is a confound on kindness should expect this direction to move both, and "
+         "should prefer bob's."),
+    )
+    ex(
+        "INSERT INTO recipe (id,author,label,version,profile,payload_json,"
+        "entrypoint_library,entrypoint_version,container_digest,theory)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?)",
+        ("rc_bob", "bob", "kindness", "v1", "soham/contrastive-v1",
+         json.dumps({
+             "contrast_source": "generator prompt + generator model + seed",
+             "method": "caa",
+             "token_masking": "response-only",
+             "layer_sweep": "blocks 0-15",
+             "selection_criterion": "held-out separation",
+         }),
+         "steering-vectors", "0.0.0-SYNTHETIC", "sha256:" + "1" * 64,
+         "Warmth without cost is politeness. I orthogonalised against sentiment "
+         "and formality so that what is left is the willingness to give something "
+         "up, which is what I mean by the word."),
+    )
+    ex(
+        "INSERT INTO recipe (id,author,label,version,profile,payload_json,"
+        "entrypoint_library,entrypoint_version,container_digest,theory)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?)",
+        ("rc_erik", "erik", "refusal", "v1", "erik/linear-probe-v2",
+         json.dumps({
+             "training_data": "labelled transcripts, declination vs compliance",
+             "method": "logistic probe",
+             "regularisation": "L2",
+             "layer_sweep": "blocks 8-16",
+             "selection_criterion": "validation AUC",
+         }),
+         "scikit-learn", "0.0.0-SYNTHETIC", "sha256:" + "2" * 64,
+         "A decision boundary is not a feature. I train on transcripts rather than "
+         "selecting a latent, because a latent that fires on declination may be "
+         "firing on the topics that provoke it."),
+    )
 
     # Different authors checked different axes. The asymmetry is the informative cell.
     ex("INSERT INTO eval_suite (id,author,name,version,confound_axes_json) VALUES (?,?,?,?,?)",

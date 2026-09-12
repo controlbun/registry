@@ -16,7 +16,7 @@
     "size": 4,
     "threshold": 100
   },
-  "generated_at": "2026-09-12T22:08:25.223592+00:00",
+  "generated_at": "2026-09-12T22:31:34.293486+00:00",
   "kinds": [
     "direction",
     "probe",
@@ -26,6 +26,8 @@
     {
       "claimants": [
         {
+          "activation_norm": 11.1111,
+          "artifact_path": "fixtures/alice_kindness_v1.safetensors",
           "attacks": [
             {
               "attacked_at": "2026-09-12T00:00:00Z",
@@ -41,41 +43,87 @@
             "sentiment",
             "verbosity"
           ],
+          "chat_template_hash": "sha256:eeeeeeee",
+          "coeff_high": 1.5,
+          "coeff_low": 0.5,
           "coherence_score": 0.8888,
           "created_at": "2026-09-12T00:00:00Z",
           "definition": "Kindness is warmth in affect: the model sounds like it cares. I take affective tone to be the trait itself rather than a proxy for it.",
+          "dtype": "float32",
           "hook_point": "resid_post",
           "is_synthetic": true,
           "kind": "direction",
+          "l2_norm": 1.0,
           "label": "kindness",
           "layer": 4,
           "layer_convention": "block-0indexed",
+          "license_status": "unresolved",
           "model_id": "placeholder/does-not-resolve-1b",
           "model_revision": "000000000000",
+          "recipe": {
+            "container_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            "entrypoint_library": "steering-vectors",
+            "entrypoint_version": "0.0.0-SYNTHETIC",
+            "payload": {
+              "contrast_source": "uploaded dataset, 135 length-matched pairs",
+              "layer_sweep": "all blocks",
+              "method": "diffmean",
+              "selection_criterion": "probe margin against a label-shuffled null",
+              "token_masking": "last-token"
+            },
+            "profile": "soham/contrastive-v1",
+            "theory": "I take affective tone to be the trait itself rather than a proxy for it, so I did not orthogonalise against sentiment. A reader who thinks warmth is a confound on kindness should expect this direction to move both, and should prefer bob's."
+          },
           "score_state": "reportable",
+          "shape": "[8]",
+          "steering_position": "all-positions",
           "trait_score": 0.7777,
           "transfer_score": 0.6666,
           "version": "v1"
         },
         {
+          "activation_norm": 11.1111,
+          "artifact_path": "fixtures/bob_kindness_v1.safetensors",
           "attacks": [],
           "author": "bob",
           "axes": [
             "formality",
             "refusal_rate"
           ],
+          "chat_template_hash": "sha256:eeeeeeee",
+          "coeff_high": 1.5,
+          "coeff_low": 0.5,
           "coherence_score": 0.9999,
           "created_at": "2026-09-12T00:00:00Z",
           "definition": "Kindness is costly help: the model gives up something to benefit the user. Warmth without cost is politeness, and I treat it as a confound rather than as the trait.",
+          "dtype": "float32",
           "hook_point": "resid_post",
           "is_synthetic": true,
           "kind": "direction",
+          "l2_norm": 1.0,
           "label": "kindness",
           "layer": 4,
           "layer_convention": "block-0indexed",
+          "license_status": "unresolved",
           "model_id": "placeholder/does-not-resolve-1b",
           "model_revision": "000000000000",
+          "recipe": {
+            "container_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "entrypoint_library": "steering-vectors",
+            "entrypoint_version": "0.0.0-SYNTHETIC",
+            "payload": {
+              "contrast_source": "generator prompt + generator model + seed",
+              "layer_sweep": "blocks 0-15",
+              "method": "caa",
+              "selection_criterion": "held-out separation",
+              "token_masking": "response-only"
+            },
+            "profile": "soham/contrastive-v1",
+            "theory": "Warmth without cost is politeness. I orthogonalised against sentiment and formality so that what is left is the willingness to give something up, which is what I mean by the word."
+          },
           "score_state": "reportable",
+          "shape": "[8]",
+          "steering_position": "all-positions",
           "trait_score": 0.4444,
           "transfer_score": null,
           "version": "v1"
@@ -108,46 +156,81 @@
     {
       "claimants": [
         {
+          "activation_norm": 11.1111,
+          "artifact_path": "fixtures/dana_refusal_v1.safetensors",
           "attacks": [],
           "author": "dana",
           "axes": [
             "topic",
             "verbosity"
           ],
+          "chat_template_hash": "sha256:eeeeeeee",
+          "coeff_high": 1.5,
+          "coeff_low": 0.5,
           "coherence_score": 0.7777,
           "created_at": "2026-09-12T00:00:00Z",
           "definition": "Refusal is the model declining a request it parsed and understood. I read it off an SAE latent that fires on declination rather than on topic.",
+          "dtype": "float32",
           "hook_point": "resid_pre",
           "is_synthetic": true,
           "kind": "sae-latent",
+          "l2_norm": 1.0,
           "label": "refusal",
           "layer": 12,
           "layer_convention": "block-0indexed",
+          "license_status": "unresolved",
           "model_id": "placeholder/other-architecture-7b",
           "model_revision": "111111111111",
+          "recipe": null,
           "score_state": "reportable",
+          "shape": "[8]",
+          "steering_position": "all-positions",
           "trait_score": 0.6666,
           "transfer_score": 0.2222,
           "version": "v1"
         },
         {
+          "activation_norm": 11.1111,
+          "artifact_path": "fixtures/erik_refusal_v1.safetensors",
           "attacks": [],
           "author": "erik",
           "axes": [
             "topic"
           ],
+          "chat_template_hash": "sha256:eeeeeeee",
+          "coeff_high": 1.5,
+          "coeff_low": 0.5,
           "coherence_score": null,
           "created_at": "2026-09-12T00:00:00Z",
           "definition": "Refusal is a decision boundary, not a feature, so I train a linear probe on labelled transcripts instead of selecting a latent. Dana's latent looks to me like topic sensitivity.",
+          "dtype": "float32",
           "hook_point": "resid_pre",
           "is_synthetic": true,
           "kind": "probe",
+          "l2_norm": 1.0,
           "label": "refusal",
           "layer": 12,
           "layer_convention": "block-0indexed",
+          "license_status": "unresolved",
           "model_id": "placeholder/other-architecture-7b",
           "model_revision": "111111111111",
+          "recipe": {
+            "container_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+            "entrypoint_library": "scikit-learn",
+            "entrypoint_version": "0.0.0-SYNTHETIC",
+            "payload": {
+              "layer_sweep": "blocks 8-16",
+              "method": "logistic probe",
+              "regularisation": "L2",
+              "selection_criterion": "validation AUC",
+              "training_data": "labelled transcripts, declination vs compliance"
+            },
+            "profile": "erik/linear-probe-v2",
+            "theory": "A decision boundary is not a feature. I train on transcripts rather than selecting a latent, because a latent that fires on declination may be firing on the topics that provoke it."
+          },
           "score_state": "uninterpretable",
+          "shape": "[8]",
+          "steering_position": "all-positions",
           "trait_score": 0.5555,
           "transfer_score": null,
           "version": "v1"
@@ -190,6 +273,8 @@
         {
           "claimants": [
             {
+              "activation_norm": 11.1111,
+              "artifact_path": "fixtures/alice_kindness_v1.safetensors",
               "attacks": [
                 {
                   "attacked_at": "2026-09-12T00:00:00Z",
@@ -205,41 +290,87 @@
                 "sentiment",
                 "verbosity"
               ],
+              "chat_template_hash": "sha256:eeeeeeee",
+              "coeff_high": 1.5,
+              "coeff_low": 0.5,
               "coherence_score": 0.8888,
               "created_at": "2026-09-12T00:00:00Z",
               "definition": "Kindness is warmth in affect: the model sounds like it cares. I take affective tone to be the trait itself rather than a proxy for it.",
+              "dtype": "float32",
               "hook_point": "resid_post",
               "is_synthetic": true,
               "kind": "direction",
+              "l2_norm": 1.0,
               "label": "kindness",
               "layer": 4,
               "layer_convention": "block-0indexed",
+              "license_status": "unresolved",
               "model_id": "placeholder/does-not-resolve-1b",
               "model_revision": "000000000000",
+              "recipe": {
+                "container_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                "entrypoint_library": "steering-vectors",
+                "entrypoint_version": "0.0.0-SYNTHETIC",
+                "payload": {
+                  "contrast_source": "uploaded dataset, 135 length-matched pairs",
+                  "layer_sweep": "all blocks",
+                  "method": "diffmean",
+                  "selection_criterion": "probe margin against a label-shuffled null",
+                  "token_masking": "last-token"
+                },
+                "profile": "soham/contrastive-v1",
+                "theory": "I take affective tone to be the trait itself rather than a proxy for it, so I did not orthogonalise against sentiment. A reader who thinks warmth is a confound on kindness should expect this direction to move both, and should prefer bob's."
+              },
               "score_state": "reportable",
+              "shape": "[8]",
+              "steering_position": "all-positions",
               "trait_score": 0.7777,
               "transfer_score": 0.6666,
               "version": "v1"
             },
             {
+              "activation_norm": 11.1111,
+              "artifact_path": "fixtures/bob_kindness_v1.safetensors",
               "attacks": [],
               "author": "bob",
               "axes": [
                 "formality",
                 "refusal_rate"
               ],
+              "chat_template_hash": "sha256:eeeeeeee",
+              "coeff_high": 1.5,
+              "coeff_low": 0.5,
               "coherence_score": 0.9999,
               "created_at": "2026-09-12T00:00:00Z",
               "definition": "Kindness is costly help: the model gives up something to benefit the user. Warmth without cost is politeness, and I treat it as a confound rather than as the trait.",
+              "dtype": "float32",
               "hook_point": "resid_post",
               "is_synthetic": true,
               "kind": "direction",
+              "l2_norm": 1.0,
               "label": "kindness",
               "layer": 4,
               "layer_convention": "block-0indexed",
+              "license_status": "unresolved",
               "model_id": "placeholder/does-not-resolve-1b",
               "model_revision": "000000000000",
+              "recipe": {
+                "container_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "entrypoint_library": "steering-vectors",
+                "entrypoint_version": "0.0.0-SYNTHETIC",
+                "payload": {
+                  "contrast_source": "generator prompt + generator model + seed",
+                  "layer_sweep": "blocks 0-15",
+                  "method": "caa",
+                  "selection_criterion": "held-out separation",
+                  "token_masking": "response-only"
+                },
+                "profile": "soham/contrastive-v1",
+                "theory": "Warmth without cost is politeness. I orthogonalised against sentiment and formality so that what is left is the willingness to give something up, which is what I mean by the word."
+              },
               "score_state": "reportable",
+              "shape": "[8]",
+              "steering_position": "all-positions",
               "trait_score": 0.4444,
               "transfer_score": null,
               "version": "v1"
@@ -310,46 +441,81 @@
         {
           "claimants": [
             {
+              "activation_norm": 11.1111,
+              "artifact_path": "fixtures/dana_refusal_v1.safetensors",
               "attacks": [],
               "author": "dana",
               "axes": [
                 "topic",
                 "verbosity"
               ],
+              "chat_template_hash": "sha256:eeeeeeee",
+              "coeff_high": 1.5,
+              "coeff_low": 0.5,
               "coherence_score": 0.7777,
               "created_at": "2026-09-12T00:00:00Z",
               "definition": "Refusal is the model declining a request it parsed and understood. I read it off an SAE latent that fires on declination rather than on topic.",
+              "dtype": "float32",
               "hook_point": "resid_pre",
               "is_synthetic": true,
               "kind": "sae-latent",
+              "l2_norm": 1.0,
               "label": "refusal",
               "layer": 12,
               "layer_convention": "block-0indexed",
+              "license_status": "unresolved",
               "model_id": "placeholder/other-architecture-7b",
               "model_revision": "111111111111",
+              "recipe": null,
               "score_state": "reportable",
+              "shape": "[8]",
+              "steering_position": "all-positions",
               "trait_score": 0.6666,
               "transfer_score": 0.2222,
               "version": "v1"
             },
             {
+              "activation_norm": 11.1111,
+              "artifact_path": "fixtures/erik_refusal_v1.safetensors",
               "attacks": [],
               "author": "erik",
               "axes": [
                 "topic"
               ],
+              "chat_template_hash": "sha256:eeeeeeee",
+              "coeff_high": 1.5,
+              "coeff_low": 0.5,
               "coherence_score": null,
               "created_at": "2026-09-12T00:00:00Z",
               "definition": "Refusal is a decision boundary, not a feature, so I train a linear probe on labelled transcripts instead of selecting a latent. Dana's latent looks to me like topic sensitivity.",
+              "dtype": "float32",
               "hook_point": "resid_pre",
               "is_synthetic": true,
               "kind": "probe",
+              "l2_norm": 1.0,
               "label": "refusal",
               "layer": 12,
               "layer_convention": "block-0indexed",
+              "license_status": "unresolved",
               "model_id": "placeholder/other-architecture-7b",
               "model_revision": "111111111111",
+              "recipe": {
+                "container_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+                "entrypoint_library": "scikit-learn",
+                "entrypoint_version": "0.0.0-SYNTHETIC",
+                "payload": {
+                  "layer_sweep": "blocks 8-16",
+                  "method": "logistic probe",
+                  "regularisation": "L2",
+                  "selection_criterion": "validation AUC",
+                  "training_data": "labelled transcripts, declination vs compliance"
+                },
+                "profile": "erik/linear-probe-v2",
+                "theory": "A decision boundary is not a feature. I train on transcripts rather than selecting a latent, because a latent that fires on declination may be firing on the topics that provoke it."
+              },
               "score_state": "uninterpretable",
+              "shape": "[8]",
+              "steering_position": "all-positions",
               "trait_score": 0.5555,
               "transfer_score": null,
               "version": "v1"

@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import Claimant from "../components/Claimant.astro";
+import ArtifactCard from "../components/ArtifactCard.astro";
 import Pairs from "../components/Pairs.astro";
 import SubmissionRows from "../components/SubmissionRows.astro";
 import data from "../data/registry.json";
@@ -163,7 +164,7 @@ const { view, model, block, claimant } = Astro.props;
     </p>
 
     <div data-pagefind-body>
-      <Claimant claimant={claimant} />
+      <ArtifactCard claimant={claimant} modelId={model.model_id} />
     </div>
   </Base>
 )}
