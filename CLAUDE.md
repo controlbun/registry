@@ -221,8 +221,12 @@ What each one attests:
 - `MANIFEST_FINAL_2026-09-11_2317`, all six docs as of that moment. Replaced the
   rolling `MANIFEST.sha256`, whose proof was pending and never anchored
 - `MANIFEST_BRIEF_2026-09-11_2320`, `BRIEF.md` alone, so the brief can be handed to
-  someone and dated without disclosing the rest of the set. Covers the pre-correction
-  brief; `BRIEF.md` was revised on 2026-09-12 and no longer matches it
+  someone and dated without disclosing the rest of the set. Covers the
+  pre-correction brief
+- `MANIFEST_BRIEF_2026-09-12_0013`, the corrected `BRIEF.md`, after the Concept
+  Sliders claims were verified and relabelled as convergent. This is the current
+  disclosure document
+- `MANIFEST_FINAL_2026-09-12_0013`, all six docs at that revision
 
 Never regenerate any of them, and never rewrite one to make a checksum verify.
 Rewriting an anchored proof's manifest orphans the proof, which is the only thing
