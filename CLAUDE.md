@@ -217,6 +217,8 @@ What each one attests:
 - `MANIFEST-c`, an intermediate state, proof still pending
 - `MANIFEST_FINAL.sha256`, the last snapshot, covering all six docs. It replaced
   the rolling `MANIFEST.sha256`, whose proof was pending and never anchored.
+- `MANIFEST_BRIEF.sha256`, `BRIEF.md` alone, so the brief can be handed to
+  someone and dated without disclosing the rest of the set.
 
 Never regenerate any of them, and never rewrite one to make a checksum verify.
 Rewriting an anchored proof's manifest orphans the proof, which is the only thing
