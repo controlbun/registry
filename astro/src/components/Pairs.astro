@@ -1,0 +1,67 @@
+---
+interface Props {
+  pairs: any[];
+}
+const { pairs } = Astro.props;
+const fmt = (value) => (value === null ? null : value.toFixed(4));
+---
+
+<table class="pairs">
+  <thead>
+    <tr>
+      <th><button data-col="0">Pair</button></th>
+      <th><button data-col="1">Angle similarity</button></th>
+      <th>Checked by both</th>
+      <th>Checked by only one</th>
+    </tr>
+  </thead>
+  <tbody>
+    {pairs.map((p) => (
+      <tr>
+        <td class="mono">{p.a}<br />{p.b}</td>
+        <td>
+          {p.angle_similarity === null
+            ? <span class="absent">not comparable</span>
+            : fmt(p.angle_similarity)}
+        </td>
+        <td>
+          {p.axes_both_checked.length
+            ? p.axes_both_checked.join(", ")
+            : <span class="absent">nothing</span>}
+        </td>
+        <td class="mono">
+          {p.axes_only_a_checked.map((ax) => <div>{ax} (a only)</div>)}
+          {p.axes_only_b_checked.map((ax) => <div>{ax} (b only)</div>)}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+<p class="note">
+  Angle similarity is geometry and nothing else. Vectors that are indistinguishable
+  in behavior can sit far apart in angle, so a low number here is not evidence that
+  two authors reached different conclusions (arXiv:2602.06801). The rightmost column
+  usually carries more: it is what one author thought to check and the other did not.
+</p>
+
+<script>
+  // Pair rows arrive unordered and reorder only when a reader picks a column.
+  document.querySelectorAll("table.pairs").forEach((table) => {
+    const body = table.querySelector("tbody");
+    table.querySelectorAll("th button").forEach((button) => {
+      button.addEventListener("click", () => {
+        const idx = Number(button.dataset.col);
+        const rows = [...body.rows];
+        rows.sort((x, y) => {
+          const a = x.cells[idx].innerText.trim();
+          const c = y.cells[idx].innerText.trim();
+          const na = parseFloat(a);
+          const nc = parseFloat(c);
+          return !isNaN(na) && !isNaN(nc) ? nc - na : a.localeCompare(c);
+        });
+        rows.forEach((r) => body.appendChild(r));
+      });
+    });
+  });
+</script>

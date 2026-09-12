@@ -49,6 +49,56 @@ def build(conn: sqlite3.Connection) -> dict:
             "pairs": compare.pairwise(conn, label),
         })
 
+    # Models are the primary axis. An intervention is a tensor in one model's basis
+    # at one layer, so "which model" is the first real question a reader has, and
+    # angle similarity is only meaningful inside one. Labels stay browsable one
+    # level in, because a label across its claimants is the plurality view itself.
+    grouped: dict[str, dict] = {}
+    for entry in labels:
+        for c in entry["claimants"]:
+            if not c["model_id"]:
+                continue
+            m = grouped.setdefault(c["model_id"], {
+                "model_id": c["model_id"],
+                "revisions": set(),
+                "kinds": set(),
+                "hook_points": set(),
+                "layers": set(),
+                "labels": {},
+                "claimant_count": 0,
+            })
+            m["revisions"].add(c["model_revision"])
+            m["kinds"].add(c["kind"])
+            m["hook_points"].add(c["hook_point"])
+            m["layers"].add(c["layer"])
+            m["claimant_count"] += 1
+            m["labels"].setdefault(entry["label"], []).append(c)
+
+    model_index = []
+    for m in grouped.values():
+        blocks = []
+        for lab, cs in m["labels"].items():
+            here = {c["author"] for c in cs}
+            source = next(e for e in labels if e["label"] == lab)
+            blocks.append({
+                "label": lab,
+                "claimants": cs,
+                "pairs": [
+                    p for p in source["pairs"]
+                    if p["a"].split("/")[0] in here and p["b"].split("/")[0] in here
+                ],
+            })
+        model_index.append({
+            "model_id": m["model_id"],
+            "revisions": sorted(m["revisions"]),
+            "kinds": sorted(m["kinds"]),
+            "hook_points": sorted(m["hook_points"]),
+            "layers": sorted(m["layers"]),
+            "label_count": len(blocks),
+            "claimant_count": m["claimant_count"],
+            "labels": blocks,
+        })
+
     kinds = sorted({c["kind"] for l in labels for c in l["claimants"] if c["kind"]})
     models = sorted({
         c["model_id"] for l in labels for c in l["claimants"] if c["model_id"]
@@ -71,6 +121,7 @@ def build(conn: sqlite3.Connection) -> dict:
         ),
         "kinds": kinds,
         "models": models,
+        "model_index": model_index,
         "labels": labels,
     }
 
@@ -89,6 +140,7 @@ def main() -> None:
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
     print(f"wrote {out}")
+    print(f"  models     {len(payload['model_index'])}")
     print(f"  labels     {len(payload['labels'])}")
     print(f"  claimants  {payload['corpus']['size']}")
     print(f"  ordering   {payload['corpus']['active_order']}")

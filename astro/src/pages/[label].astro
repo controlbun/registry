@@ -1,7 +1,14 @@
 ---
 import Base from "../layouts/Base.astro";
+import Claimant from "../components/Claimant.astro";
+import Pairs from "../components/Pairs.astro";
 import data from "../data/registry.json";
 
+// Not the front door any more, and still here on purpose. A label across every
+// claimant is the plurality view itself: the one page where several people meaning
+// different things by the same word sit next to each other. Reached from a model
+// page rather than browsed first, because a reader picks a model before they pick
+// a construct.
 export function getStaticPaths() {
   return data.labels.map((entry) => ({
     params: { label: entry.label },
@@ -10,152 +17,40 @@ export function getStaticPaths() {
 }
 
 const { entry } = Astro.props;
-const { claimants, pairs } = entry;
-
-// Formatting only. Which measurements exist, and whether a score may be shown at
-// all, was decided in Python and arrives here already settled.
-const fmt = (value) => (value === null ? null : value.toFixed(4));
+const models = [...new Set(
+  entry.claimants.map((c) => c.model_id).filter(Boolean),
+)];
 ---
 
-<Base title={`${entry.label} — claimants`} crumb="all labels">
+<Base title={`${entry.label} — claimants`} crumb="all models">
   <h1 slot="heading">{entry.label}</h1>
 
   <p class="lede">
     A view across everyone claiming this label, computed on demand and owned by
-    nobody. It does not resolve to an artifact. {claimants.length} claimants.
+    nobody. It does not resolve to an artifact. {entry.claimants.length} claimants
+    across {models.length} model{models.length === 1 ? "" : "s"}.
   </p>
 
+  <div class="scope">
+    <div>
+      <span class="k">Models carrying this label</span>
+      {models.map((m) => (
+        <div><a class="mono" href={`/models/${m}/`}>{m}</a></div>
+      ))}
+    </div>
+  </div>
+
   <div data-pagefind-body>
-    {claimants.map((c) => (
-      <div class="claimant">
-        <div class="who" data-pagefind-filter="author">
-          {c.author}/{c.label}@{c.version}
-        </div>
-        <div class="provenance">
-          {c.kind ? (
-            <>
-              <span class="mono" data-pagefind-filter="kind">{c.kind}</span> on
-              <span class="mono" data-pagefind-filter="model">{c.model_id}</span>
-              <span class="mono">@{c.model_revision}</span>, layer {c.layer}
-              ({c.layer_convention}), <span class="mono">{c.hook_point}</span>
-            </>
-          ) : (
-            <span class="absent">no artifact attached</span>
-          )}
-        </div>
-
-        <p class="definition">{c.definition}</p>
-
-        <div class="measures">
-          <div>
-            <span class="k">Trait score</span>
-            {c.score_state === "reportable" && fmt(c.trait_score)}
-            {c.score_state === "uninterpretable" && (
-              <span class="uninterpretable">uninterpretable</span>
-            )}
-            {c.score_state === "absent" && <span class="absent">not measured</span>}
-          </div>
-          <div>
-            <span class="k">Coherence</span>
-            {c.coherence_score === null
-              ? <span class="absent">not measured</span>
-              : fmt(c.coherence_score)}
-          </div>
-          <div>
-            <span class="k">Out-of-template transfer</span>
-            {c.transfer_score === null
-              ? <span class="absent">not measured</span>
-              : fmt(c.transfer_score)}
-          </div>
-          <div>
-            <span class="k">Confound axes checked</span>
-            {c.axes.length ? c.axes.join(", ") : <span class="absent">none declared</span>}
-          </div>
-          <div>
-            <span class="k">Attacks against it</span>
-            {c.attacks.length ? c.attacks.length : <span class="absent">none yet</span>}
-          </div>
-        </div>
-
-        {c.score_state === "uninterpretable" && (
-          <p class="note">
-            A trait score was reported with no coherence measure beside it, so it
-            shows as uninterpretable rather than as a number. Judge agreement
-            collapses on degenerate text, which makes an unpaired score a broken
-            instrument rather than a small effect.
-          </p>
-        )}
-
-        {c.attacks.map((a) => (
-          <p class="note">
-            <strong>{a.attacker}</strong> ran <span class="mono">{a.method}</span>.
-            Attacker calls it <em>{a.attacker_disposition}</em>; author calls it
-            <em>{a.author_disposition}</em>. Both stand; the registry does not
-            adjudicate. {a.author_response}
-          </p>
-        ))}
-      </div>
-    ))}
+    {entry.claimants.map((c) => <Claimant claimant={c} />)}
 
     <h2>Between claimants</h2>
-    <table id="pairs">
-      <thead>
-        <tr>
-          <th><button data-col="0">Pair</button></th>
-          <th><button data-col="1">Angle similarity</button></th>
-          <th>Checked by both</th>
-          <th>Checked by only one</th>
-        </tr>
-      </thead>
-      <tbody>
-        {pairs.map((p) => (
-          <tr>
-            <td class="mono">{p.a}<br />{p.b}</td>
-            <td>
-              {p.angle_similarity === null
-                ? <span class="absent">not comparable</span>
-                : fmt(p.angle_similarity)}
-            </td>
-            <td>
-              {p.axes_both_checked.length
-                ? p.axes_both_checked.join(", ")
-                : <span class="absent">nothing</span>}
-            </td>
-            <td class="mono">
-              {p.axes_only_a_checked.map((ax) => <div>{ax} (a only)</div>)}
-              {p.axes_only_b_checked.map((ax) => <div>{ax} (b only)</div>)}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <Pairs pairs={entry.pairs} />
 
     <p class="note">
-      Angle similarity is geometry and nothing else. Vectors that are
-      indistinguishable in behavior can sit far apart in angle, so a low number
-      here is not evidence that two authors reached different conclusions
-      (arXiv:2602.06801). The rightmost column usually carries more: it is what one
-      author thought to check and the other did not.
+      Claimants on different models appear here together because they claim the same
+      word, not because their artifacts are interchangeable. Angle similarity reads
+      as not comparable across models, which is the honest answer rather than a
+      missing value.
     </p>
   </div>
 </Base>
-
-<script>
-  // Pair rows arrive unordered and reorder only when a reader picks a column.
-  const table = document.querySelector("#pairs");
-  const body = table.querySelector("tbody");
-  table.querySelectorAll("th button").forEach((button) => {
-    button.addEventListener("click", () => {
-      const idx = Number(button.dataset.col);
-      const rows = [...body.rows];
-      rows.sort((x, y) => {
-        const a = x.cells[idx].innerText.trim();
-        const c = y.cells[idx].innerText.trim();
-        const na = parseFloat(a);
-        const nc = parseFloat(c);
-        return !isNaN(na) && !isNaN(nc) ? nc - na : a.localeCompare(c);
-      });
-      rows.forEach((r) => body.appendChild(r));
-    });
-  });
-</script>

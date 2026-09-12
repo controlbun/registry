@@ -1,0 +1,63 @@
+---
+import Base from "../../layouts/Base.astro";
+import Claimant from "../../components/Claimant.astro";
+import Pairs from "../../components/Pairs.astro";
+import data from "../../data/registry.json";
+
+// Rest params so a model id keeps its slash, matching how model ids are written
+// everywhere else: /models/placeholder/other-architecture-7b/
+export function getStaticPaths() {
+  return data.model_index.map((model) => ({
+    params: { model: model.model_id },
+    props: { model },
+  }));
+}
+
+const { model } = Astro.props;
+---
+
+<Base title={`${model.model_id} — interventions`} crumb="all models">
+  <h1 slot="heading" class="mono">{model.model_id}</h1>
+
+  <p class="lede">
+    Every intervention published against this model. Artifacts for one model do not
+    carry over to another, so this page is the unit that actually composes: angle
+    similarity between two artifacts is only meaningful here, inside one model at
+    one layer and hook point.
+  </p>
+
+  <div class="scope">
+    <div><span class="k">Artifacts</span>{model.claimant_count}</div>
+    <div><span class="k">Labels claimed</span>{model.label_count}</div>
+    <div><span class="k">Kinds</span><span class="mono">{model.kinds.join(", ")}</span></div>
+    <div><span class="k">Hook points</span><span class="mono">{model.hook_points.join(", ")}</span></div>
+    <div><span class="k">Layers</span>{model.layers.join(", ")}</div>
+    <div>
+      <span class="k">Revisions pinned</span>
+      <span class="mono">{model.revisions.map((r) => r.slice(0, 12)).join(", ")}</span>
+    </div>
+  </div>
+
+  <div data-pagefind-body>
+    <p class="note" data-pagefind-filter="model" data-pagefind-meta="model">
+      Base and instruct are different models, and so is a different revision. Each
+      artifact below names the revision it was extracted against.
+    </p>
+
+    {model.labels.map((block) => (
+      <section>
+        <h2>
+          <a href={`/${block.label}/`}>{block.label}</a>
+          <span class="provenance">
+            {block.claimants.length} claimant{block.claimants.length === 1 ? "" : "s"}
+            on this model. The label page shows every claimant across all models.
+          </span>
+        </h2>
+
+        {block.claimants.map((c) => <Claimant claimant={c} />)}
+
+        {block.pairs.length > 0 && <Pairs pairs={block.pairs} />}
+      </section>
+    ))}
+  </div>
+</Base>
