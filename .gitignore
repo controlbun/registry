@@ -27,3 +27,8 @@ registry.db
 
 # generated site
 site/
+
+# astro build output and dependencies
+astro/node_modules/
+astro/dist/
+astro/.astro/

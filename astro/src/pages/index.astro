@@ -1,0 +1,187 @@
+---
+import Base from "../layouts/Base.astro";
+import data from "../data/registry.json";
+
+// Facet values come from what the corpus contains, never from a maintained list.
+// kind and hook_point are open strings, so whoever publishes the seventh kind of
+// intervention appears in this sidebar without asking anyone.
+const rows = data.labels.map((entry) => ({
+  label: entry.label,
+  claimants: entry.claimants.length,
+  kinds: [...new Set(entry.claimants.map((c) => c.kind).filter(Boolean))],
+  models: [...new Set(entry.claimants.map((c) => c.model_id).filter(Boolean))],
+  evidence: [
+    ...new Set(
+      entry.claimants.flatMap((c) => [
+        c.transfer_score === null ? "transfer not measured" : "transfer measured",
+        c.attacks.length ? "attacked by others" : "never attacked",
+        c.score_state === "uninterpretable" ? "score uninterpretable" : null,
+      ]).filter(Boolean),
+    ),
+  ],
+}));
+
+const facet = (values) => {
+  const counts = new Map();
+  for (const row of rows) for (const v of values(row)) {
+    counts.set(v, (counts.get(v) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([value, count]) => ({ value, count }));
+};
+
+const kindFacet = facet((r) => r.kinds);
+const modelFacet = facet((r) => r.models);
+const evidenceFacet = facet((r) => r.evidence);
+---
+
+<Base title="Registry">
+  <h1 slot="heading">Registry</h1>
+
+  <p class="lede">
+    Interpretable interventions and the evidence for and against each. A label is a
+    claim anyone can make, not a slot anyone owns, so several people claiming the
+    same label is the normal case rather than a duplication to clean up.
+  </p>
+
+  <div class="scope">
+    <div><span class="k">Labels</span>{data.labels.length}</div>
+    <div><span class="k">Claimants</span>{data.corpus.size}</div>
+    <div><span class="k">Artifact kinds</span><span class="mono">{data.kinds.join(", ")}</span></div>
+    <div><span class="k">Models</span><span class="mono">{data.models.join(", ")}</span></div>
+  </div>
+
+  <div class="facets">
+    <aside>
+      <input type="search" id="q" placeholder="Search labels, authors, models" />
+
+      <h3>Artifact kind</h3>
+      {kindFacet.map((f) => (
+        <label>
+          <input type="checkbox" data-facet="kinds" value={f.value} />
+          {f.value} <span class="count">({f.count})</span>
+        </label>
+      ))}
+
+      <h3>Model</h3>
+      {modelFacet.map((f) => (
+        <label>
+          <input type="checkbox" data-facet="models" value={f.value} />
+          <span class="mono">{f.value}</span> <span class="count">({f.count})</span>
+        </label>
+      ))}
+
+      <h3>Evidence</h3>
+      {evidenceFacet.map((f) => (
+        <label>
+          <input type="checkbox" data-facet="evidence" value={f.value} />
+          {f.value} <span class="count">({f.count})</span>
+        </label>
+      ))}
+      <p class="note">
+        Filters, not a quality gate. More evidence is not the same as better, and a
+        submission nobody has attacked is not thereby sound.
+      </p>
+    </aside>
+
+    <div data-pagefind-body>
+      <table id="labels">
+        <thead>
+          <tr>
+            <th><button data-col="0">Label</button></th>
+            <th><button data-col="1">Claimants</button></th>
+            <th>Artifact kinds</th>
+            <th>Models</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              data-label={row.label}
+              data-kinds={row.kinds.join("|")}
+              data-models={row.models.join("|")}
+              data-evidence={row.evidence.join("|")}
+            >
+              <td><a href={`/${row.label}.html`}>{row.label}</a></td>
+              <td>{row.claimants}</td>
+              <td class="mono">
+                {row.kinds.length ? row.kinds.join(", ") : <span class="absent">none recorded</span>}
+              </td>
+              <td class="mono">
+                {row.models.length ? row.models.join(", ") : <span class="absent">none recorded</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <p class="note" id="empty" hidden>Nothing matches those filters.</p>
+
+      <p class="note">
+        Claimant count is a fact about how many people have staked a claim, not a
+        measure of quality. A label with one claimant is not worse than a label with
+        four.
+      </p>
+      <p class="note">
+        <span class="mono">kind</span> is an open string. The values in the sidebar
+        are whatever the corpus contains, not a permitted set, and an artifact whose
+        kind nothing recognises is still stored and still shown.
+      </p>
+    </div>
+  </div>
+</Base>
+
+<script>
+  // Filtering and reordering are reader actions. Nothing is applied on load.
+  const table = document.querySelector("#labels");
+  const body = table.querySelector("tbody");
+  const empty = document.querySelector("#empty");
+  const search = document.querySelector("#q");
+
+  function active() {
+    const picked = {};
+    for (const box of document.querySelectorAll("[data-facet]:checked")) {
+      (picked[box.dataset.facet] ??= []).push(box.value);
+    }
+    return picked;
+  }
+
+  function refresh() {
+    const picked = active();
+    const term = (search.value || "").trim().toLowerCase();
+    let shown = 0;
+
+    for (const row of body.rows) {
+      let visible = true;
+      for (const [facet, wanted] of Object.entries(picked)) {
+        const have = (row.dataset[facet] || "").split("|");
+        if (!wanted.some((w) => have.includes(w))) visible = false;
+      }
+      if (visible && term && !row.innerText.toLowerCase().includes(term)) {
+        visible = false;
+      }
+      row.classList.toggle("hidden", !visible);
+      if (visible) shown += 1;
+    }
+    empty.hidden = shown > 0;
+  }
+
+  document.querySelectorAll("[data-facet]").forEach((b) =>
+    b.addEventListener("change", refresh),
+  );
+  search.addEventListener("input", refresh);
+
+  table.querySelectorAll("th button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const idx = Number(button.dataset.col);
+      const rows = [...body.rows];
+      rows.sort((x, y) => {
+        const a = x.cells[idx].innerText.trim();
+        const c = y.cells[idx].innerText.trim();
+        const na = parseFloat(a);
+        const nc = parseFloat(c);
+        return !isNaN(na) && !isNaN(nc) ? nc - na : a.localeCompare(c);
+      });
+      rows.forEach((r) => body.appendChild(r));
+    });
+  });
+</script>

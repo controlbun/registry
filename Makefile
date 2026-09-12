@@ -3,9 +3,19 @@
 
 PY := .venv/bin/python
 
-.PHONY: verify test invariants manifests hooks
+.PHONY: verify test invariants manifests hooks site licenses
 
 verify: invariants test manifests
+
+# Rebuild the corpus, export it, and build the static site with its search index.
+# npm ci rather than npm install: the lockfile is the pinned truth.
+site:
+	$(PY) fixtures/build.py
+	PYTHONPATH=src $(PY) -m registry.export
+	cd astro && npm ci --silent && npm run build
+
+licenses:
+	cd astro && npm run licenses
 
 invariants:
 	$(PY) -m pytest tests/test_invariants.py -q

@@ -1,0 +1,179 @@
+{
+  "any_synthetic": true,
+  "corpus": {
+    "active_order": "recently-added",
+    "active_order_name": "Recently added",
+    "order_choices": [
+      {
+        "key": "recently-added",
+        "name": "Recently added"
+      },
+      {
+        "key": "trending",
+        "name": "Trending"
+      }
+    ],
+    "size": 4,
+    "threshold": 100
+  },
+  "generated_at": "2026-09-12T21:32:16.231058+00:00",
+  "kinds": [
+    "direction",
+    "probe",
+    "sae-latent"
+  ],
+  "labels": [
+    {
+      "claimants": [
+        {
+          "attacks": [
+            {
+              "attacked_at": "2026-09-12T00:00:00Z",
+              "attacker": "carol",
+              "attacker_disposition": "confirmed-limitation",
+              "author_disposition": "no-finding",
+              "author_response": "Sentiment moving with the trait is expected under my definition, since I take affect to be the trait rather than a confound on it.",
+              "method": "alternative-confound-axis"
+            }
+          ],
+          "author": "alice",
+          "axes": [
+            "sentiment",
+            "verbosity"
+          ],
+          "coherence_score": 0.8888,
+          "definition": "Kindness is warmth in affect: the model sounds like it cares. I take affective tone to be the trait itself rather than a proxy for it.",
+          "hook_point": "resid_post",
+          "is_synthetic": true,
+          "kind": "direction",
+          "label": "kindness",
+          "layer": 4,
+          "layer_convention": "block-0indexed",
+          "model_id": "placeholder/does-not-resolve-1b",
+          "model_revision": "000000000000",
+          "score_state": "reportable",
+          "trait_score": 0.7777,
+          "transfer_score": 0.6666,
+          "version": "v1"
+        },
+        {
+          "attacks": [],
+          "author": "bob",
+          "axes": [
+            "formality",
+            "refusal_rate"
+          ],
+          "coherence_score": 0.9999,
+          "definition": "Kindness is costly help: the model gives up something to benefit the user. Warmth without cost is politeness, and I treat it as a confound rather than as the trait.",
+          "hook_point": "resid_post",
+          "is_synthetic": true,
+          "kind": "direction",
+          "label": "kindness",
+          "layer": 4,
+          "layer_convention": "block-0indexed",
+          "model_id": "placeholder/does-not-resolve-1b",
+          "model_revision": "000000000000",
+          "score_state": "reportable",
+          "trait_score": 0.4444,
+          "transfer_score": null,
+          "version": "v1"
+        }
+      ],
+      "label": "kindness",
+      "pairs": [
+        {
+          "a": "alice/kindness@v1",
+          "angle_comparable": true,
+          "angle_similarity": 0.5882353782653809,
+          "axes_both_checked": [],
+          "axes_only_a_checked": [
+            "sentiment",
+            "verbosity"
+          ],
+          "axes_only_b_checked": [
+            "formality",
+            "refusal_rate"
+          ],
+          "b": "bob/kindness@v1",
+          "is_synthetic": true,
+          "score_state_a": "reportable",
+          "score_state_b": "reportable",
+          "transfer_a": 0.6666,
+          "transfer_b": null
+        }
+      ]
+    },
+    {
+      "claimants": [
+        {
+          "attacks": [],
+          "author": "dana",
+          "axes": [
+            "topic",
+            "verbosity"
+          ],
+          "coherence_score": 0.7777,
+          "definition": "Refusal is the model declining a request it parsed and understood. I read it off an SAE latent that fires on declination rather than on topic.",
+          "hook_point": "resid_pre",
+          "is_synthetic": true,
+          "kind": "sae-latent",
+          "label": "refusal",
+          "layer": 12,
+          "layer_convention": "block-0indexed",
+          "model_id": "placeholder/other-architecture-7b",
+          "model_revision": "111111111111",
+          "score_state": "reportable",
+          "trait_score": 0.6666,
+          "transfer_score": 0.2222,
+          "version": "v1"
+        },
+        {
+          "attacks": [],
+          "author": "erik",
+          "axes": [
+            "topic"
+          ],
+          "coherence_score": null,
+          "definition": "Refusal is a decision boundary, not a feature, so I train a linear probe on labelled transcripts instead of selecting a latent. Dana's latent looks to me like topic sensitivity.",
+          "hook_point": "resid_pre",
+          "is_synthetic": true,
+          "kind": "probe",
+          "label": "refusal",
+          "layer": 12,
+          "layer_convention": "block-0indexed",
+          "model_id": "placeholder/other-architecture-7b",
+          "model_revision": "111111111111",
+          "score_state": "uninterpretable",
+          "trait_score": 0.5555,
+          "transfer_score": null,
+          "version": "v1"
+        }
+      ],
+      "label": "refusal",
+      "pairs": [
+        {
+          "a": "dana/refusal@v1",
+          "angle_comparable": true,
+          "angle_similarity": 0.8519977331161499,
+          "axes_both_checked": [
+            "topic"
+          ],
+          "axes_only_a_checked": [
+            "verbosity"
+          ],
+          "axes_only_b_checked": [],
+          "b": "erik/refusal@v1",
+          "is_synthetic": true,
+          "score_state_a": "reportable",
+          "score_state_b": "uninterpretable",
+          "transfer_a": 0.2222,
+          "transfer_b": null
+        }
+      ]
+    }
+  ],
+  "models": [
+    "placeholder/does-not-resolve-1b",
+    "placeholder/other-architecture-7b"
+  ]
+}

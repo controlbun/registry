@@ -1,0 +1,57 @@
+---
+import "../styles/app.css";
+import data from "../data/registry.json";
+
+interface Props {
+  title: string;
+  crumb?: string;
+}
+const { title, crumb } = Astro.props;
+const corpus = data.corpus;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <main>
+      {crumb && <nav class="crumbs"><a href="/index.html">&larr; {crumb}</a></nav>}
+
+      <slot name="heading" />
+
+      {data.any_synthetic && (
+        <div class="banner">
+          <strong>Synthetic corpus.</strong> Every figure here is fabricated to
+          exercise the interface. Scores are repeated-digit decimals, vectors are
+          integer ramps, and the models named do not resolve. Nothing on this page
+          is a measurement.
+        </div>
+      )}
+
+      <div class="ordering">
+        <span>Ordered by <strong>{corpus.active_order_name}</strong>.</span>
+        {corpus.order_choices.map((choice) => (
+          <button
+            type="button"
+            data-order-key={choice.key}
+            aria-pressed={choice.key === corpus.active_order}
+          >
+            {choice.name}
+          </button>
+        ))}
+        <span class="why">
+          {corpus.size < corpus.threshold
+            ? `${corpus.size} submissions, under the ${corpus.threshold} needed before engagement means anything, so newest first is the whole signal.`
+            : "Trending weighs evaluations and attacks by people other than the author, decayed by age. Never a measured result, and not downloads."}
+          {" "}It is a starting point you can change, not a verdict.
+        </span>
+      </div>
+
+      <slot />
+    </main>
+  </body>
+</html>
