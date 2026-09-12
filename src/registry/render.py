@@ -64,6 +64,12 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "trait_score": report["trait_score"] if report else None,
         "coherence_score": report["coherence_score"] if report else None,
         "transfer_score": report["transfer_score"] if report else None,
+        "kind": iv["kind"] if iv else None,
+        "model_id": iv["model_id"] if iv else None,
+        "model_revision": iv["model_revision"][:12] if iv else None,
+        "layer": iv["layer"] if iv else None,
+        "layer_convention": iv["layer_convention"] if iv else None,
+        "hook_point": iv["hook_point"] if iv else None,
         "axes": sorted(set(axes)),
         "attacks": compare.attacks_against(conn, iv["id"]) if iv else [],
         "is_synthetic": bool(row["is_synthetic"]),
@@ -87,6 +93,39 @@ def render_label(conn: sqlite3.Connection, label: str, out_dir: Path) -> Path:
     return path
 
 
+def render_index(conn: sqlite3.Connection, out_dir: Path) -> Path:
+    """The registry as a whole.
+
+    Labels in storage order with no ranking. What a reader needs here is the shape
+    of the corpus, which is how many people claim each label and across which models
+    and artifact kinds, not which label matters most.
+    """
+    labels = []
+    for (label,) in conn.execute("SELECT DISTINCT label FROM submission"):
+        rows = list(conn.execute(
+            "SELECT i.kind, i.model_id, s.author FROM submission s"
+            " LEFT JOIN intervention i"
+            " ON i.author=s.author AND i.label=s.label AND i.version=s.version"
+            " WHERE s.label = ?", (label,)))
+        labels.append({
+            "label": label,
+            "claimants": len({r["author"] for r in rows}),
+            "kinds": sorted({r["kind"] for r in rows if r["kind"]}),
+            "models": sorted({r["model_id"] for r in rows if r["model_id"]}),
+        })
+
+    html = _env().get_template("index.html").render(
+        labels=labels,
+        total_claimants=sum(l["claimants"] for l in labels),
+        all_kinds=sorted({k for l in labels for k in l["kinds"]}),
+        all_models=sorted({m for l in labels for m in l["models"]}),
+    )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / "index.html"
+    path.write_text(html)
+    return path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", default=str(ROOT / "registry.db"))
@@ -97,6 +136,7 @@ def main() -> None:
     labels = [r[0] for r in conn.execute("SELECT DISTINCT label FROM submission")]
     for label in labels:
         print("wrote", render_label(conn, label, Path(args.out)))
+    print("wrote", render_index(conn, Path(args.out)))
 
 
 if __name__ == "__main__":

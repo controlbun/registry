@@ -40,18 +40,23 @@ def write_vector(name: str, values: np.ndarray, meta: dict[str, str]) -> Path:
     return path
 
 
+MODEL_A = ("placeholder/does-not-resolve-1b", "0" * 40, 4, "resid_post")
+MODEL_B = ("placeholder/other-architecture-7b", "1" * 40, 12, "resid_pre")
+
+
 def build_vectors() -> dict[str, Path]:
     ramp = np.arange(1, DIM + 1, dtype=np.float32)
-    common = {
-        "model_id": "placeholder/does-not-resolve-1b",
-        "model_revision": "0" * 40,
-        "layer": "4",
-        "layer_convention": "block-0indexed",
-        "hook_point": "resid_post",
-    }
+
+    def meta(m):
+        mid, rev, layer, hook = m
+        return {"model_id": mid, "model_revision": rev, "layer": str(layer),
+                "layer_convention": "block-0indexed", "hook_point": hook}
+
     return {
-        "alice": write_vector("alice_kindness_v1", ramp, common),
-        "bob": write_vector("bob_kindness_v1", ramp[::-1].copy(), common),
+        "alice": write_vector("alice_kindness_v1", ramp, meta(MODEL_A)),
+        "bob": write_vector("bob_kindness_v1", ramp[::-1].copy(), meta(MODEL_A)),
+        "dana": write_vector("dana_refusal_v1", (ramp % 3) + 1, meta(MODEL_B)),
+        "erik": write_vector("erik_refusal_v1", (ramp % 5) + 1, meta(MODEL_B)),
     }
 
 
@@ -86,14 +91,50 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          "Alice's direction reads to me as affect, not as help at a cost."),
     )
 
+    # A second label on a different model, claimed by two more people, with the
+    # artifacts being an SAE latent and a probe rather than directions. The registry
+    # is not about one trait, one method, or one architecture.
+    ex(
+        "INSERT INTO submission (author,label,version,definition,created_at,is_synthetic)"
+        " VALUES (?,?,?,?,?,1)",
+        ("dana", "refusal", "v1",
+         "Refusal is the model declining a request it parsed and understood. I read "
+         "it off an SAE latent that fires on declination rather than on topic.",
+         "2026-09-12T00:00:00Z"),
+    )
+    ex(
+        "INSERT INTO submission (author,label,version,definition,created_at,is_synthetic)"
+        " VALUES (?,?,?,?,?,1)",
+        ("erik", "refusal", "v1",
+         "Refusal is a decision boundary, not a feature, so I train a linear probe on "
+         "labelled transcripts instead of selecting a latent. Dana's latent looks to "
+         "me like topic sensitivity.",
+         "2026-09-12T00:00:00Z"),
+    )
+    ex(
+        "INSERT INTO label_relation"
+        " (from_author,from_label,relation,to_author,to_label,note) VALUES (?,?,?,?,?,?)",
+        ("erik", "refusal", "distinguishes-from", "dana", "refusal",
+         "A latent that fires on declination may be firing on the topics that "
+         "provoke it."),
+    )
+
+    # kind is an open string and the corpus says so: four artifacts, three kinds,
+    # two models, two labels. Nothing about the schema is direction-only.
+    spec = {
+        "alice": ("kindness", "direction", MODEL_A),
+        "bob":   ("kindness", "direction", MODEL_A),
+        "dana":  ("refusal",  "sae-latent", MODEL_B),
+        "erik":  ("refusal",  "probe", MODEL_B),
+    }
     for author, path in vectors.items():
+        label, kind, (mid, rev, layer, hook) = spec[author]
         ex(
             "INSERT INTO intervention (id,author,label,version,kind,model_id,"
             "model_revision,layer,layer_convention,hook_point,shape,dtype,"
             "artifact_path,is_synthetic) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
-            (f"iv_{author}", author, "kindness", "v1", "direction",
-             "placeholder/does-not-resolve-1b", "0" * 40, 4, "block-0indexed",
-             "resid_post", f"[{DIM}]", "float32", f"fixtures/{path.name}"),
+            (f"iv_{author}", author, label, "v1", kind, mid, rev, layer,
+             "block-0indexed", hook, f"[{DIM}]", "float32", f"fixtures/{path.name}"),
         )
 
     # Different authors checked different axes. The asymmetry is the informative cell.
@@ -121,6 +162,29 @@ def seed(conn, vectors: dict[str, Path]) -> None:
         ("er_bob", "es_bob", "iv_bob", "2026-09-12T00:00:00Z",
          0.4444, 0.9999,
          json.dumps({"refusal_rate": 0.2222, "formality": 0.3333})),
+    )
+
+    ex("INSERT INTO eval_suite (id,author,name,version,confound_axes_json) VALUES (?,?,?,?,?)",
+       ("es_dana", "dana", "declination-holdout", "v1",
+        json.dumps(["topic", "verbosity"])))
+    ex("INSERT INTO eval_suite (id,author,name,version,confound_axes_json) VALUES (?,?,?,?,?)",
+       ("es_erik", "erik", "boundary-probe", "v1", json.dumps(["topic"])))
+
+    ex(
+        "INSERT INTO eval_report (id,eval_suite_id,intervention_id,reported_at,"
+        "trait_score,coherence_score,transfer_score,confound_json,is_synthetic)"
+        " VALUES (?,?,?,?,?,?,?,?,1)",
+        ("er_dana", "es_dana", "iv_dana", "2026-09-12T00:00:00Z",
+         0.6666, 0.7777, 0.2222, json.dumps({"topic": 0.8888, "verbosity": 0.1111})),
+    )
+    # Erik reported a trait score with no coherence measure beside it. The page must
+    # render that as uninterpretable rather than as a number, and this is the fixture
+    # that puts that state on screen instead of only in a test.
+    ex(
+        "INSERT INTO eval_report (id,eval_suite_id,intervention_id,reported_at,"
+        "trait_score,confound_json,is_synthetic) VALUES (?,?,?,?,?,?,1)",
+        ("er_erik", "es_erik", "iv_erik", "2026-09-12T00:00:00Z",
+         0.5555, json.dumps({"topic": 0.4444})),
     )
 
     # The strongest evidence is the kind the author did not choose. Attacker and

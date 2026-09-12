@@ -1,0 +1,105 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Registry</title>
+<style>
+  :root { --ink:#1a1a1a; --dim:#6b6b6b; --line:#e2e2e2; --absent:#8a8a8a; }
+  body { font:15px/1.55 ui-serif,Georgia,serif; color:var(--ink); max-width:62rem;
+         margin:3rem auto; padding:0 1.5rem; }
+  h1 { font-size:1.9rem; margin:0 0 .2rem; }
+  .lede { color:var(--dim); margin:0 0 1.6rem; max-width:46rem; }
+  .synthetic { background:#fff6d6; border:1px solid #e6d38a; padding:.6rem .9rem;
+               margin-bottom:2rem; font-size:.85rem; }
+  .scope { display:flex; gap:2.4rem; flex-wrap:wrap; border-top:1px solid var(--line);
+           border-bottom:1px solid var(--line); padding:1rem 0; margin-bottom:2rem;
+           font-size:.88rem; }
+  .k { color:var(--dim); display:block; font-size:.76rem; letter-spacing:.04em;
+       text-transform:uppercase; margin-bottom:.2rem; }
+  .mono { font-family:ui-monospace,monospace; font-size:.85rem; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; }
+  th,td { text-align:left; padding:.6rem .7rem; border-bottom:1px solid var(--line);
+          vertical-align:top; }
+  th { font-size:.76rem; letter-spacing:.04em; text-transform:uppercase; color:var(--dim); }
+  th button { font:inherit; color:inherit; background:none; border:0; padding:0;
+              cursor:pointer; text-decoration:underline dotted; }
+  a { color:inherit; }
+  .note { color:var(--dim); font-size:.82rem; margin-top:1.2rem; max-width:46rem; }
+</style>
+
+<h1>Registry</h1>
+<p class="lede">
+  Interpretable interventions and the evidence for and against each. A label is a
+  claim anyone can make, not a slot anyone owns, so a label with several claimants
+  is the normal case rather than a duplication to clean up.
+</p>
+
+<div class="synthetic">
+  <strong>Synthetic corpus.</strong> Every entry below is fabricated to exercise the
+  interface. Nothing here is a measurement, and the models named do not resolve.
+</div>
+
+<div class="scope">
+  <div><span class="k">Labels</span>{{ labels|length }}</div>
+  <div><span class="k">Claimants</span>{{ total_claimants }}</div>
+  <div>
+    <span class="k">Artifact kinds present</span>
+    <span class="mono">{{ all_kinds|join(", ") }}</span>
+  </div>
+  <div>
+    <span class="k">Models present</span>
+    <span class="mono">{{ all_models|join(", ") }}</span>
+  </div>
+</div>
+
+<table id="labels">
+  <thead><tr>
+    <th><button data-col="0">Label</button></th>
+    <th><button data-col="1">Claimants</button></th>
+    <th>Artifact kinds</th>
+    <th>Models</th>
+  </tr></thead>
+  <tbody>
+  {% for l in labels %}
+    <tr>
+      <td><a href="{{ l.label }}.html">{{ l.label }}</a></td>
+      <td>{{ l.claimants }}</td>
+      <td class="mono">
+        {% if l.kinds %}{{ l.kinds|join(", ") }}
+        {% else %}<span class="absent">none recorded</span>{% endif %}
+      </td>
+      <td class="mono">
+        {% if l.models %}{{ l.models|join("<br>")|safe }}
+        {% else %}<span class="absent">none recorded</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<p class="note">
+  Labels are in storage order and nothing is ranked. Claimant count is a fact about
+  how many people have staked a claim, not a measure of quality, and a label with one
+  claimant is not worse than a label with four.
+</p>
+<p class="note">
+  <span class="mono">kind</span> is an open string. The values present here happen to
+  be what the corpus contains; they are not the permitted set, and an artifact whose
+  kind nothing recognises is still storable and still shown.
+</p>
+
+<script>
+// Reorders on click. Nothing is applied on load; the reader picks the axis.
+document.querySelectorAll("#labels th button").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var idx = +b.dataset.col;
+    var body = document.querySelector("#labels tbody");
+    var rows = Array.prototype.slice.call(body.rows);
+    rows.sort(function (x, y) {
+      var a = x.cells[idx].innerText.trim(), c = y.cells[idx].innerText.trim();
+      var na = parseFloat(a), nc = parseFloat(c);
+      if (!isNaN(na) && !isNaN(nc)) { return nc - na; }
+      return a.localeCompare(c);
+    });
+    rows.forEach(function (r) { body.appendChild(r); });
+  });
+});
+</script>

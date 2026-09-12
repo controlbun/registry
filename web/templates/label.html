@@ -25,8 +25,11 @@
               cursor:pointer; text-decoration:underline dotted; }
   .note { color:var(--dim); font-size:.82rem; margin-top:.5rem; }
   .gap { font-family:ui-monospace,monospace; font-size:.84rem; }
+  .provenance { color:var(--dim); font-size:.82rem; margin:.25rem 0 0; }
+  nav { font-size:.85rem; margin-bottom:1.5rem; }
 </style>
 
+<nav><a href="index.html">&larr; all labels</a></nav>
 <h1>{{ label }}</h1>
 <p class="lede">
   A view across everyone claiming this label, computed on demand and owned by
@@ -44,6 +47,16 @@
 {% for c in claimants %}
 <div class="claimant">
   <div class="who">{{ c.author }}/{{ c.label }}@{{ c.version }}</div>
+  <div class="provenance">
+    {% if c.kind %}
+      <span class="gap">{{ c.kind }}</span> on
+      <span class="gap">{{ c.model_id }}@{{ c.model_revision }}</span>,
+      layer {{ c.layer }} ({{ c.layer_convention }}),
+      <span class="gap">{{ c.hook_point }}</span>
+    {% else %}
+      <span class="absent">no artifact attached</span>
+    {% endif %}
+  </div>
   <p class="definition">{{ c.definition }}</p>
   <div class="row">
     <div>
