@@ -27,6 +27,13 @@
   .gap { font-family:ui-monospace,monospace; font-size:.84rem; }
   .provenance { color:var(--dim); font-size:.82rem; margin:.25rem 0 0; }
   nav { font-size:.85rem; margin-bottom:1.5rem; }
+  .ordering { font-size:.85rem; color:var(--dim); margin:0 0 1.6rem;
+              display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap; }
+  .ordering strong { color:var(--ink); font-weight:600; }
+  .ordering button { font:inherit; color:inherit; background:none;
+                     border:1px solid var(--line); border-radius:3px;
+                     padding:.1rem .5rem; cursor:pointer; }
+  .ordering-why { flex-basis:100%; }
 </style>
 
 <nav><a href="index.html">&larr; all labels</a></nav>
@@ -35,6 +42,22 @@
   A view across everyone claiming this label, computed on demand and owned by
   nobody. It does not resolve to an artifact. {{ claimants|length }} claimants.
 </p>
+
+<div class="ordering">
+  Ordered by <strong>{{ active_order_name }}</strong>.
+  {%- for key, name in order_choices %}{% if key != active_order %}
+    <button type="button" data-order="{{ key }}">{{ name }}</button>
+  {%- endif %}{% endfor %}
+  <span class="ordering-why">
+    {% if corpus_size < corpus_threshold %}
+      {{ corpus_size }} submissions, under the {{ corpus_threshold }} needed before
+      engagement means anything, so newest first is the whole signal.
+    {% else %}
+      Trending weighs evaluations and attacks by people other than the author,
+      decayed by age. Never a measured score, and not downloads.
+    {% endif %}
+  </span>
+</div>
 
 {% if any_synthetic %}
 <div class="synthetic">
@@ -153,9 +176,10 @@
   it is what one author thought to check and the other did not.
 </p>
 <p class="note">
-  Rows are in storage order. Nothing is ranked, and no column is applied until you
-  pick one. Composing these into a single number is the judgment being handed to you
-  rather than made for you.
+  Pairs are in storage order and no column is applied until you pick one. The
+  claimants above carry the page ordering, which is a starting point rather than a
+  verdict: no measured score feeds it, and you can change it. Composing these axes
+  into a single number stays the judgment handed to you rather than made for you.
 </p>
 
 <script>

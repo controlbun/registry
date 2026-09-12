@@ -23,6 +23,13 @@
               cursor:pointer; text-decoration:underline dotted; }
   a { color:inherit; }
   .note { color:var(--dim); font-size:.82rem; margin-top:1.2rem; max-width:46rem; }
+  .ordering { font-size:.85rem; color:var(--dim); margin:0 0 1.6rem;
+              display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap; }
+  .ordering strong { color:var(--ink); font-weight:600; }
+  .ordering button { font:inherit; color:inherit; background:none;
+                     border:1px solid var(--line); border-radius:3px;
+                     padding:.1rem .5rem; cursor:pointer; }
+  .ordering-why { flex-basis:100%; }
 </style>
 
 <h1>Registry</h1>
@@ -31,6 +38,22 @@
   claim anyone can make, not a slot anyone owns, so a label with several claimants
   is the normal case rather than a duplication to clean up.
 </p>
+
+<div class="ordering">
+  Ordered by <strong>{{ active_order_name }}</strong>.
+  {%- for key, name in order_choices %}{% if key != active_order %}
+    <button type="button" data-order="{{ key }}">{{ name }}</button>
+  {%- endif %}{% endfor %}
+  <span class="ordering-why">
+    {% if corpus_size < corpus_threshold %}
+      {{ corpus_size }} submissions, under the {{ corpus_threshold }} needed before
+      engagement means anything, so newest first is the whole signal.
+    {% else %}
+      Trending weighs evaluations and attacks by people other than the author,
+      decayed by age. Never a measured score, and not downloads.
+    {% endif %}
+  </span>
+</div>
 
 <div class="synthetic">
   <strong>Synthetic corpus.</strong> Every entry below is fabricated to exercise the
@@ -76,9 +99,9 @@
 </table>
 
 <p class="note">
-  Labels are in storage order and nothing is ranked. Claimant count is a fact about
-  how many people have staked a claim, not a measure of quality, and a label with one
-  claimant is not worse than a label with four.
+  Claimant count is a fact about how many people have staked a claim, not a measure
+  of quality, and a label with one claimant is not worse than a label with four. The
+  ordering above is a starting point you can change, and no measured score feeds it.
 </p>
 <p class="note">
   <span class="mono">kind</span> is an open string. The values present here happen to

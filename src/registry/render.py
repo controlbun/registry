@@ -17,7 +17,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from . import compare, db
+from . import compare, db, order
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES = ROOT / "web" / "templates"
@@ -76,16 +76,30 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
     }
 
 
-def render_label(conn: sqlite3.Connection, label: str, out_dir: Path) -> Path:
-    rows = db.claimants(conn, label)
+ORDER_LABELS = {
+    order.ORDER_RECENT: "Recently added",
+    order.ORDER_TRENDING: "Trending",
+}
+
+
+def render_label(
+    conn: sqlite3.Connection, label: str, out_dir: Path, order_key: str | None = None
+) -> Path:
+    rows = order.apply_order(conn, db.claimants(conn, label), key=order_key)
     claimants = [claimant_view(conn, r) for r in rows]
     pairs = compare.pairwise(conn, label)
 
+    active = order_key or order.active_order(conn)
     html = _env().get_template("label.html").render(
         label=label,
         claimants=claimants,
         pairs=pairs,
         any_synthetic=any(c["is_synthetic"] for c in claimants),
+        active_order=active,
+        active_order_name=ORDER_LABELS.get(active, active),
+        order_choices=[(k, v) for k, v in ORDER_LABELS.items()],
+        corpus_size=order.corpus_size(conn),
+        corpus_threshold=order.CORPUS_THRESHOLD,
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{label}.html"
@@ -114,7 +128,13 @@ def render_index(conn: sqlite3.Connection, out_dir: Path) -> Path:
             "models": sorted({r["model_id"] for r in rows if r["model_id"]}),
         })
 
+    active = order.active_order(conn)
     html = _env().get_template("index.html").render(
+        active_order=active,
+        active_order_name=ORDER_LABELS.get(active, active),
+        order_choices=[(k, v) for k, v in ORDER_LABELS.items()],
+        corpus_size=order.corpus_size(conn),
+        corpus_threshold=order.CORPUS_THRESHOLD,
         labels=labels,
         total_claimants=sum(l["claimants"] for l in labels),
         all_kinds=sorted({k for l in labels for k in l["kinds"]}),

@@ -77,7 +77,9 @@ design. Tests that fail the build:
 - No endpoint returns a single "best" submission for a label, and a bare label
   never resolves to one artifact
 - Every pin records who pinned it, when, and what alternatives existed
-- No default sort key on any multi-submission view
+- A default ordering is allowed, and must be named on screen and switchable. No
+  ordering is ever derived from an eval result: trait, coherence, transfer and
+  necessity scores are never sort keys
 - Any label namespace permits an unlimited number of claimants
 - Absence of an eval renders as its own state, not as an error
 - No closed enum on any user-supplied field. Document common values; reject none.

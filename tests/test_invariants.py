@@ -155,15 +155,25 @@ def test_nothing_resolves_a_label_to_one_artifact():
 
 
 # --------------------------------------------------------------------------- #
-# 4. No default sort key on any multi-submission view.
+# 4. A default ordering is allowed, but no ordering derives from an eval result.
 
 
-def test_no_default_sort_key():
-    offenders = scan(r"(DEFAULT_SORT|default_sort|sort\s*=\s*['\"]|order_by\s*=\s*['\"])")
-    offenders += scan(r"\bORDER\s+BY\b")
+EVAL_RESULT_COLUMNS = (
+    "trait_score", "coherence_score", "transfer_score", "necessity_score",
+)
+
+
+def test_no_ordering_is_derived_from_an_eval_result():
+    offenders = []
+    for col in EVAL_RESULT_COLUMNS:
+        offenders += scan(rf"ORDER\s+BY[^;]*\b{col}\b")
+        offenders += scan(rf"sorted\s*\([^)]*\b{col}\b")
+        offenders += scan(rf"key\s*=\s*[^,)]*\b{col}\b")
+        offenders += scan(rf"\b(sort|rank|order)\w*\s*[=(][^)]*\b{col}\b")
     assert not offenders, (
-        "Composing the axes is the judgment being handed to the user deliberately. "
-        "Sorting is user-chosen and explicit:\n" + "\n".join(offenders)
+        "A direction that also moves sentiment and verbosity feels more effective "
+        "in use, because more is happening. Ordering on measured effect favors the "
+        "confounded submission and placement compounds it:\n" + "\n".join(offenders)
     )
 
 

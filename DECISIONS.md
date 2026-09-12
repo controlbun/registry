@@ -241,6 +241,23 @@ accident. Cost accepted: no native array type, so author-declared confound axes 
 recipe payloads are JSON columns, and a type review when it moves.
 **Supersedes:** "Postgres for metadata" in the v0 scope section of `BRIEF.md`.
 
+## 2026-09-12 A default ordering is allowed; no ordering derives from an eval result
+**Decided:** Multi-submission views carry a default ordering. Below 100 submissions
+it is recency, because recency is the only signal that exists at that size. Above
+100 it is a decayed engagement score, where engagement means evaluations and attacks
+by someone other than the author. The ordering is named on screen and switchable.
+**Why:** A page that arrives in storage order reads as broken rather than as
+principled, and the reader who wants a starting point is not the enemy. What the
+earlier entry was actually protecting is narrower and survives intact: no ordering
+derives from a measured result. A direction that also moves sentiment and verbosity
+feels more effective in use because more is happening, so ranking on measured effect
+would systematically favor the confounded submission and placement would compound it.
+Engagement is scrutiny by others, which is the audit-queue signal, not popularity.
+The trending function is a placeholder to be replaced by someone who works on
+ranking; it is written so that with no engagement anywhere it collapses into recency
+rather than inventing a signal.
+**Supersedes:** No ranking by default, sorting is user-chosen.
+
 ---
 
 ## Open, blocking launch (not code)

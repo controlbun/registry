@@ -81,7 +81,23 @@ def test_nothing_is_ranked(page):
     for marker in ("#1", "#2", "1st", "2nd", "winner", "overall score",
                    "composite", "top pick", "ranked #"):
         assert marker not in body, f"page implies an ordering via {marker!r}"
-    assert "nothing is ranked" in body
+    # A default ordering now exists, so the claim is no longer that nothing is
+    # ordered. It is that the ordering is disclosed and changeable, which is what
+    # separates a starting point from a verdict.
+    assert "ordered by" in body, "the active ordering must be named on screen"
+
+
+def test_ordering_is_switchable(page):
+    body = text_of(page)
+    assert "Recently added" in body or "Trending" in body
+    assert 'data-order=' in page, "a reader must be able to change the ordering"
+
+
+def test_ordering_explains_itself(page):
+    body = text_of(page).lower()
+    assert "newest first" in body or "decayed by age" in body, (
+        "an ordering the reader cannot interrogate is a verdict wearing a label"
+    )
 
 
 def test_score_without_coherence_renders_as_uninterpretable(tmp_path):
