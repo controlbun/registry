@@ -61,10 +61,21 @@ export function getStaticPaths() {
 }
 
 const { view, model, block, claimant } = Astro.props;
+
+// Built once, sliced per view, so a segment can never link somewhere its text
+// does not describe.
+const crumbs = {
+  registry: { text: "Registry", href: "/" },
+  models: { text: "Models", href: "/models/" },
+  model: { text: model.model_id, href: `/models/${model.model_id}/` },
+  label: block
+    ? { text: block.label, href: `/models/${model.model_id}/${block.label}/` }
+    : null,
+};
 ---
 
 {view === "model" && (
-  <Base title={`${model.model_id} — interventions`} crumb="all models" ordering>
+  <Base title={`${model.model_id} — interventions`} trail={[crumbs.registry, crumbs.models]} ordering>
     <h1 slot="heading" class="mono">{model.model_id}</h1>
 
     <p class="lede">
@@ -122,7 +133,7 @@ const { view, model, block, claimant } = Astro.props;
 {view === "label" && (
   <Base
     title={`${block.label} on ${model.model_id}`}
-    crumb="all models"
+    trail={[crumbs.registry, crumbs.models, crumbs.model]}
     ordering
   >
     <h1 slot="heading">{block.label}</h1>
@@ -150,7 +161,7 @@ const { view, model, block, claimant } = Astro.props;
 {view === "submission" && (
   <Base
     title={`${claimant.author}/${block.label} on ${model.model_id}`}
-    crumb="all models"
+    trail={[crumbs.registry, crumbs.models, crumbs.model, crumbs.label]}
   >
     <h1 slot="heading" class="mono">
       {claimant.author}/{claimant.label}@{claimant.version}

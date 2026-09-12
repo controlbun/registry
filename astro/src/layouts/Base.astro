@@ -4,14 +4,17 @@ import data from "../data/registry.json";
 
 interface Props {
   title: string;
-  crumb?: string;
+  // Every level above this page, outermost first. Each entry links to where its
+  // text says it goes: a crumb reading "Models" that lands on the home page is
+  // worse than no crumb, because the reader stops checking.
+  trail?: { text: string; href: string }[];
   // Opt-in, and false by default. The ordering control belongs only on a page
   // that shows a list; on a single artifact there is nothing to order, and a
   // control that reorders nothing is noise that implies the page is a view of
   // many things when it is a view of one.
   ordering?: boolean;
 }
-const { title, crumb, ordering = false } = Astro.props;
+const { title, trail = [], ordering = false } = Astro.props;
 const corpus = data.corpus;
 ---
 
@@ -24,7 +27,16 @@ const corpus = data.corpus;
   </head>
   <body>
     <main>
-      {crumb && <nav class="crumbs"><a href="/">&larr; {crumb}</a></nav>}
+      {trail.length > 0 && (
+        <nav class="crumbs" aria-label="Breadcrumb">
+          {trail.map((step, i) => (
+            <>
+              {i > 0 && <span class="sep">/</span>}
+              <a href={step.href}>{step.text}</a>
+            </>
+          ))}
+        </nav>
+      )}
 
       <slot name="heading" />
 
