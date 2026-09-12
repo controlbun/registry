@@ -1,0 +1,122 @@
+---
+import Base from "../layouts/Base.astro";
+import Claimant from "../components/Claimant.astro";
+import Pairs from "../components/Pairs.astro";
+import data from "../data/registry.json";
+
+// Everything below the index lives under the model, because an intervention is a
+// tensor in one model's basis at one layer and does nothing for another model.
+//
+//   /<org>/<name>/           every intervention published against that model
+//   /<org>/<name>/<label>/   everyone claiming that label, on that model
+//
+// A label has no page of its own. Claimants of the same word on different models
+// are not comparable: the angle between their vectors is undefined and their evals
+// are not commensurable. Putting them in one table would have been a view of
+// nothing. The plurality worth rendering is several people meaning different
+// things by one word against one model, where the disagreement is real.
+//
+// Model ids keep their slash, so the route is a catch-all and the depth of a model
+// id is not something this file needs to know.
+export function getStaticPaths() {
+  const routes = [];
+
+  for (const model of data.model_index) {
+    routes.push({
+      params: { path: model.model_id },
+      props: { view: "model", model, block: null },
+    });
+
+    for (const block of model.labels) {
+      routes.push({
+        params: { path: `${model.model_id}/${block.label}` },
+        props: { view: "label", model, block },
+      });
+    }
+  }
+  return routes;
+}
+
+const { view, model, block } = Astro.props;
+---
+
+{view === "model" && (
+  <Base title={`${model.model_id} — interventions`} crumb="all models">
+    <h1 slot="heading" class="mono">{model.model_id}</h1>
+
+    <p class="lede">
+      Every intervention published against this model. Artifacts do not carry over
+      between models, so this page is the unit that composes: angle similarity is
+      only meaningful here, inside one model at one layer and hook point.
+    </p>
+
+    <div class="scope">
+      <div><span class="k">Artifacts</span>{model.claimant_count}</div>
+      <div><span class="k">Labels claimed</span>{model.label_count}</div>
+      <div><span class="k">Kinds</span><span class="mono">{model.kinds.join(", ")}</span></div>
+      <div><span class="k">Hook points</span><span class="mono">{model.hook_points.join(", ")}</span></div>
+      <div><span class="k">Layers</span>{model.layers.join(", ")}</div>
+      <div>
+        <span class="k">Revisions pinned</span>
+        <span class="mono">{model.revisions.map((r) => r.slice(0, 12)).join(", ")}</span>
+      </div>
+    </div>
+
+    <div data-pagefind-body>
+      <p class="note" data-pagefind-filter="model">
+        Base and instruct are different models, and so is a different revision.
+        Each artifact names the revision it was extracted against.
+      </p>
+
+      <table class="labels">
+        <thead>
+          <tr>
+            <th><button data-col="0">Label</button></th>
+            <th><button data-col="1">Claimants</button></th>
+          </tr>
+        </thead>
+        <tbody>
+          {model.labels.map((b) => (
+            <tr>
+              <td><a href={`/${model.model_id}/${b.label}/`}>{b.label}</a></td>
+              <td>{b.claimants.length}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <p class="note">
+        A label is a claim anyone can make, not a slot anyone owns. Several
+        claimants on one label is the normal case, and the disagreement between
+        them is the content rather than a duplication to clean up.
+      </p>
+    </div>
+  </Base>
+)}
+
+{view === "label" && (
+  <Base
+    title={`${block.label} on ${model.model_id}`}
+    crumb="all models"
+  >
+    <h1 slot="heading">{block.label}</h1>
+
+    <p class="lede">
+      Everyone claiming <strong>{block.label}</strong> against
+      {" "}<a class="mono" href={`/${model.model_id}/`}>{model.model_id}</a>.
+      Computed on demand and owned by nobody: this does not resolve to an artifact.
+      {" "}{block.claimants.length} claimant{block.claimants.length === 1 ? "" : "s"}.
+    </p>
+
+    <div data-pagefind-body>
+      {block.claimants.map((c) => <Claimant claimant={c} />)}
+
+      {block.pairs.length > 0 && (
+        <>
+          <h2>Between claimants</h2>
+          <Pairs pairs={block.pairs} />
+        </>
+      )}
+    </div>
+  </Base>
+)}

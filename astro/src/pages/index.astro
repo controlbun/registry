@@ -94,7 +94,7 @@ const evidenceFacet = facet((r) => r.evidence);
               data-evidence={m.evidence.join("|")}
             >
               <td>
-                <a class="mono" href={`/models/${m.model_id}/`}>{m.model_id}</a>
+                <a class="mono" href={`/${m.model_id}/`}>{m.model_id}</a>
                 <div class="provenance">
                   {m.revisions.length} revision{m.revisions.length === 1 ? "" : "s"},
                   layer{m.layers.length === 1 ? "" : "s"} {m.layers.join(", ")}
