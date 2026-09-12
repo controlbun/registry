@@ -84,6 +84,9 @@ design. Tests that fail the build:
   Schema `CHECK` constraints listing permitted strings fail the build.
 - A judged score renders with a coherence measure beside it or renders as
   uninterpretable, never as a bare number
+- Cosine similarity is a displayed fact, never evidence of disagreement and never
+  a sort key. Behaviorally indistinguishable vectors can sit far apart in angle
+  (arXiv:2602.06801)
 
 Add one whenever a new invariant is settled. An invariant that is only in prose
 is not an invariant.

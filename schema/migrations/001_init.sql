@@ -105,7 +105,7 @@ CREATE TABLE recipe (
     entrypoint_version  TEXT,
     container_digest    TEXT,
     -- Recipe is the structural constraint. Two vectors indistinguishable by
-    -- behaviour are still distinguishable by provenance. See the identifiability
+    -- behavior are still distinguishable by provenance. See the identifiability
     -- section in VALIDATION.md.
     theory              TEXT,
     FOREIGN KEY (author, label, version) REFERENCES submission (author, label, version)
@@ -198,7 +198,7 @@ CREATE TABLE reproduction (
     reproduced_intervention_id TEXT NOT NULL REFERENCES intervention (id),
     reproducer          TEXT    NOT NULL,
     run_id              TEXT    REFERENCES run (id),
-    -- Displayed as a fact and not as evidence of disagreement. Behaviourally
+    -- Displayed as a fact and not as evidence of disagreement. Behaviorally
     -- indistinguishable vectors can sit far apart in angle: see the identifiability
     -- section in VALIDATION.md.
     cosine_to_original  REAL,   -- eval-result

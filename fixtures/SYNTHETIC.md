@@ -10,7 +10,7 @@ Two conventions make that impossible to miss, by design rather than by trust:
 - **Scores are repeated-digit decimals.** `0.1111`, `0.2222`, `0.7777`. Real
   measurements do not look like this. If you ever see one of these on a page that
   claims to show real data, the fixture loader has leaked into production.
-- **Vectors are integer ramps**, `[1,2,3,...]` and its reverse, normalised. They
+- **Vectors are integer ramps**, `[1,2,3,...]` and its reverse, normalized. They
   are not directions in any model's residual basis, and the models and revisions
   they claim to belong to are placeholders that do not resolve.
 

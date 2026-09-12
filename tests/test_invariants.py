@@ -210,7 +210,7 @@ def test_cosine_is_never_evidence_of_disagreement():
     offenders = scan(r"(disagree|diverg|differ|conflict)\w*.*cos(ine)?_?sim")
     offenders += scan(r"sort\w*.*cos(ine)?_?sim")
     assert not offenders, (
-        "Behaviourally indistinguishable vectors can sit far apart in angle "
+        "Behaviorally indistinguishable vectors can sit far apart in angle "
         "(arXiv:2602.06801). Low cosine similarity is not by itself a finding:\n"
         + "\n".join(offenders)
     )
