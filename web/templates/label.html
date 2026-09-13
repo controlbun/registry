@@ -33,6 +33,8 @@
   .ordering button { font:inherit; color:inherit; background:none;
                      border:1px solid var(--line); border-radius:3px;
                      padding:.1rem .5rem; cursor:pointer; }
+  .ordering button[aria-pressed="true"] { background:var(--wash);
+    border-color:var(--dim); }
   .ordering-why { flex-basis:100%; }
 </style>
 
@@ -43,21 +45,7 @@
   nobody. It does not resolve to an artifact. {{ claimants|length }} claimants.
 </p>
 
-<div class="ordering">
-  Ordered by <strong>{{ active_order_name }}</strong>.
-  {%- for key, name in order_choices %}{% if key != active_order %}
-    <button type="button" data-order="{{ key }}">{{ name }}</button>
-  {%- endif %}{% endfor %}
-  <span class="ordering-why">
-    {% if corpus_size < corpus_threshold %}
-      {{ corpus_size }} submissions, under the {{ corpus_threshold }} needed before
-      engagement means anything, so newest first is the whole signal.
-    {% else %}
-      Trending weighs evaluations and attacks by people other than the author,
-      decayed by age. Never a measured score, and not downloads.
-    {% endif %}
-  </span>
-</div>
+{% include "_ordering.html" %}
 
 {% if any_synthetic %}
 <div class="synthetic">
@@ -67,8 +55,12 @@
 </div>
 {% endif %}
 
+{# The container the ordering control reorders. It holds the claimant blocks and
+   nothing else, because the handler treats every child as an item. #}
+<div class="claimants" data-orderable>
 {% for c in claimants %}
-<div class="claimant">
+<div class="claimant" data-created="{{ c.created_at }}"
+     data-engagement="{{ c.attacks|length + c.verifications|length }}">
   <div class="who">{{ c.author }}/{{ c.label }}@{{ c.version }}</div>
   <div class="provenance">
     {% if c.kind %}
@@ -136,6 +128,7 @@
   {% endfor %}
 </div>
 {% endfor %}
+</div>
 
 <h2>Between claimants</h2>
 <table id="pairs">

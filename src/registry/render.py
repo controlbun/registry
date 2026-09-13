@@ -81,7 +81,7 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
 
     # Optional by design. A published vector whose procedure was never written down
     # is still a submission, and its absence renders as absence rather than as a
-    # gap to apologise for.
+    # gap to apologize for.
     rec = conn.execute(
         "SELECT * FROM recipe WHERE author=? AND label=? AND version=?",
         (row["author"], row["label"], row["version"]),
@@ -188,6 +188,10 @@ def render_label(
         order_choices=[(k, v) for k, v in ORDER_LABELS.items()],
         corpus_size=order.corpus_size(conn),
         corpus_threshold=order.CORPUS_THRESHOLD,
+        # Handed to the template so the in-page reorder runs this module's
+        # trending function rather than a second copy of it that drifts.
+        gravity=order.GRAVITY,
+        age_offset_hours=order.AGE_OFFSET_HOURS,
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{label}.html"
@@ -205,7 +209,8 @@ def render_index(conn: sqlite3.Connection, out_dir: Path) -> Path:
     labels = []
     for (label,) in conn.execute("SELECT DISTINCT label FROM submission"):
         rows = list(conn.execute(
-            "SELECT i.kind, i.model_id, s.author FROM submission s"
+            "SELECT i.kind, i.model_id, s.author, s.version, s.created_at"
+            " FROM submission s"
             " LEFT JOIN intervention i"
             " ON i.author=s.author AND i.label=s.label AND i.version=s.version"
             " WHERE s.label = ?", (label,)))
@@ -214,6 +219,13 @@ def render_index(conn: sqlite3.Connection, out_dir: Path) -> Path:
             "claimants": len({r["author"] for r in rows}),
             "kinds": sorted({r["kind"] for r in rows if r["kind"]}),
             "models": sorted({r["model_id"] for r in rows if r["model_id"]}),
+            # The two inputs order.py uses, shipped per row so the reader can
+            # switch ordering in the page rather than by rebuilding the site.
+            "latest": max(r["created_at"] for r in rows),
+            "engagement": sum(
+                order.engagement(conn, r["author"], label, r["version"])
+                for r in rows
+            ),
         })
 
     active = order.active_order(conn)
@@ -223,6 +235,10 @@ def render_index(conn: sqlite3.Connection, out_dir: Path) -> Path:
         order_choices=[(k, v) for k, v in ORDER_LABELS.items()],
         corpus_size=order.corpus_size(conn),
         corpus_threshold=order.CORPUS_THRESHOLD,
+        # Handed to the template so the in-page reorder runs this module's
+        # trending function rather than a second copy of it that drifts.
+        gravity=order.GRAVITY,
+        age_offset_hours=order.AGE_OFFSET_HOURS,
         labels=labels,
         total_claimants=sum(l["claimants"] for l in labels),
         all_kinds=sorted({k for l in labels for k in l["kinds"]}),

@@ -87,9 +87,11 @@ const evidenceFacet = facet((r) => r.evidence);
             <th><button data-col="1">Artifacts</button></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody data-orderable>
           {rows.map((m) => (
             <tr
+              data-created={m.latest}
+              data-engagement={m.engagement}
               data-kinds={m.kinds.join("|")}
               data-hooks={m.hook_points.join("|")}
               data-evidence={m.evidence.join("|")}
@@ -117,7 +119,7 @@ const evidenceFacet = facet((r) => r.evidence);
       <p class="note">
         <span class="mono">kind</span> and <span class="mono">hook_point</span> are
         open strings. The values in the sidebar are whatever the corpus contains,
-        not a permitted set, and an artifact whose kind nothing recognises is still
+        not a permitted set, and an artifact whose kind nothing recognizes is still
         stored and still shown.
       </p>
     </div>

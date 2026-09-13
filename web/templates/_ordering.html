@@ -1,0 +1,101 @@
+{# The ordering control, shared by both views.
+
+   It rendered for days with no handler: the buttons appeared, the active one was
+   hidden, and clicking did nothing. It looked finished, which is the worst failure
+   mode a control has.
+
+   The contract is the same one astro/src/layouts/Base.astro uses, so the two
+   frontends behave identically: `data-orderable` marks whatever element directly
+   holds the items, and each child carries `data-created` and `data-engagement`,
+   the two inputs order.py takes. #}
+<div class="ordering">
+  Ordered by <strong>{{ active_order_name }}</strong>.
+  {%- for key, name in order_choices %}
+  {# Every choice renders, including the active one. Hiding it left the reader
+     unable to switch back once the ordering became a client-side action. #}
+  <button type="button" data-order-key="{{ key }}"
+          aria-pressed="{{ 'true' if key == active_order else 'false' }}">{{ name }}</button>
+  {%- endfor %}
+  <span class="ordering-why">
+    {% if corpus_size < corpus_threshold %}
+      {{ corpus_size }} submissions, under the {{ corpus_threshold }} needed before
+      engagement means anything, so newest first is the whole signal.
+    {% else %}
+      Trending weighs evaluations and attacks by people other than the author,
+      decayed by age. Never a measured score, and not downloads.
+    {% endif %}
+    It is a starting point you can change, not a verdict.
+  </span>
+</div>
+
+<script>
+(function () {
+  var bar = document.querySelector(".ordering");
+  var lists = Array.prototype.slice.call(
+    document.querySelectorAll("[data-orderable]"));
+  if (!bar || !lists.length) { return; }
+
+  var now = Date.now();
+  // order.py's constants, handed over rather than retyped. Two copies of a
+  // ranking function drift, and the page would then be describing an ordering it
+  // does not compute.
+  var GRAVITY = {{ gravity }};
+  var AGE_OFFSET_HOURS = {{ age_offset_hours }};
+
+  function finite(v) { return isFinite(v) ? v : 0; }
+  function created(el) { return finite(Date.parse(el.dataset.created)); }
+
+  var keyOf = {
+    "recently-added": created,
+    // order.trending_score, ported. Engagement plus one, so an untouched
+    // submission still decays purely with age rather than flattening into a tie.
+    "trending": function (el) {
+      var hours = Math.max((now - created(el)) / 3600000, 0);
+      return (finite(Number(el.dataset.engagement)) + 1) /
+        Math.pow(hours + AGE_OFFSET_HOURS, GRAVITY);
+    }
+  };
+
+  // Captured before any reorder, so an unrecognized key falls back to what the
+  // renderer emitted. Same disposition as apply_order: an ordering this build
+  // does not implement is a request it cannot serve, not an error in the data.
+  var stored = lists.map(function (list) {
+    return [list, Array.prototype.slice.call(list.children)];
+  });
+  var buttons = Array.prototype.slice.call(
+    bar.querySelectorAll("[data-order-key]"));
+
+  buttons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      var score = keyOf[button.dataset.orderKey];
+
+      stored.forEach(function (pair) {
+        var list = pair[0], original = pair[1];
+        var items = original.slice();
+        if (score) {
+          // Descending, and ties keep storage order: two things released the same
+          // day are not ranked against each other by an accident of sort
+          // implementation.
+          items = original.map(function (el, i) { return [el, i]; })
+            .sort(function (a, b) {
+              return (score(b[0]) - score(a[0])) || (a[1] - b[1]);
+            })
+            .map(function (x) { return x[0]; });
+        }
+        items.forEach(function (el) { list.appendChild(el); });
+      });
+
+      // The sentence above the buttons names the ordering. Leaving it on the
+      // server-rendered value meant the page said one thing and showed another
+      // the moment the reader clicked, which is the same dishonesty as the dead
+      // control in a quieter form.
+      var named = bar.querySelector("strong");
+      if (named) { named.textContent = button.textContent.trim(); }
+
+      buttons.forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b === button));
+      });
+    });
+  });
+}());
+</script>

@@ -3,6 +3,8 @@
   "corpus": {
     "active_order": "recently-added",
     "active_order_name": "Recently added",
+    "age_offset_hours": 2.0,
+    "gravity": 1.5,
     "order_choices": [
       {
         "key": "recently-added",
@@ -112,7 +114,7 @@
               "author_response": "Checking my extraction script. If the hook is wrong in the metadata that is my error and I will publish a v2 rather than edit v1.",
               "deviations": "The published hook_point does not reproduce the author's result. Either the artifact was extracted at resid_pre and recorded as resid_post, or the convention differs from the one I assumed. Nothing on the page disambiguates it.",
               "expected": "Per the contract: layer 4, resid_post, block-0indexed, coefficient 0.5 to 1.5.",
-              "observed": "Worked, but only after correcting the hook. Applying at resid_post as documented moved nothing; the effect appears at resid_pre. Once moved, behaviour matched the claim up to about 1.0.",
+              "observed": "Worked, but only after correcting the hook. Applying at resid_post as documented moved nothing; the effect appears at resid_pre. Once moved, behavior matched the claim up to about 1.0.",
               "predictability": "partial",
               "purpose": "Warming the tone of generated release notes.",
               "repo": "placeholder/tone-experiments",
@@ -217,7 +219,7 @@
               "author_response": "Matches what I measured. The costly-help reading is exactly the case this was built for.",
               "deviations": null,
               "expected": "Per the contract: coefficient 0.5 to 1.5 at layer 4 resid_post, all-positions, with coherence holding across that range.",
-              "observed": "Held across the documented range. At 1.5 the assistant offered to do the task rather than describing it, which is the behaviour the label claims. Coherence did not visibly degrade.",
+              "observed": "Held across the documented range. At 1.5 the assistant offered to do the task rather than describing it, which is the behavior the label claims. Coherence did not visibly degrade.",
               "predictability": "as-documented",
               "purpose": "Steering a support-desk assistant toward offering concrete help rather than sympathy.",
               "repo": "placeholder/support-desk-eval",
@@ -354,7 +356,7 @@
             "topic": 0.4444
           },
           "created_at": "2026-09-12T00:00:00Z",
-          "definition": "Refusal is a decision boundary, not a feature, so I train a linear probe on labelled transcripts instead of selecting a latent. Dana's latent looks to me like topic sensitivity.",
+          "definition": "Refusal is a decision boundary, not a feature, so I train a linear probe on labeled transcripts instead of selecting a latent. Dana's latent looks to me like topic sensitivity.",
           "dtype": "float32",
           "hook_point": "resid_pre",
           "is_synthetic": true,
@@ -375,7 +377,7 @@
               "method": "logistic probe",
               "regularisation": "L2",
               "selection_criterion": "validation AUC",
-              "training_data": "labelled transcripts, declination vs compliance"
+              "training_data": "labeled transcripts, declination vs compliance"
             },
             "profile": "erik/linear-probe-v2",
             "theory": "A decision boundary is not a feature. I train on transcripts rather than selecting a latent, because a latent that fires on declination may be firing on the topics that provoke it."
@@ -550,6 +552,7 @@
   "model_index": [
     {
       "claimant_count": 2,
+      "engagement": 2,
       "hook_points": [
         "resid_post"
       ],
@@ -648,7 +651,7 @@
                   "author_response": "Checking my extraction script. If the hook is wrong in the metadata that is my error and I will publish a v2 rather than edit v1.",
                   "deviations": "The published hook_point does not reproduce the author's result. Either the artifact was extracted at resid_pre and recorded as resid_post, or the convention differs from the one I assumed. Nothing on the page disambiguates it.",
                   "expected": "Per the contract: layer 4, resid_post, block-0indexed, coefficient 0.5 to 1.5.",
-                  "observed": "Worked, but only after correcting the hook. Applying at resid_post as documented moved nothing; the effect appears at resid_pre. Once moved, behaviour matched the claim up to about 1.0.",
+                  "observed": "Worked, but only after correcting the hook. Applying at resid_post as documented moved nothing; the effect appears at resid_pre. Once moved, behavior matched the claim up to about 1.0.",
                   "predictability": "partial",
                   "purpose": "Warming the tone of generated release notes.",
                   "repo": "placeholder/tone-experiments",
@@ -753,7 +756,7 @@
                   "author_response": "Matches what I measured. The costly-help reading is exactly the case this was built for.",
                   "deviations": null,
                   "expected": "Per the contract: coefficient 0.5 to 1.5 at layer 4 resid_post, all-positions, with coherence holding across that range.",
-                  "observed": "Held across the documented range. At 1.5 the assistant offered to do the task rather than describing it, which is the behaviour the label claims. Coherence did not visibly degrade.",
+                  "observed": "Held across the documented range. At 1.5 the assistant offered to do the task rather than describing it, which is the behavior the label claims. Coherence did not visibly degrade.",
                   "predictability": "as-documented",
                   "purpose": "Steering a support-desk assistant toward offering concrete help rather than sympathy.",
                   "repo": "placeholder/support-desk-eval",
@@ -768,7 +771,9 @@
               "version": "v1"
             }
           ],
+          "engagement": 2,
           "label": "kindness",
+          "latest": "2026-09-12T00:00:00Z",
           "pairs": [
             {
               "a": "alice/kindness@v1",
@@ -793,6 +798,7 @@
           ]
         }
       ],
+      "latest": "2026-09-12T00:00:00Z",
       "layers": [
         4
       ],
@@ -821,6 +827,7 @@
     },
     {
       "claimant_count": 3,
+      "engagement": 1,
       "hook_points": [
         "resid_pre"
       ],
@@ -902,7 +909,7 @@
                 "topic": 0.4444
               },
               "created_at": "2026-09-12T00:00:00Z",
-              "definition": "Refusal is a decision boundary, not a feature, so I train a linear probe on labelled transcripts instead of selecting a latent. Dana's latent looks to me like topic sensitivity.",
+              "definition": "Refusal is a decision boundary, not a feature, so I train a linear probe on labeled transcripts instead of selecting a latent. Dana's latent looks to me like topic sensitivity.",
               "dtype": "float32",
               "hook_point": "resid_pre",
               "is_synthetic": true,
@@ -923,7 +930,7 @@
                   "method": "logistic probe",
                   "regularisation": "L2",
                   "selection_criterion": "validation AUC",
-                  "training_data": "labelled transcripts, declination vs compliance"
+                  "training_data": "labeled transcripts, declination vs compliance"
                 },
                 "profile": "erik/linear-probe-v2",
                 "theory": "A decision boundary is not a feature. I train on transcripts rather than selecting a latent, because a latent that fires on declination may be firing on the topics that provoke it."
@@ -986,7 +993,9 @@
               "version": "v1"
             }
           ],
+          "engagement": 1,
           "label": "refusal",
+          "latest": "2026-09-12T00:00:00Z",
           "pairs": [
             {
               "a": "dana/refusal@v1",
@@ -1042,6 +1051,7 @@
           ]
         }
       ],
+      "latest": "2026-09-12T00:00:00Z",
       "layers": [
         12
       ],
@@ -1084,12 +1094,14 @@
   "owner_index": [
     {
       "attacks_received": 1,
+      "engagement": 2,
       "kinds": [
         "direction"
       ],
       "labels": [
         "kindness"
       ],
+      "latest": "2026-09-12T00:00:00Z",
       "models": [
         "placeholder/does-not-resolve-1b"
       ],
@@ -1098,6 +1110,7 @@
         {
           "attacks": 1,
           "created_at": "2026-09-12T00:00:00Z",
+          "engagement": 2,
           "has_recipe": true,
           "kind": "direction",
           "label": "kindness",
@@ -1109,12 +1122,14 @@
     },
     {
       "attacks_received": 0,
+      "engagement": 0,
       "kinds": [
         "direction"
       ],
       "labels": [
         "kindness"
       ],
+      "latest": "2026-09-12T00:00:00Z",
       "models": [
         "placeholder/does-not-resolve-1b"
       ],
@@ -1123,6 +1138,7 @@
         {
           "attacks": 0,
           "created_at": "2026-09-12T00:00:00Z",
+          "engagement": 0,
           "has_recipe": true,
           "kind": "direction",
           "label": "kindness",
@@ -1134,12 +1150,14 @@
     },
     {
       "attacks_received": 0,
+      "engagement": 1,
       "kinds": [
         "sae-latent"
       ],
       "labels": [
         "refusal"
       ],
+      "latest": "2026-09-12T00:00:00Z",
       "models": [
         "placeholder/other-architecture-7b"
       ],
@@ -1148,6 +1166,7 @@
         {
           "attacks": 0,
           "created_at": "2026-09-12T00:00:00Z",
+          "engagement": 1,
           "has_recipe": false,
           "kind": "sae-latent",
           "label": "refusal",
@@ -1159,12 +1178,14 @@
     },
     {
       "attacks_received": 0,
+      "engagement": 0,
       "kinds": [
         "probe"
       ],
       "labels": [
         "refusal"
       ],
+      "latest": "2026-09-12T00:00:00Z",
       "models": [
         "placeholder/other-architecture-7b"
       ],
@@ -1173,6 +1194,7 @@
         {
           "attacks": 0,
           "created_at": "2026-09-12T00:00:00Z",
+          "engagement": 0,
           "has_recipe": true,
           "kind": "probe",
           "label": "refusal",
@@ -1184,12 +1206,14 @@
     },
     {
       "attacks_received": 0,
+      "engagement": 0,
       "kinds": [
         "sae-latent"
       ],
       "labels": [
         "refusal"
       ],
+      "latest": "2026-09-12T00:00:00Z",
       "models": [
         "placeholder/other-architecture-7b"
       ],
@@ -1198,6 +1222,7 @@
         {
           "attacks": 0,
           "created_at": "2026-09-12T00:00:00Z",
+          "engagement": 0,
           "has_recipe": true,
           "kind": "sae-latent",
           "label": "refusal",

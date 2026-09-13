@@ -33,7 +33,7 @@ def text_of(html: str) -> str:
     """Reader-visible copy only.
 
     Script and style contents survive naive tag-stripping and are not text a reader
-    sees. Leaving CSS in produced a false positive once already: the hex colour
+    sees. Leaving CSS in produced a false positive once already: the hex color
     #1a1a1a contains "#1" and read as a ranking marker.
     """
     for tag in ("script", "style"):
@@ -87,10 +87,20 @@ def test_nothing_is_ranked(page):
     assert "ordered by" in body, "the active ordering must be named on screen"
 
 
-def test_ordering_is_switchable(page):
+def test_every_ordering_is_named_on_screen(page):
+    """What the reader can see, not what the control does.
+
+    This used to assert that `data-order=` appeared in the markup and called that
+    "a reader must be able to change the ordering". It was true of a control with
+    no handler behind it, which is what shipped. Behavior is tested by running the
+    page's own script in test_ordering_control.py; what belongs here is the copy.
+
+    Both orderings are named rather than either, because a bar that names only the
+    active one leaves the alternative undiscoverable.
+    """
     body = text_of(page)
-    assert "Recently added" in body or "Trending" in body
-    assert 'data-order=' in page, "a reader must be able to change the ordering"
+    assert "Recently added" in body
+    assert "Trending" in body
 
 
 def test_ordering_explains_itself(page):

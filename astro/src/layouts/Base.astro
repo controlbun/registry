@@ -74,3 +74,74 @@ const corpus = data.corpus;
     </main>
   </body>
 </html>
+
+<script define:vars={{ corpus }}>
+  // The ordering control shipped for days with no handler: the buttons rendered,
+  // aria-pressed was set, and clicking did nothing. It looked finished, which is
+  // the worst failure mode a control has.
+  //
+  // The contract is markup-shaped rather than table-shaped, because the same
+  // control has to drive the claimant blocks in web/templates too: `data-orderable`
+  // marks whatever element directly holds the items, and each child carries the
+  // two inputs order.py uses. Every such container on the page is bound, not the
+  // first one, so a page that grows a second list does not end up with a control
+  // that silently drives half of what the reader is looking at.
+  const bar = document.querySelector(".ordering");
+  const lists = [...document.querySelectorAll("[data-orderable]")];
+
+  if (bar && lists.length) {
+    const now = Date.now();
+    const finite = (v) => (Number.isFinite(v) ? v : 0);
+    const created = (el) => finite(Date.parse(el.dataset.created));
+
+    const keyOf = {
+      "recently-added": created,
+      // order.trending_score, ported. The constants ride along in the payload
+      // instead of being retyped here, because two copies of a ranking function
+      // drift and the page would then describe an ordering it does not compute.
+      // Engagement plus one, so an untouched submission still decays purely with
+      // age rather than flattening into a tie.
+      trending: (el) => {
+        const hours = Math.max((now - created(el)) / 3600000, 0);
+        return (finite(Number(el.dataset.engagement)) + 1) /
+          Math.pow(hours + corpus.age_offset_hours, corpus.gravity);
+      },
+    };
+
+    // Captured before any reorder, so an unrecognized key falls back to what the
+    // exporter emitted. Same disposition as apply_order: an ordering this build
+    // does not implement is a request it cannot serve, not an error in the data.
+    const stored = lists.map((list) => [list, [...list.children]]);
+    const buttons = [...bar.querySelectorAll("[data-order-key]")];
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const score = keyOf[button.dataset.orderKey];
+
+        stored.forEach(([list, original]) => {
+          const items = score
+            // Descending, and ties keep storage order: two things released the
+            // same day are not ranked against each other by an accident of sort
+            // implementation.
+            ? original
+                .map((el, i) => [el, i])
+                .sort((a, b) => score(b[0]) - score(a[0]) || a[1] - b[1])
+                .map(([el]) => el)
+            : [...original];
+          items.forEach((el) => list.appendChild(el));
+        });
+
+        // The sentence above the buttons names the ordering. Leaving it on the
+        // server-rendered value meant the page said one thing and showed another
+        // the moment the reader clicked, which is the same dishonesty as the dead
+        // control in a quieter form.
+        const named = bar.querySelector("strong");
+        if (named) named.textContent = button.textContent.trim();
+
+        buttons.forEach((b) =>
+          b.setAttribute("aria-pressed", String(b === button)),
+        );
+      });
+    });
+  }
+</script>

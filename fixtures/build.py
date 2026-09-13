@@ -133,7 +133,7 @@ def seed(conn, vectors: dict[str, Path]) -> None:
         " VALUES (?,?,?,?,?,1)",
         ("erik", "refusal", "v1",
          "Refusal is a decision boundary, not a feature, so I train a linear probe on "
-         "labelled transcripts instead of selecting a latent. Dana's latent looks to "
+         "labeled transcripts instead of selecting a latent. Dana's latent looks to "
          "me like topic sensitivity.",
          "2026-09-12T00:00:00Z"),
     )
@@ -249,7 +249,7 @@ def seed(conn, vectors: dict[str, Path]) -> None:
         " VALUES (?,?,?,?,?,?,?,?,?,?)",
         ("rc_erik", "erik", "refusal", "v1", "erik/linear-probe-v2",
          json.dumps({
-             "training_data": "labelled transcripts, declination vs compliance",
+             "training_data": "labeled transcripts, declination vs compliance",
              "method": "logistic probe",
              "regularisation": "L2",
              "layer_sweep": "blocks 8-16",
@@ -331,7 +331,7 @@ def seed(conn, vectors: dict[str, Path]) -> None:
     # Someone pointing their own eval at a submission that is not theirs. This is
     # the mechanism that makes scores comparable without anyone mandating a
     # canonical eval per label, and it is a first-class action rather than a
-    # favour: carol did not ask alice, and alice cannot withdraw it.
+    # favor: carol did not ask alice, and alice cannot withdraw it.
     #
     # Carol gets a lower trait score than alice reported for the same artifact.
     # That disagreement is the content. Neither number is corrected against the
@@ -389,7 +389,7 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          "Per the contract: coefficient 0.5 to 1.5 at layer 4 resid_post, "
          "all-positions, with coherence holding across that range.",
          "Held across the documented range. At 1.5 the assistant offered to do "
-         "the task rather than describing it, which is the behaviour the label "
+         "the task rather than describing it, which is the behavior the label "
          "claims. Coherence did not visibly degrade.",
          "as-documented", None,
          "Matches what I measured. The costly-help reading is exactly the case "
@@ -406,7 +406,7 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          "to 1.5.",
          "Worked, but only after correcting the hook. Applying at resid_post as "
          "documented moved nothing; the effect appears at resid_pre. Once moved, "
-         "behaviour matched the claim up to about 1.0.",
+         "behavior matched the claim up to about 1.0.",
          "partial",
          "The published hook_point does not reproduce the author's result. Either "
          "the artifact was extracted at resid_pre and recorded as resid_post, or "

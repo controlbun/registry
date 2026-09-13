@@ -130,9 +130,9 @@ const released = (iso) =>
             <th><button data-col="1">Claimants</button></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody data-orderable>
           {model.labels.map((b) => (
-            <tr>
+            <tr data-created={b.latest} data-engagement={b.engagement}>
               <td><a href={`/models/${model.model_id}/${b.label}/`}>{b.label}</a></td>
               <td>{b.claimants.length}</td>
             </tr>
@@ -295,9 +295,9 @@ const released = (iso) =>
             <th>Evidence</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody data-orderable>
           {owner.submissions.map((s) => (
-            <tr>
+            <tr data-created={s.created_at} data-engagement={s.engagement}>
               <td>
                 <a href={`/${owner.owner}/${s.model_id}/${s.label}/`}>{s.label}</a>
                 <div class="provenance mono">{s.kind} @{s.version}</div>

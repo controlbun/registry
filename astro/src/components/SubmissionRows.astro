@@ -13,7 +13,7 @@
 // "Most-used" is not a compliment. Picking the top few by trending or by attacks
 // measures visibility, and visibility compounds: prominent things get looked at,
 // which gets them attacked, which feeds trending, which keeps them prominent. So
-// the aggregate is labelled as similarity to the most-used rather than as a score,
+// the aggregate is labeled as similarity to the most-used rather than as a score,
 // because a reader glancing at a bare number will read it as a grade.
 //
 // Stars and views have no source, so they are not offered as orderings. A
@@ -34,6 +34,10 @@ const rows = claimants.map((c) => ({
   version: c.version,
   created_at: c.created_at,
   attacks: c.attacks.length,
+  // Engagement is scrutiny by other people: attacks plus evaluations somebody
+  // else ran. Same definition order.py uses, so the ordering bar above this
+  // table means the same thing here as it does on every other list.
+  engagement: c.attacks.length + c.verifications.length,
 }));
 
 const released = (iso) =>
@@ -70,9 +74,10 @@ const released = (iso) =>
       <th id="simhead">Similarity</th>
     </tr>
   </thead>
-  <tbody>
+  <tbody data-orderable>
     {rows.map((r) => (
-      <tr data-ref={r.ref} data-created={r.created_at} data-attacks={r.attacks}>
+      <tr data-ref={r.ref} data-created={r.created_at}
+          data-attacks={r.attacks} data-engagement={r.engagement}>
         <td>
           <a href={`/${r.author}/${modelId}/${r.label}/`}>{r.author}</a>
           <div class="provenance mono">@{r.version}</div>

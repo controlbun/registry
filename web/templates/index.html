@@ -29,6 +29,8 @@
   .ordering button { font:inherit; color:inherit; background:none;
                      border:1px solid var(--line); border-radius:3px;
                      padding:.1rem .5rem; cursor:pointer; }
+  .ordering button[aria-pressed="true"] { background:var(--wash);
+    border-color:var(--dim); }
   .ordering-why { flex-basis:100%; }
 </style>
 
@@ -39,21 +41,7 @@
   is the normal case rather than a duplication to clean up.
 </p>
 
-<div class="ordering">
-  Ordered by <strong>{{ active_order_name }}</strong>.
-  {%- for key, name in order_choices %}{% if key != active_order %}
-    <button type="button" data-order="{{ key }}">{{ name }}</button>
-  {%- endif %}{% endfor %}
-  <span class="ordering-why">
-    {% if corpus_size < corpus_threshold %}
-      {{ corpus_size }} submissions, under the {{ corpus_threshold }} needed before
-      engagement means anything, so newest first is the whole signal.
-    {% else %}
-      Trending weighs evaluations and attacks by people other than the author,
-      decayed by age. Never a measured score, and not downloads.
-    {% endif %}
-  </span>
-</div>
+{% include "_ordering.html" %}
 
 <div class="synthetic">
   <strong>Synthetic corpus.</strong> Every entry below is fabricated to exercise the
@@ -80,9 +68,9 @@
     <th>Artifact kinds</th>
     <th>Models</th>
   </tr></thead>
-  <tbody>
+  <tbody data-orderable>
   {% for l in labels %}
-    <tr>
+    <tr data-created="{{ l.latest }}" data-engagement="{{ l.engagement }}">
       <td><a href="{{ l.label }}.html">{{ l.label }}</a></td>
       <td>{{ l.claimants }}</td>
       <td class="mono">
@@ -106,7 +94,7 @@
 <p class="note">
   <span class="mono">kind</span> is an open string. The values present here happen to
   be what the corpus contains; they are not the permitted set, and an artifact whose
-  kind nothing recognises is still storable and still shown.
+  kind nothing recognizes is still storable and still shown.
 </p>
 
 <script>

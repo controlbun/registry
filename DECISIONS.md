@@ -339,3 +339,30 @@ and link out to the feature pages.
   adaptor, without per-attribute supervision. If that ports to language-model residual directions, the registry
   seeds itself from a short trait list rather than one hand-built recipe at a time,
   which changes the cold-start answer. Speculative; do not build toward it.
+
+## 2026-09-13 Adoption comes from the client being easy, not from the ordering
+**Decided:** The ordering is not tilted toward whatever attracts the most users, now
+or later. It stays as already settled: recency below 100 submissions, decayed
+scrutiny above it, named on screen and switchable, with no measured result feeding
+it. Growth is bought by making the client easy to use.
+**Why:** The plan was to order for attraction early and realign to safety once there
+were enough users to matter. The realignment never happens. Whatever is at the top
+gets looked at, which raises its engagement, which keeps it at the top, and by the
+time there is a corpus worth reordering there is also a constituency whose position
+depends on the current order. Ordering for attraction is a lever that only moves one
+way. A good client is a lever with no such ratchet, and it is the part a person
+actually touches.
+
+## 2026-09-13 The ordering control computes what its caption says it computes
+**Decided:** Both frontends reorder in the page, running `order.trending_score` with
+the constants exported from `order.py` rather than a second copy of the formula.
+Every ordering renders as a button, including the active one, and the caption naming
+the active ordering updates when the reader changes it.
+**Why:** The control shipped with buttons, `aria-pressed`, an explanatory caption and
+no handler at all, and the suite was green because the test asserted that the
+attribute was in the markup. A reader clicking it concluded the ordering could not be
+changed. The first fix sorted by the raw engagement count while the caption promised
+engagement decayed by age, which is the same dishonesty one layer down. Behavior is
+now tested by running the page's own script against `order.py`, and
+`tests/test_ordering_bites.py` reintroduces each failure to prove the tests fail on
+it.

@@ -19,8 +19,8 @@
 -- **Why this is not a star rating with prose.** DECISIONS.md rejected user
 -- ratings because a direction that also moves sentiment and verbosity feels more
 -- effective in use, since more is happening, while a well-isolated one feels
--- subtler. So satisfaction systematically favours the confounded artifact. The
--- defence is that a card records a prediction and an outcome rather than a
+-- subtler. So satisfaction systematically favors the confounded artifact. The
+-- defense is that a card records a prediction and an outcome rather than a
 -- feeling: `expected` is what the contract said, `observed` is what happened, and
 -- a card with no `expected` is an opinion rather than evidence.
 --

@@ -7,11 +7,11 @@ Three things it refuses to do, because the registry refuses to do them:
 
 - **A bare label does not resolve.** `load("kindness")` raises and points you at
   `compare("kindness")`. There is no canonical kindness to load, so a client that
-  answered would be inventing one. This is the single behaviour most likely to be
+  answered would be inventing one. This is the single behavior most likely to be
   "fixed" by a future convenience patch.
 - **Nothing is ordered by a measured result.** `compare()` returns claimants in
   storage order. A direction that also moves sentiment feels more effective in
-  use, so ranking on measured effect favours the confounded one.
+  use, so ranking on measured effect favors the confounded one.
 - **A missing measurement is `None`.** Never 0.0, never omitted from the object.
   You can ask whether something was measured; you cannot be handed a number that
   nobody produced.

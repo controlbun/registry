@@ -4,13 +4,12 @@ import data from "../../data/registry.json";
 
 // Everyone who has published. An owner may be a person or an org; nothing here
 // distinguishes them, because nothing about a submission depends on which it is.
-// Latest date computed over all of them rather than by taking submissions[0].
-// Indexing a claimant list down to one is the shape the resolve-to-one-artifact
-// invariant exists to catch, even where the intent here is only a summary date.
-const owners = data.owner_index.map((o) => ({
-  ...o,
-  latest: o.submissions.map((s) => s.created_at).sort().at(-1),
-}));
+//
+// The latest date and the engagement count are computed in export.py over all of
+// someone's submissions rather than read off submissions[0]. Indexing a claimant
+// list down to one is the shape the resolve-to-one-artifact invariant exists to
+// catch, even where the intent is only a summary date.
+const owners = data.owner_index;
 
 const released = (iso) =>
   new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
@@ -37,9 +36,9 @@ const released = (iso) =>
           <th>Latest</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody data-orderable>
         {owners.map((o) => (
-          <tr>
+          <tr data-created={o.latest} data-engagement={o.engagement}>
             <td><a class="mono" href={`/${o.owner}/`}>{o.owner}</a></td>
             <td>{o.submissions.length}</td>
             <td>{o.labels.join(", ")}</td>

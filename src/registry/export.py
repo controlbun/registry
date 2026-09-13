@@ -84,6 +84,12 @@ def build(conn: sqlite3.Connection) -> dict:
             blocks.append({
                 "label": lab,
                 "claimants": cs,
+                # Ordering keys, the same two inputs order.py uses. Shipped per row
+                # so the reader can switch ordering without a round trip.
+                "latest": max(c["created_at"] for c in cs),
+                "engagement": sum(
+                    len(c["attacks"]) + len(c["verifications"]) for c in cs
+                ),
                 "pairs": [
                     p for p in source["pairs"]
                     if p["a"].split("/")[0] in here and p["b"].split("/")[0] in here
@@ -91,6 +97,8 @@ def build(conn: sqlite3.Connection) -> dict:
             })
         model_index.append({
             "model_id": m["model_id"],
+            "latest": max(b["latest"] for b in blocks),
+            "engagement": sum(b["engagement"] for b in blocks),
             "submissions": [
                 {
                     "author": c["author"],
@@ -171,6 +179,10 @@ def build(conn: sqlite3.Connection) -> dict:
                 "score_state": c["score_state"],
                 "has_recipe": c["recipe"] is not None,
                 "attacks": len(c["attacks"]),
+                # Same definition as everywhere else: what other people did to it,
+                # never what it scored. Kept identical to the model_index sum so
+                # the two pages do not order by quietly different quantities.
+                "engagement": len(c["attacks"]) + len(c["verifications"]),
             })
             if c["model_id"]:
                 o["models"].add(c["model_id"])
@@ -189,6 +201,10 @@ def build(conn: sqlite3.Connection) -> dict:
             "kinds": sorted(o["kinds"]),
             "labels": sorted(o["labels"]),
             "attacks_received": o["attacks_received"],
+            # Ordering keys for the owners list, computed over all of someone's
+            # submissions rather than read off the first one.
+            "latest": max(s["created_at"] for s in o["submissions"]),
+            "engagement": sum(s["engagement"] for s in o["submissions"]),
         }
         for o in owners.values()
     ]
@@ -208,6 +224,12 @@ def build(conn: sqlite3.Connection) -> dict:
             "order_choices": [
                 {"key": k, "name": v} for k, v in render.ORDER_LABELS.items()
             ],
+            # The trending constants travel with the data so the browser can run
+            # order.trending_score rather than a second, drifting copy of it. The
+            # page says trending is decayed by age; sorting on a raw engagement
+            # count would have made that sentence false.
+            "gravity": order.GRAVITY,
+            "age_offset_hours": order.AGE_OFFSET_HOURS,
         },
         "any_synthetic": any(
             c["is_synthetic"] for l in labels for c in l["claimants"]

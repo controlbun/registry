@@ -274,7 +274,7 @@ figure.chart svg { width: 100%; height: auto; overflow: visible; }
 .chart .series-1.dot, .chart .series-1-bg { fill: var(--series-1); }
 .chart .series-2.dot, .chart .series-2-bg { fill: var(--series-2); }
 
-/* Text wears text tokens, never the series colour. */
+/* Text wears text tokens, never the series color. */
 .chart .tick { fill: var(--viz-tick); font-size: 11px; font-family: ui-sans-serif, system-ui, sans-serif; }
 .chart .direct { fill: var(--viz-ink); font-size: 11px; font-family: ui-sans-serif, system-ui, sans-serif; }
 
