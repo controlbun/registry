@@ -40,7 +40,16 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from functools import lru_cache
+
 from safetensors.numpy import load_file
+
+
+@lru_cache(maxsize=None)
+def _vector(path: str):
+    """Cached for the same reason comparison is: rechecking every published angle
+    is quadratic in claimants, and the raw artifacts do not change mid-run."""
+    return next(iter(load_file(path).values()))
 
 ROOT = Path(__file__).resolve().parents[1]
 DB = ROOT / "registry.db"
@@ -89,7 +98,7 @@ def check_artifacts_match_their_metadata(conn: sqlite3.Connection) -> None:
             continue
 
         try:
-            vector = next(iter(load_file(str(path)).values()))
+            vector = _vector(str(path))
         except (OSError, ValueError) as exc:
             fail("artifacts", f"{row['id']}: {row['artifact_path']} is unreadable "
                               f"({exc})")
@@ -137,8 +146,7 @@ def check_angles_recompute(payload: dict) -> None:
             # a falsifier that crashes is indistinguishable in CI from one that is
             # broken; neither tells you which number stopped reconciling.
             try:
-                va = next(iter(load_file(str(ROOT / a)).values()))
-                vb = next(iter(load_file(str(ROOT / b)).values()))
+                va, vb = _vector(str(ROOT / a)), _vector(str(ROOT / b))
             except (OSError, FileNotFoundError, ValueError) as exc:
                 fail("angles", f"{pair['a']} vs {pair['b']}: cannot read a raw "
                                f"artifact to recheck the published angle ({exc})")

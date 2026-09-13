@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -34,7 +35,14 @@ SCORE_UNINTERPRETABLE = "uninterpretable"
 SCORE_REPORTABLE = "reportable"
 
 
+@lru_cache(maxsize=None)
 def load_vector(artifact_path: str) -> np.ndarray:
+    """Cached, because pairing is quadratic and loading is not free.
+
+    Without this, n claimants on one label cost n(n-1) reads of n distinct files:
+    9,900 loads at n=100 where 100 would do. The cache is keyed on path and the
+    artifacts are immutable, so a stale entry is not reachable.
+    """
     tensors = load_file(str(ROOT / artifact_path))
     return next(iter(tensors.values()))
 
