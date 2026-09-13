@@ -1,17 +1,40 @@
 ---
-// A label page is a list, not a stack of full cards. Author, when they released
-// it, and the two social columns.
+// A label page is a list, not a stack of cards, and not a quadratic table of
+// every pair. Author, when they released it, the two social columns, and a
+// similarity column the reader points wherever they want.
 //
-// Stars and views render as not tracked rather than as 0. A zero here would read
-// as a measurement saying nobody starred it, which is a different claim from
-// nothing counting. There is no rating mechanism (DECISIONS.md settled against
-// user ratings: a confounded direction feels more effective in use, so ratings
-// would systematically favour it) and nothing is serving pages to count views of.
+// Two things about that column.
+//
+// It never orders the rows. Rows stay in the page ordering whatever reference is
+// selected, because vectors that behave identically can sit far apart in angle
+// (arXiv:2602.06801), so sorting by it would rank on a quantity that does not
+// mean what the ranking implies.
+//
+// "Most-used" is not a compliment. Picking the top few by trending or by attacks
+// measures visibility, and visibility compounds: prominent things get looked at,
+// which gets them attacked, which feeds trending, which keeps them prominent. So
+// the aggregate is labelled as similarity to the most-used rather than as a score,
+// because a reader glancing at a bare number will read it as a grade.
+//
+// Stars and views have no source, so they are not offered as orderings. A
+// dropdown entry that silently does nothing is worse than an absent one.
 interface Props {
   claimants: any[];
   modelId: string;
+  similarity: Record<string, Record<string, number | null>>;
 }
-const { claimants, modelId } = Astro.props;
+const { claimants, modelId, similarity } = Astro.props;
+
+const refOf = (c) => `${c.author}/${c.label}@${c.version}`;
+
+const rows = claimants.map((c) => ({
+  ref: refOf(c),
+  author: c.author,
+  label: c.label,
+  version: c.version,
+  created_at: c.created_at,
+  attacks: c.attacks.length,
+}));
 
 const released = (iso) =>
   new Date(iso).toLocaleDateString("en-US", {
@@ -19,55 +42,138 @@ const released = (iso) =>
   });
 ---
 
-<table class="submissions">
+<div class="reference-picker">
+  <label for="ref">Similarity against</label>
+  <select id="ref">
+    <optgroup label="One submission">
+      {rows.map((r) => <option value={`one:${r.ref}`}>{r.author}</option>)}
+    </optgroup>
+    <optgroup label="The most-used, averaged">
+      {[2, 3, 5, 10].map((k) => (
+        <>
+          <option value={`trending:${k}`}>top {k} by recency</option>
+          <option value={`attacks:${k}`}>top {k} by attacks received</option>
+        </>
+      ))}
+    </optgroup>
+  </select>
+  <span class="picker-why" id="why"></span>
+</div>
+
+<table class="submissions" id="claimants">
   <thead>
     <tr>
       <th><button data-col="0">Author</button></th>
       <th><button data-col="1">Released</button></th>
       <th>Stars</th>
       <th>Views</th>
+      <th id="simhead">Similarity</th>
     </tr>
   </thead>
   <tbody>
-    {claimants.map((c) => (
-      <tr>
+    {rows.map((r) => (
+      <tr data-ref={r.ref} data-created={r.created_at} data-attacks={r.attacks}>
         <td>
-          <a href={`/${c.author}/${modelId}/${c.label}/`}>{c.author}</a>
-          <span class="provenance mono">@{c.version}</span>
+          <a href={`/${r.author}/${modelId}/${r.label}/`}>{r.author}</a>
+          <div class="provenance mono">@{r.version}</div>
         </td>
-        <td>
-          <time datetime={c.created_at}>{released(c.created_at)}</time>
-        </td>
+        <td><time datetime={r.created_at}>{released(r.created_at)}</time></td>
         <td><span class="absent">not tracked</span></td>
         <td><span class="absent">not tracked</span></td>
+        <td class="sim">—</td>
       </tr>
     ))}
   </tbody>
 </table>
 
 <p class="note">
-  Stars and views are not counted. There is no rating mechanism, and nothing is
+  Stars and views are not counted. There is no rating mechanism and nothing is
   serving pages to count views of, so both read as untracked rather than as zero.
   A zero would be a measurement claiming nobody starred it.
 </p>
+<p class="note" id="simnote"></p>
 
-<script>
-  document.querySelectorAll("table.submissions").forEach((table) => {
-    const body = table.querySelector("tbody");
-    table.querySelectorAll("th button").forEach((button) => {
-      button.addEventListener("click", () => {
-        const idx = Number(button.dataset.col);
-        const rows = [...body.rows];
-        rows.sort((x, y) => {
-          const a = x.cells[idx];
-          const c = y.cells[idx];
-          const ta = a.querySelector("time")?.getAttribute("datetime");
-          const tc = c.querySelector("time")?.getAttribute("datetime");
-          if (ta && tc) return tc.localeCompare(ta);
-          return a.innerText.trim().localeCompare(c.innerText.trim());
-        });
-        rows.forEach((r) => body.appendChild(r));
+<script define:vars={{ similarity }}>
+  const table = document.querySelector("#claimants");
+  const body = table.querySelector("tbody");
+  const picker = document.querySelector("#ref");
+  const head = document.querySelector("#simhead");
+  const note = document.querySelector("#simnote");
+  const why = document.querySelector("#why");
+
+  const rows = [...body.rows];
+  const fmt = (v) => (v === null || v === undefined ? "not comparable" : v.toFixed(4));
+
+  function topRefs(by, k) {
+    // Ordered by prominence, never by similarity. Recency stands in for trending
+    // below the corpus threshold, which is what the page ordering already uses.
+    const scored = rows.map((r) => ({
+      ref: r.dataset.ref,
+      score: by === "attacks"
+        ? Number(r.dataset.attacks)
+        : Date.parse(r.dataset.created),
+    }));
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, k).map((s) => s.ref);
+  }
+
+  function apply() {
+    const [mode, arg] = picker.value.split(":");
+
+    if (mode === "one") {
+      head.textContent = "Similarity";
+      why.textContent = `angle against ${arg.split("/")[0]}`;
+      note.textContent =
+        "Geometry against one submission you chose. A low number is not evidence " +
+        "that two authors reached different conclusions: vectors that behave " +
+        "identically can sit far apart in angle (arXiv:2602.06801).";
+      for (const row of rows) {
+        const v = (similarity[row.dataset.ref] || {})[arg];
+        row.querySelector(".sim").textContent =
+          row.dataset.ref === arg ? "reference" : fmt(v);
+      }
+      return;
+    }
+
+    const k = Number(arg);
+    const refs = topRefs(mode, k);
+    head.textContent = "Similarity to most-used";
+    why.textContent = `mean angle against the ${refs.length} most prominent by ` +
+      (mode === "attacks" ? "attacks received" : "recency");
+    note.textContent =
+      "This is similarity to whatever is currently prominent, not a quality " +
+      "score. Prominence compounds: visible submissions get looked at, which " +
+      "gets them attacked, which feeds the ordering that made them visible. " +
+      "Differing from the most-used is not a fault, and resembling them is not " +
+      "a merit.";
+
+    for (const row of rows) {
+      const others = refs.filter((r) => r !== row.dataset.ref);
+      const values = others
+        .map((r) => (similarity[row.dataset.ref] || {})[r])
+        .filter((v) => v !== null && v !== undefined);
+      row.querySelector(".sim").textContent = values.length
+        ? fmt(values.reduce((a, b) => a + b, 0) / values.length)
+        : "not comparable";
+    }
+  }
+
+  picker.addEventListener("change", apply);
+  apply();
+
+  // Author and Released reorder on click. Similarity deliberately does not.
+  table.querySelectorAll("th button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const idx = Number(button.dataset.col);
+      const current = [...body.rows];
+      current.sort((x, y) => {
+        const a = x.cells[idx], c = y.cells[idx];
+        const ta = a.querySelector("time")?.getAttribute("datetime");
+        const tc = c.querySelector("time")?.getAttribute("datetime");
+        if (ta && tc) return tc.localeCompare(ta);
+        return a.innerText.trim().localeCompare(c.innerText.trim());
       });
+      current.forEach((r) => body.appendChild(r));
     });
   });
 </script>

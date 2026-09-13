@@ -17,7 +17,7 @@ import sqlite3
 from pathlib import Path
 
 from . import db, order, render
-from .comparison import pairwise
+from .comparison import pairwise, similarity_matrix
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -47,6 +47,7 @@ def build(conn: sqlite3.Connection) -> dict:
             "label": label,
             "claimants": claimants,
             "pairs": pairwise(conn, label),
+            "similarity": similarity_matrix(conn, label),
         })
 
     # Models are the primary axis. An intervention is a tensor in one model's basis

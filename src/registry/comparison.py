@@ -164,3 +164,46 @@ def attacks_against(conn: sqlite3.Connection, intervention_id: str) -> list[sqli
             "SELECT * FROM attack WHERE intervention_id = ?", (intervention_id,)
         )
     )
+
+
+def similarity_matrix(conn: sqlite3.Connection, label: str) -> dict:
+    """Angle between every pair of claimants on a label, as a lookup.
+
+    Shipped to the page so a reader can pick any reference and see the column
+    recompute without a round trip. Storage is n^2 floats per label: fine at the
+    scale one label reaches, not fine past a few hundred claimants. Revisit
+    before that rather than after.
+
+    Nothing is ordered here and nothing is implied. Which reference to measure
+    against is the reader's choice, and rows do not reorder when they make it.
+    """
+    rows = list(conn.execute(
+        "SELECT s.author, s.label, s.version, i.artifact_path, i.model_id,"
+        " i.model_revision, i.layer, i.hook_point"
+        " FROM submission s JOIN intervention i"
+        " ON i.author=s.author AND i.label=s.label AND i.version=s.version"
+        " WHERE s.label = ?",
+        (label,),
+    ))
+    refs = [f"{r['author']}/{r['label']}@{r['version']}" for r in rows]
+    matrix: dict[str, dict] = {ref: {} for ref in refs}
+
+    for i, a in enumerate(rows):
+        for j, b in enumerate(rows):
+            # Only meaningful inside one model at one layer and hook point.
+            # Across models the angle is undefined rather than zero.
+            comparable = (
+                a["model_id"] == b["model_id"]
+                and a["model_revision"] == b["model_revision"]
+                and a["layer"] == b["layer"]
+                and a["hook_point"] == b["hook_point"]
+                and a["artifact_path"] and b["artifact_path"]
+            )
+            matrix[refs[i]][refs[j]] = (
+                angle_similarity(
+                    load_vector(a["artifact_path"]), load_vector(b["artifact_path"])
+                )
+                if comparable
+                else None
+            )
+    return matrix

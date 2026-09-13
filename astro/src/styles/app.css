@@ -312,3 +312,14 @@ blockquote.origin p {
   color: var(--dim); font-style: italic;
   font-family: ui-serif, Georgia, serif;
 }
+
+.reference-picker {
+  display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap;
+  font-size: .85rem; color: var(--dim); margin-bottom: .8rem;
+}
+.reference-picker select {
+  font: inherit; font-size: .85rem; color: var(--ink); background: var(--wash);
+  border: 1px solid var(--line); border-radius: 3px; padding: .15rem .4rem;
+}
+.picker-why { color: var(--faint); }
+td.sim { font-variant-numeric: tabular-nums; }

@@ -5,7 +5,6 @@ import ArtifactCard from "../components/ArtifactCard.astro";
 import Tabs from "../components/Tabs.astro";
 import Verifications from "../components/Verifications.astro";
 import Attacks from "../components/Attacks.astro";
-import Pairs from "../components/Pairs.astro";
 import SubmissionRows from "../components/SubmissionRows.astro";
 import Pins from "../components/Pins.astro";
 import Relations from "../components/Relations.astro";
@@ -165,14 +164,11 @@ const released = (iso) =>
     </p>
 
     <div data-pagefind-body>
-      <SubmissionRows claimants={block.claimants} modelId={model.model_id} />
-
-      {block.pairs.length > 0 && (
-        <>
-          <h2>Between claimants</h2>
-          <Pairs pairs={block.pairs} />
-        </>
-      )}
+      <SubmissionRows
+        claimants={block.claimants}
+        modelId={model.model_id}
+        similarity={data.labels.find((l) => l.label === block.label).similarity}
+      />
 
       <h2>How the claimants read each other</h2>
       <Relations
