@@ -3,9 +3,15 @@
 
 PY := .venv/bin/python
 
-.PHONY: verify test invariants manifests hooks site licenses serve
+.PHONY: verify test invariants manifests hooks site licenses serve falsifier
 
-verify: invariants test manifests
+# The falsifier runs against the built site, so the site is built first. A
+# frontend that fails to build, or a page carrying a number that traces to
+# nothing, used to pass this gate untouched.
+verify: invariants test site falsifier manifests
+
+falsifier:
+	$(PY) falsifier/verify.py
 
 # Rebuild the corpus, export it, and build the static site with its search index.
 # npm ci rather than npm install: the lockfile is the pinned truth.
