@@ -388,3 +388,43 @@ now, so a reader with scripts off gets the list in storage order with no angles.
 That is a real loss and an acceptable one at v0, which serves nothing publicly; if
 a no-JS path is ever needed it is a build-time render of the same `views.py` shapes,
 not a second template language.
+
+## 2026-09-13 The site is published on GitHub Pages, when the repo goes public
+**Decided:** The built site is served from GitHub Pages once this repo is public.
+Publication is gated on the dual-use policy, so neither happens at v0. Nothing is
+imported into a deploy platform before then: a connected deploy integration on a
+private backup remote is a build surface, which the repo section rules out.
+
+If something has to be served before the repo is public, it is a direct upload of
+`astro/dist` with no git connection, because GitHub Pages on the free plan requires
+a public repo and serving early would mean publishing the design docs to get a
+website. That is a fallback, not the plan.
+
+**Why:** The site is 960K of static files across 49 of them, against a 1 GB Pages
+limit and a 100 GB/month soft bandwidth limit. There is no hosting problem here to
+solve, so the deciding factor is what the hosting arrangement couples together.
+Publishing from the repo is only acceptable once the repo is itself the public
+artifact; before that it forces a choice between a private history and a website.
+
+Publishing also makes `_attest/` verifiable by anyone rather than by anyone who is
+handed the files. The proofs date the design, and a proof nobody can independently
+check is worth less than one they can.
+
+**What this makes impossible to express:** a public site over a private repo. That
+combination needs a paid GitHub plan or a second host, and taking it would mean the
+published site and the source it was built from are no longer the same object a
+reader can check. Declining it is what keeps "build it yourself and compare" true.
+
+**Obligations this creates, to be discharged at publication and not before:**
+
+1. Amend the repo section of `CLAUDE.md`. It currently reads no Actions, no public
+   push, no `gh` workflows, which is correct for a private backup and wrong for a
+   public repo that publishes from a branch or a workflow. Amend it deliberately at
+   that moment rather than discovering the contradiction mid-build.
+2. Re-run the history audit against the tip of the day. Publishing exposes every
+   commit, not the tip. As of `07489dd`, `_local/`, `.env`, `.env.*` and
+   `NOTES-private.md` have never been committed on any branch at any point, and no
+   tracked file carries anything credential-shaped. That result is dated, not
+   permanent.
+3. Confirm the dual-use policy exists and is published with it. It is the launch
+   blocker, and the site going up is the launch.
