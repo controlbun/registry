@@ -18,8 +18,7 @@ const { measurements, author, own } = Astro.props;
 const fmt = (v) => (v === null || v === undefined ? null : v.toFixed(4));
 const when = (iso) =>
   new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric", month: "short", day: "numeric",
-  });
+    year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 ---
 
 {measurements.length === 0 ? (

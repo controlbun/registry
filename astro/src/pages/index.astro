@@ -16,7 +16,7 @@ const recent = data.model_index
   .slice(0, 8);
 
 const released = (iso) =>
-  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
 const belowThreshold = data.corpus.size < data.corpus.threshold;
 ---

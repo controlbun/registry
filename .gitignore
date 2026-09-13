@@ -19,8 +19,9 @@ __pycache__/
 *.transcript
 *.session.json
 
-# local venv
+# local venv and the editable-install metadata it writes
 .venv/
+*.egg-info/
 
 # generated database, rebuild with fixtures/build.py
 registry.db

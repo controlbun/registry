@@ -3,16 +3,22 @@
 
 PY := .venv/bin/python
 
-.PHONY: verify test invariants manifests hooks site licenses serve falsifier
+.PHONY: verify test invariants manifests hooks site licenses serve falsifier links
 
 # The site is built before the tests, not after. Both the falsifier and the page
 # tests read `astro/dist`, so building later meant they checked the previous
 # build: a frontend that fails to build, or a page carrying a number that traces
 # to nothing, used to pass this gate untouched.
-verify: invariants site test falsifier manifests
+verify: invariants site test links falsifier manifests
 
 falsifier:
 	$(PY) falsifier/verify.py
+
+# A 404 on our own site is a claim that something exists. Nothing else in the gate
+# follows a link: the invariants read source, the page tests read one page at a
+# time, and the falsifier re-derives numbers.
+links:
+	$(PY) falsifier/links.py
 
 # Rebuild the corpus, export it, and build the static site with its search index.
 # npm ci rather than npm install: the lockfile is the pinned truth.

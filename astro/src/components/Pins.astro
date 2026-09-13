@@ -20,8 +20,7 @@ const { pins, subject } = Astro.props;
 
 const when = (iso) =>
   new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric", month: "short", day: "numeric",
-  });
+    year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 ---
 
 {pins.length === 0 ? (

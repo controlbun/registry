@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -169,3 +170,35 @@ def test_score_without_coherence_renders_as_uninterpretable():
         "number; judge agreement collapses on degenerate text and an unpaired "
         "score is a broken instrument rather than a small effect"
     )
+
+
+def test_a_rendered_date_matches_its_own_datetime_attribute():
+    """Every date on the site rendered a day early outside UTC.
+
+    Timestamps are stored as UTC midnight and `toLocaleDateString` resolves them
+    in the reader's zone, so west of Greenwich `2026-09-12T00:00:00Z` printed as
+    "Sep 11, 2026". The machine-readable attribute was correct the whole time and
+    only the human text was wrong, which is the version of this nobody notices and
+    the version a reader acts on.
+    """
+    months = {
+        "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
+        "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
+    }
+    seen = 0
+    for path in every_page():
+        for iso, shown in re.findall(
+            r'<time datetime="([^"]+)"[^>]*>([^<]+)</time>', path.read_text()
+        ):
+            stamp = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+            m = re.match(r"([A-Z][a-z]{2}) (\d{1,2})(?:, (\d{4}))?", shown.strip())
+            assert m, f"{path.name}: unparsed date text {shown!r}"
+            seen += 1
+            assert (months[m.group(1)], int(m.group(2))) == (stamp.month, stamp.day), (
+                f"{path.name}: shows {shown.strip()!r} for {iso}. The stored "
+                "timestamp and the text a reader sees are different days."
+            )
+            if m.group(3):
+                assert int(m.group(3)) == stamp.year
+
+    assert seen, "no dates rendered anywhere, so this proves nothing"

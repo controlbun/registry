@@ -12,7 +12,7 @@ import data from "../../data/registry.json";
 const owners = data.owner_index;
 
 const released = (iso) =>
-  new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 ---
 
 <Base title="Owners" trail={[{ text: "Registry", href: "/" }]} ordering>
@@ -41,9 +41,15 @@ const released = (iso) =>
           <tr data-created={o.latest} data-engagement={o.engagement}>
             <td><a class="mono" href={`/${o.owner}/`}>{o.owner}</a></td>
             <td>{o.submissions.length}</td>
-            <td>{o.labels.join(", ")}</td>
             <td>
-              <time datetime={o.latest}>{released(o.latest)}</time>
+              {o.labels.length
+                ? o.labels.join(", ")
+                : <span class="absent">none claimed</span>}
+            </td>
+            <td>
+              {o.latest
+                ? <time datetime={o.latest}>{released(o.latest)}</time>
+                : <span class="absent">nothing dated</span>}
             </td>
           </tr>
         ))}
@@ -53,6 +59,11 @@ const released = (iso) =>
     <p class="note">
       Submission count is a fact about how much someone has published, not a
       measure of how good any of it is. Nothing here ranks owners.
+    </p>
+    <p class="note">
+      Zero submissions is not an empty profile. Somebody who has only evaluated or
+      attacked other people's work has done the part of this that nobody else is
+      doing, and their page says what that was.
     </p>
   </div>
 </Base>

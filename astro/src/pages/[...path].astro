@@ -89,8 +89,7 @@ const crumbs = {
 
 const released = (iso) =>
   new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric", month: "short", day: "numeric",
-  });
+    year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 ---
 
 {view === "model" && (
@@ -268,24 +267,47 @@ const released = (iso) =>
 
 {view === "owner" && (
   <Base
-    title={`${owner.owner} — submissions`}
+    title={`${owner.owner}`}
     trail={[crumbs.registry, crumbs.owners]}
-    ordering
+    ordering={owner.submissions.length > 0}
   >
     <h1 slot="heading" class="mono">{owner.owner}</h1>
 
     <p class="lede">
-      Everything {owner.owner} has published.
+      Everything {owner.owner} has done here. Publishing an artifact is one way to
+      take part and not the only one: evaluating somebody else's submission,
+      attacking it, and reporting what happened when you used it are the rest, and
+      they are what makes anything here evidence rather than a file.
     </p>
 
     <div class="scope">
       <div><span class="k">Submissions</span>{owner.submissions.length}</div>
-      <div><span class="k">Labels claimed</span>{owner.labels.join(", ")}</div>
-      <div><span class="k">Kinds</span><span class="mono">{owner.kinds.join(", ")}</span></div>
+      <div>
+        <span class="k">Labels claimed</span>
+        {owner.labels.length
+          ? owner.labels.join(", ")
+          : <span class="absent">none</span>}
+      </div>
+      <div>
+        <span class="k">Kinds</span>
+        {owner.kinds.length
+          ? <span class="mono">{owner.kinds.join(", ")}</span>
+          : <span class="absent">none</span>}
+      </div>
       <div><span class="k">Attacks received</span>{owner.attacks_received}</div>
     </div>
 
     <div data-pagefind-body>
+      <h2>Submissions</h2>
+      {owner.submissions.length === 0 && (
+        <p class="note absent-block">
+          {owner.owner} has not published an artifact. That is a fact about what
+          they have done here, not a gap in the record and not a lesser kind of
+          participation: the work below is somebody checking other people's claims,
+          which is the part this registry is short of.
+        </p>
+      )}
+      {owner.submissions.length > 0 && (
       <table class="submissions">
         <thead>
           <tr>
@@ -323,13 +345,163 @@ const released = (iso) =>
           ))}
         </tbody>
       </table>
+      )}
 
-      <p class="note">
-        {owner.attacks_received > 0
-          ? "Attacks received is a count of scrutiny, not of failure. Work that has been attacked carries more evidence than work nobody has looked at."
-          : "Nothing here has been attacked yet, which is not evidence that any of it is sound. The strongest evidence available is the kind an author does not choose."}
-        {" "}None of these numbers order anybody.
-      </p>
+      {owner.submissions.length > 0 && (
+        <p class="note">
+          {owner.attacks_received > 0
+            ? "Attacks received is a count of scrutiny, not of failure. Work that has been attacked carries more evidence than work nobody has looked at."
+            : "Nothing here has been attacked yet, which is not evidence that any of it is sound. The strongest evidence available is the kind an author does not choose."}
+          {" "}None of these numbers order anybody.
+        </p>
+      )}
+
+      <h2>Work on other people's submissions</h2>
+
+      {owner.evaluations.length === 0 && owner.attacks_made.length === 0
+        && owner.support_given.length === 0 ? (
+        <p class="note absent-block">
+          {owner.owner} has not evaluated, attacked or reported use of anybody
+          else's submission. Nothing follows from that about the quality of their
+          own work. It does mean every number on their submissions was measured by
+          the person who made them.
+        </p>
+      ) : (
+        <>
+          {owner.attacks_made.length > 0 && (
+            <>
+              <h3>Attacks</h3>
+              <table>
+                <thead>
+                  <tr><th>Against</th><th>Method</th><th>Attacker calls it</th><th>When</th></tr>
+                </thead>
+                <tbody>
+                  {owner.attacks_made.map((a) => (
+                    <tr>
+                      <td>
+                        <a class="mono" href={a.model_id
+                          ? `/${a.subject_author}/${a.model_id}/${a.label}/`
+                          : `/${a.subject_author}/`}>{a.subject}</a>
+                      </td>
+                      <td class="mono">{a.method}</td>
+                      <td>{(a.disposition || "").replace(/-/g, " ")}</td>
+                      <td class="provenance">
+                        <time datetime={a.attacked_at}>{released(a.attacked_at)}</time>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p class="note">
+                An attack is displayed with both dispositions on the artifact's own
+                page, where the author answers it. What is here is only that the
+                attack was made, because the registry does not adjudicate and a
+                tally of attacks made is not a score for the attacker.
+              </p>
+            </>
+          )}
+
+          {owner.evaluations.length > 0 && (
+            <>
+              <h3>Independent measurements</h3>
+              <table>
+                <thead>
+                  <tr><th>Measured</th><th>Reported</th></tr>
+                </thead>
+                <tbody>
+                  {owner.evaluations.map((e) => (
+                    <tr>
+                      <td>
+                        <a class="mono" href={e.model_id
+                          ? `/${e.subject_author}/${e.model_id}/${e.label}/`
+                          : `/${e.subject_author}/`}>{e.subject}</a>
+                      </td>
+                      <td class="provenance">
+                        <time datetime={e.reported_at}>{released(e.reported_at)}</time>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p class="note">
+                Somebody other than the author ran their own suite against this
+                work. The scores live on the artifact's page beside the author's
+                own, never reconciled against them.
+              </p>
+            </>
+          )}
+
+          {owner.support_given.length > 0 && (
+            <>
+              <h3>Applied use</h3>
+              <table>
+                <thead>
+                  <tr><th>Used</th><th>For</th><th>Behaved</th><th>Reported</th></tr>
+                </thead>
+                <tbody>
+                  {owner.support_given.map((c) => (
+                    <tr>
+                      <td>
+                        <a class="mono" href={c.model_id
+                          ? `/${c.subject_author}/${c.model_id}/${c.label}/`
+                          : `/${c.subject_author}/`}>{c.subject}</a>
+                      </td>
+                      <td>{c.purpose}</td>
+                      <td>
+                        {c.predictability
+                          ? c.predictability.replace(/-/g, " ")
+                          : <span class="absent">not reported</span>}
+                      </td>
+                      <td class="provenance">
+                        <time datetime={c.reported_at}>{released(c.reported_at)}</time>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </>
+      )}
+
+      <h2>Eval suites</h2>
+      {owner.suites.length === 0 ? (
+        <p class="note absent-block">
+          {owner.owner} has not published an eval suite. A suite is what lets
+          somebody measure other people's submissions on stated terms, so its
+          absence is why nothing above could be a measurement of anyone else.
+        </p>
+      ) : (
+        <>
+          <table>
+            <thead>
+              <tr><th>Suite</th><th>Judge</th><th>Confound axes checked</th></tr>
+            </thead>
+            <tbody>
+              {owner.suites.map((x) => (
+                <tr>
+                  <td class="mono">{x.suite}</td>
+                  <td class="mono">
+                    {x.judge_model
+                      ? <>{x.judge_model}@{x.judge_revision}</>
+                      : <span class="absent">no judge pinned</span>}
+                  </td>
+                  <td>
+                    {x.axes.length
+                      ? x.axes.join(", ")
+                      : <span class="absent">none stated</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p class="note">
+            The judge model and revision are pinned by the suite's author for their
+            own measurements. A score from a different judge is a different
+            measurement, which is why suites are named rather than pooled.
+          </p>
+        </>
+      )}
     </div>
   </Base>
 )}

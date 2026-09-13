@@ -1093,8 +1093,10 @@
   ],
   "owner_index": [
     {
+      "attacks_made": [],
       "attacks_received": 1,
       "engagement": 2,
+      "evaluations": [],
       "kinds": [
         "direction"
       ],
@@ -1118,11 +1120,26 @@
           "score_state": "reportable",
           "version": "v1"
         }
-      ]
+      ],
+      "suites": [
+        {
+          "axes": [
+            "sentiment",
+            "verbosity"
+          ],
+          "id": "es_alice",
+          "judge_model": null,
+          "judge_revision": "",
+          "suite": "warmth-holdout@v1"
+        }
+      ],
+      "support_given": []
     },
     {
+      "attacks_made": [],
       "attacks_received": 0,
       "engagement": 0,
+      "evaluations": [],
       "kinds": [
         "direction"
       ],
@@ -1146,11 +1163,26 @@
           "score_state": "reportable",
           "version": "v1"
         }
-      ]
+      ],
+      "suites": [
+        {
+          "axes": [
+            "refusal_rate",
+            "formality"
+          ],
+          "id": "es_bob",
+          "judge_model": null,
+          "judge_revision": "",
+          "suite": "costly-help-holdout@v1"
+        }
+      ],
+      "support_given": []
     },
     {
+      "attacks_made": [],
       "attacks_received": 0,
       "engagement": 1,
+      "evaluations": [],
       "kinds": [
         "sae-latent"
       ],
@@ -1174,11 +1206,34 @@
           "score_state": "reportable",
           "version": "v1"
         }
-      ]
+      ],
+      "suites": [
+        {
+          "axes": [
+            "topic",
+            "verbosity"
+          ],
+          "id": "es_dana",
+          "judge_model": null,
+          "judge_revision": "",
+          "suite": "declination-holdout@v1"
+        }
+      ],
+      "support_given": []
     },
     {
+      "attacks_made": [],
       "attacks_received": 0,
       "engagement": 0,
+      "evaluations": [
+        {
+          "label": "refusal",
+          "model_id": "placeholder/other-architecture-7b",
+          "reported_at": "2026-09-12T00:00:00Z",
+          "subject": "dana/refusal@v1",
+          "subject_author": "dana"
+        }
+      ],
       "kinds": [
         "probe"
       ],
@@ -1202,11 +1257,32 @@
           "score_state": "uninterpretable",
           "version": "v1"
         }
-      ]
+      ],
+      "suites": [
+        {
+          "axes": [
+            "topic"
+          ],
+          "id": "es_erik",
+          "judge_model": null,
+          "judge_revision": "",
+          "suite": "boundary-probe@v1"
+        },
+        {
+          "axes": [],
+          "id": "es_erik_x",
+          "judge_model": "placeholder/judge-8b",
+          "judge_revision": "000000000000",
+          "suite": "declination-crosscheck@v1"
+        }
+      ],
+      "support_given": []
     },
     {
+      "attacks_made": [],
       "attacks_received": 0,
       "engagement": 0,
+      "evaluations": [],
       "kinds": [
         "sae-latent"
       ],
@@ -1229,6 +1305,99 @@
           "model_id": "placeholder/other-architecture-7b",
           "score_state": "absent",
           "version": "v1"
+        }
+      ],
+      "suites": [],
+      "support_given": []
+    },
+    {
+      "attacks_made": [
+        {
+          "attacked_at": "2026-09-12T00:00:00Z",
+          "disposition": "confirmed-limitation",
+          "label": "kindness",
+          "method": "alternative-confound-axis",
+          "model_id": "placeholder/does-not-resolve-1b",
+          "subject": "alice/kindness@v1",
+          "subject_author": "alice"
+        }
+      ],
+      "attacks_received": 0,
+      "engagement": 0,
+      "evaluations": [
+        {
+          "label": "kindness",
+          "model_id": "placeholder/does-not-resolve-1b",
+          "reported_at": "2026-09-12T00:00:00Z",
+          "subject": "alice/kindness@v1",
+          "subject_author": "alice"
+        }
+      ],
+      "kinds": [],
+      "labels": [],
+      "latest": "2026-09-12T00:00:00Z",
+      "models": [],
+      "owner": "carol",
+      "submissions": [],
+      "suites": [
+        {
+          "axes": [
+            "sentiment",
+            "length"
+          ],
+          "id": "es_carol",
+          "judge_model": "placeholder/judge-8b",
+          "judge_revision": "000000000000",
+          "suite": "warmth-adversarial@v1"
+        }
+      ],
+      "support_given": []
+    },
+    {
+      "attacks_made": [],
+      "attacks_received": 0,
+      "engagement": 0,
+      "evaluations": [],
+      "kinds": [],
+      "labels": [],
+      "latest": "2026-09-12T00:00:00Z",
+      "models": [],
+      "owner": "gus",
+      "submissions": [],
+      "suites": [],
+      "support_given": [
+        {
+          "label": "kindness",
+          "model_id": "placeholder/does-not-resolve-1b",
+          "predictability": "as-documented",
+          "purpose": "Steering a support-desk assistant toward offering concrete help rather than sympathy.",
+          "reported_at": "2026-09-12T00:00:00Z",
+          "subject": "bob/kindness@v1",
+          "subject_author": "bob"
+        }
+      ]
+    },
+    {
+      "attacks_made": [],
+      "attacks_received": 0,
+      "engagement": 0,
+      "evaluations": [],
+      "kinds": [],
+      "labels": [],
+      "latest": "2026-09-12T00:00:00Z",
+      "models": [],
+      "owner": "hana",
+      "submissions": [],
+      "suites": [],
+      "support_given": [
+        {
+          "label": "kindness",
+          "model_id": "placeholder/does-not-resolve-1b",
+          "predictability": "partial",
+          "purpose": "Warming the tone of generated release notes.",
+          "reported_at": "2026-09-12T00:00:00Z",
+          "subject": "alice/kindness@v1",
+          "subject_author": "alice"
         }
       ]
     }

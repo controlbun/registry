@@ -428,3 +428,48 @@ reader can check. Declining it is what keeps "build it yourself and compare" tru
    permanent.
 3. Confirm the dual-use policy exists and is published with it. It is the launch
    blocker, and the site going up is the launch.
+
+## 2026-09-13 An owner is someone who took part, not someone who published
+**Decided:** Owner pages are derived from participation. Authoring an eval suite,
+evaluating somebody else's submission, attacking one, or filing a support card all
+make a person a page, the same way publishing an artifact does. The page names what
+they actually did, and zero submissions renders as a fact rather than as an empty
+profile.
+
+This is not an account system and does not pretend to be one. A person is still
+derived from what they did and nobody has a page until they do something. Real
+profiles arrive with the upload path.
+
+**Why:** `/carol/` was a 404 for days, and so were `/gus/` and `/hana/`. carol ran
+the only attack in the fixture corpus and owns an eval suite; gus and hana filed
+the support cards. All three are linked by name from the pages their work appears
+on, and there was nothing at the other end, because an owner existed only if they
+had published a submission.
+
+That is backwards here specifically. The evidence layer is the differentiator, and
+it is written by people pointing their suites at other people's submissions. A
+reader weighing an attack cannot weigh the attacker if the attacker has no page, so
+the old derivation made scrutiny second-class next to publication in a registry
+whose thesis is that scrutiny is the content.
+
+Treating it as a fixture gap would have been wrong. Real data reproduces it
+exactly: a real evaluator who never ships an artifact 404s the same way.
+
+**What this makes impossible to express:** a participant who is not listed. Anyone
+who attacks or evaluates now has a public page enumerating it, whether or not they
+wanted one. That is the correct trade for an open registry, where the point of an
+attack is that it is attributable, but it is a real constraint and not a free win.
+
+**Also:** `make verify` gained a `links` step. Nothing in the gate followed a link
+before, so a page linking to a page that was never built passed everything. The
+falsifier re-derives numbers, the invariants read source, the page tests read one
+page at a time.
+
+## 2026-09-13 Dates render in UTC
+**Decided:** Every date the site prints is formatted with `timeZone: "UTC"`.
+**Why:** Timestamps are stored as UTC midnight and `toLocaleDateString` resolves
+them in the reader's zone, so west of Greenwich `2026-09-12T00:00:00Z` printed as
+"Sep 11, 2026" while the `datetime` attribute beside it said the twelfth. Seven
+formatters, every date on the site, and a released-on date that is a day out is the
+kind of error a reader acts on without ever suspecting it. A registry about
+reproducibility does not get to display a different day than the one it recorded.

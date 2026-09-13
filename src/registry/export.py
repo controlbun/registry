@@ -159,17 +159,24 @@ def build(conn: sqlite3.Connection) -> dict:
     # entry evidence rather than a file. There is no visibility field and
     # deliberately so. Dual-use gating, if it ever exists, is registry policy and a
     # different mechanism with a different owner.
+    def owner(name: str) -> dict:
+        return owners.setdefault(name, {
+            "owner": name,
+            "submissions": [],
+            "suites": [],
+            "evaluations": [],
+            "attacks_made": [],
+            "support_given": [],
+            "models": set(),
+            "kinds": set(),
+            "labels": set(),
+            "attacks_received": 0,
+        })
+
     owners: dict[str, dict] = {}
     for entry in labels:
         for c in entry["claimants"]:
-            o = owners.setdefault(c["author"], {
-                "owner": c["author"],
-                "submissions": [],
-                "models": set(),
-                "kinds": set(),
-                "labels": set(),
-                "attacks_received": 0,
-            })
+            o = owner(c["author"])
             o["submissions"].append({
                 "label": c["label"],
                 "version": c["version"],
@@ -191,23 +198,124 @@ def build(conn: sqlite3.Connection) -> dict:
             o["labels"].add(c["label"])
             o["attacks_received"] += len(c["attacks"])
 
-    owner_index = [
-        {
+    # Everyone who took part, not only everyone who published. An eval-suite
+    # author, an attacker and a support-card reporter are all linked by name from
+    # the pages their work appears on, and until now none of them had a page to
+    # link to: an owner existed because they shipped an artifact.
+    #
+    # That is backwards for this registry specifically. The evidence layer is the
+    # differentiator, and it is written by people pointing their suites at other
+    # people's submissions. A reader weighing an attack cannot weigh the attacker
+    # if the attacker has no page, which quietly makes scrutiny second-class next
+    # to publication.
+    #
+    # This is not an account system and does not pretend to be one. A person here
+    # is still derived from what they did, and nobody has a page until they do
+    # something. Real profiles arrive with the upload path.
+    for r in conn.execute(
+        "SELECT author, id, name, version, judge_model, judge_revision,"
+        " confound_axes_json FROM eval_suite"
+    ):
+        owner(r["author"])["suites"].append({
+            "id": r["id"],
+            "suite": f"{r['name']}@{r['version']}",
+            "judge_model": r["judge_model"],
+            "judge_revision": (r["judge_revision"] or "")[:12],
+            "axes": (
+                json.loads(r["confound_axes_json"])
+                if r["confound_axes_json"] else []
+            ),
+        })
+
+    # An evaluation of somebody else's submission. An author's runs against their
+    # own work are already on their submission rows, and repeating them here would
+    # count self-measurement as scrutiny.
+    for r in conn.execute(
+        "SELECT s.author AS evaluator, r.reported_at, i.author AS subject_author,"
+        " i.label, i.version, i.model_id FROM eval_report r"
+        " JOIN eval_suite s ON s.id = r.eval_suite_id"
+        " JOIN intervention i ON i.id = r.intervention_id"
+        " WHERE s.author != i.author"
+    ):
+        owner(r["evaluator"])["evaluations"].append({
+            "subject": f"{r['subject_author']}/{r['label']}@{r['version']}",
+            "subject_author": r["subject_author"],
+            "label": r["label"],
+            "model_id": r["model_id"],
+            "reported_at": r["reported_at"],
+        })
+
+    for r in conn.execute(
+        "SELECT a.attacker, a.attacked_at, a.method, a.attacker_disposition,"
+        " i.author AS subject_author, i.label, i.version, i.model_id FROM attack a"
+        " JOIN intervention i ON i.id = a.intervention_id"
+    ):
+        owner(r["attacker"])["attacks_made"].append({
+            "subject": f"{r['subject_author']}/{r['label']}@{r['version']}",
+            "subject_author": r["subject_author"],
+            "label": r["label"],
+            "model_id": r["model_id"],
+            "attacked_at": r["attacked_at"],
+            "method": r["method"],
+            "disposition": r["attacker_disposition"],
+        })
+
+    for r in conn.execute(
+        "SELECT c.*, i.model_id FROM support_card c"
+        " LEFT JOIN intervention i"
+        " ON i.author = c.author AND i.label = c.label AND i.version = c.version"
+    ):
+        owner(r["reporter"])["support_given"].append({
+            "subject": f"{r['author']}/{r['label']}@{r['version']}",
+            "subject_author": r["author"],
+            "label": r["label"],
+            "model_id": r["model_id"],
+            "reported_at": r["reported_at"],
+            "purpose": r["purpose"],
+            "predictability": r["predictability"],
+        })
+
+    def owner_entry(o: dict) -> dict:
+        # Every date this person put on anything, so the ordering key covers
+        # attacking and evaluating as well as publishing. Reading it off the
+        # submissions alone would sort a prolific attacker as though they had
+        # never done anything.
+        dates = (
+            [s["created_at"] for s in o["submissions"]]
+            + [e["reported_at"] for e in o["evaluations"]]
+            + [a["attacked_at"] for a in o["attacks_made"]]
+            + [c["reported_at"] for c in o["support_given"]]
+        )
+        return {
             "owner": o["owner"],
             "submissions": sorted(
                 o["submissions"], key=lambda s: s["created_at"], reverse=True
+            ),
+            "suites": sorted(o["suites"], key=lambda x: x["suite"]),
+            "evaluations": sorted(
+                o["evaluations"], key=lambda x: x["reported_at"], reverse=True
+            ),
+            "attacks_made": sorted(
+                o["attacks_made"], key=lambda x: x["attacked_at"], reverse=True
+            ),
+            "support_given": sorted(
+                o["support_given"], key=lambda x: x["reported_at"], reverse=True
             ),
             "models": sorted(o["models"]),
             "kinds": sorted(o["kinds"]),
             "labels": sorted(o["labels"]),
             "attacks_received": o["attacks_received"],
-            # Ordering keys for the owners list, computed over all of someone's
-            # submissions rather than read off the first one.
-            "latest": max(s["created_at"] for s in o["submissions"]),
+            # An eval suite carries no date in the schema, so somebody who has
+            # only authored one and never run it has nothing to sort on. None
+            # rather than a stand-in date: the page says so instead of implying
+            # they were here today.
+            "latest": max(dates) if dates else None,
+            # Scrutiny received, which is a property of having published
+            # something. Nobody is ordered up the page for attacking a lot.
             "engagement": sum(s["engagement"] for s in o["submissions"]),
         }
-        for o in owners.values()
-    ]
+
+    owner_index = [owner_entry(o) for o in owners.values()]
 
     kinds = sorted({c["kind"] for l in labels for c in l["claimants"] if c["kind"]})
     models = sorted({

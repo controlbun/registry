@@ -28,8 +28,7 @@ const { support, author } = Astro.props;
 
 const when = (iso) =>
   new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric", month: "short", day: "numeric",
-  });
+    year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 ---
 
 {support.length === 0 ? (
