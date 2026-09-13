@@ -123,10 +123,10 @@ def test_a_row_missing_its_ordering_key_is_caught(clean):
 
 
 def test_hiding_the_active_choice_is_caught(clean):
-    """The Jinja bar used to omit whichever ordering was already applied.
+    """A bar that omits whichever ordering is already applied.
 
-    Harmless while the control was decorative. Once it worked, it meant a reader
-    could switch away from an ordering and had no button to switch back.
+    Harmless while the control was decorative, and a one-way door once it worked:
+    the reader switches away from an ordering and has no button to switch back.
     """
     broken = clean.replace('data-order-key="recently-added"', 'data-inert="x"', 1)
     assert broken != clean

@@ -5,10 +5,11 @@ PY := .venv/bin/python
 
 .PHONY: verify test invariants manifests hooks site licenses serve falsifier
 
-# The falsifier runs against the built site, so the site is built first. A
-# frontend that fails to build, or a page carrying a number that traces to
-# nothing, used to pass this gate untouched.
-verify: invariants test site falsifier manifests
+# The site is built before the tests, not after. Both the falsifier and the page
+# tests read `astro/dist`, so building later meant they checked the previous
+# build: a frontend that fails to build, or a page carrying a number that traces
+# to nothing, used to pass this gate untouched.
+verify: invariants site test falsifier manifests
 
 falsifier:
 	$(PY) falsifier/verify.py

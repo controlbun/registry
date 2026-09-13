@@ -182,9 +182,9 @@ def _parse(ref: str) -> tuple[str, str, str | None]:
 
 
 def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
-    from . import render  # noqa: PLC0415  (shared view logic, one source of truth)
+    from . import views  # noqa: PLC0415  (shared view logic, one source of truth)
 
-    view = render.claimant_view(conn, row)
+    view = views.claimant_view(conn, row)
     iv = conn.execute(
         "SELECT artifact_path FROM intervention"
         " WHERE author=? AND label=? AND version=?",

@@ -16,7 +16,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from . import db, order, render
+from . import db, order, views
 from .comparison import pairwise, similarity_matrix
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,7 +40,7 @@ def build(conn: sqlite3.Connection) -> dict:
         rows = order.apply_order(conn, db.claimants(conn, label))
         claimants = []
         for row in rows:
-            view = render.claimant_view(conn, row)
+            view = views.claimant_view(conn, row)
             view["attacks"] = [_attack(a) for a in view["attacks"]]
             claimants.append(view)
         labels.append({
@@ -220,9 +220,9 @@ def build(conn: sqlite3.Connection) -> dict:
             "size": order.corpus_size(conn),
             "threshold": order.CORPUS_THRESHOLD,
             "active_order": active,
-            "active_order_name": render.ORDER_LABELS.get(active, active),
+            "active_order_name": order.ORDER_LABELS.get(active, active),
             "order_choices": [
-                {"key": k, "name": v} for k, v in render.ORDER_LABELS.items()
+                {"key": k, "name": v} for k, v in order.ORDER_LABELS.items()
             ],
             # The trending constants travel with the data so the browser can run
             # order.trending_score rather than a second, drifting copy of it. The

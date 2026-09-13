@@ -25,9 +25,6 @@ __pycache__/
 # generated database, rebuild with fixtures/build.py
 registry.db
 
-# generated site
-site/
-
 # astro build output and dependencies
 astro/node_modules/
 astro/dist/

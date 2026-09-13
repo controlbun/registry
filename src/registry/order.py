@@ -44,6 +44,14 @@ AGE_OFFSET_HOURS = 2.0
 ORDER_RECENT = "recently-added"
 ORDER_TRENDING = "trending"
 
+# What each key is called on screen. Here rather than in a view module because an
+# ordering the page can name but this module cannot produce is the bug that lets a
+# control describe something it does not compute.
+ORDER_LABELS = {
+    ORDER_RECENT: "Recently added",
+    ORDER_TRENDING: "Trending",
+}
+
 
 def _parse(ts: str) -> datetime:
     return datetime.fromisoformat(ts.replace("Z", "+00:00"))

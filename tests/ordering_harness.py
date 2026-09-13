@@ -12,8 +12,10 @@ surface of the DOM, and that surface is shimmed here. Anything it touches that i
 not shimmed throws, which is the correct outcome for an untested code path rather
 than a silent pass.
 
-Both frontends are driven through this, because they render the same control from
-the same two inputs and both of them had the same dead buttons.
+Every page shape that renders the control is driven through this. The bar comes
+from the layout and the list comes from the page, so "has a bar" and "has something
+to order" are set in different files, which is how several pages ended up with a bar
+and nothing under it.
 """
 
 from __future__ import annotations

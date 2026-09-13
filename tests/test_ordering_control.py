@@ -18,7 +18,6 @@ is the definition. Drift in either direction fails.
 
 from __future__ import annotations
 
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import ordering_harness as harness  # noqa: E402
 
-from registry import db, order, render  # noqa: E402
+from registry import order  # noqa: E402
 
 # Fixed so the decay denominator is the same on both sides of the comparison. Far
 # enough ahead of the synthetic corpus that every age is positive.
@@ -41,35 +40,22 @@ NOW_MS = int(NOW.timestamp() * 1000)
 CHOICES = [order.ORDER_RECENT, order.ORDER_TRENDING]
 
 
-def build_db(tmp_path: Path) -> Path:
-    path = tmp_path / "fixture.db"
-    subprocess.run(
-        [sys.executable, str(ROOT / "fixtures" / "build.py"), "--db", str(path)],
-        check=True, capture_output=True,
-    )
-    return path
-
-
 @pytest.fixture(scope="module")
-def pages(tmp_path_factory):
-    """Both frontends, built once.
+def pages():
+    """Every built page that renders the control.
 
-    The Astro build is the shipped site and the Jinja render is the one the other
-    render tests exercise. Both draw the control from the same two inputs, and both
-    of them shipped it dead, so both are driven here.
+    One of each shape: a table of models, a table of owners, the claimants on a
+    label, and one owner's submissions. They are separate templates that all get
+    the control from the layout, which is exactly how five of them ended up with a
+    bar and nothing under it to order.
     """
-    tmp = tmp_path_factory.mktemp("ordering")
-    conn = db.connect(build_db(tmp))
-
-    out = {"jinja-label": render.render_label(conn, "kindness", tmp / "site").read_text(),
-           "jinja-index": render.render_index(conn, tmp / "site").read_text()}
-
+    out = {}
     dist = ROOT / "astro" / "dist"
     for name, rel in [
-        ("astro-models", "models/index.html"),
-        ("astro-owners", "owners/index.html"),
-        ("astro-label", "models/placeholder/other-architecture-7b/refusal/index.html"),
-        ("astro-owner", "dana/index.html"),
+        ("models", "models/index.html"),
+        ("owners", "owners/index.html"),
+        ("label", "models/placeholder/other-architecture-7b/refusal/index.html"),
+        ("owner", "dana/index.html"),
     ]:
         path = dist / rel
         if path.exists():
@@ -77,8 +63,7 @@ def pages(tmp_path_factory):
     return out
 
 
-@pytest.fixture(params=["jinja-label", "jinja-index", "astro-models", "astro-owners",
-                        "astro-label", "astro-owner"])
+@pytest.fixture(params=["models", "owners", "label", "owner"])
 def page(request, pages):
     if request.param not in pages:
         pytest.skip(f"{request.param} not built; run `make site`")
@@ -88,9 +73,9 @@ def page(request, pages):
 def test_every_ordering_is_offered(page):
     """Including the active one.
 
-    The Jinja bar used to hide whichever ordering was active, which was harmless
-    while the control was a label and became a one-way door the moment it worked:
-    switch away and there is no button to switch back.
+    The bar used to hide whichever ordering was active, which was harmless while
+    the control was a label and became a one-way door the moment it worked: switch
+    away and there is no button to switch back.
     """
     assert sorted(harness.bar_choices(page)) == sorted(CHOICES)
 
@@ -133,7 +118,7 @@ def test_the_pressed_state_follows_the_click(page):
 
 
 def test_the_caption_names_the_ordering_actually_applied(page):
-    """"Ordered by X" has to keep up with the reader.
+    """Ordered by X has to keep up with the reader.
 
     It was rendered once on the server and never touched again, so clicking
     Trending left the page reading "Ordered by Recently added" above a list that

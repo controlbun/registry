@@ -80,12 +80,12 @@ const corpus = data.corpus;
   // aria-pressed was set, and clicking did nothing. It looked finished, which is
   // the worst failure mode a control has.
   //
-  // The contract is markup-shaped rather than table-shaped, because the same
-  // control has to drive the claimant blocks in web/templates too: `data-orderable`
-  // marks whatever element directly holds the items, and each child carries the
-  // two inputs order.py uses. Every such container on the page is bound, not the
-  // first one, so a page that grows a second list does not end up with a control
-  // that silently drives half of what the reader is looking at.
+  // The contract is markup-shaped rather than table-shaped, so it holds for a list
+  // that is not a table: `data-orderable` marks whatever element directly holds
+  // the items, and each child carries the two inputs order.py uses. Every such
+  // container on the page is bound, not the first one, so a page that grows a
+  // second list does not end up with a control that silently drives half of what
+  // the reader is looking at.
   const bar = document.querySelector(".ordering");
   const lists = [...document.querySelectorAll("[data-orderable]")];
 

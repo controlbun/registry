@@ -1,44 +1,35 @@
-"""Render label views to static HTML.
+"""One claimant, shaped the way every view of it needs.
 
-Static on purpose. v0 serves nothing publicly, and a renderer that writes files
-cannot accidentally become a public surface the way a running server can. It also
-keeps the output diffable, which makes a regression in what a reader is shown
-visible in review rather than only at runtime.
+This is not a renderer. It was one: the project carried a Jinja frontend in
+`web/templates/` alongside the Astro site, and the two drifted, most visibly when
+the pairwise "Between claimants" table was replaced with a reader-pointed
+similarity column in Astro and left standing in Jinja. Astro is the frontend. The
+Jinja templates and the HTML-emitting half of this module are gone.
 
-    .venv/bin/python -m registry.render --db registry.db --out site/
+What survives is the part both callers actually shared: the shape of a claimant.
+`export.py` builds the site payload from it and `client.py` builds a `Submission`
+from it, so the Python client and the website cannot disagree about what a
+submission is.
+
+Every measurement is passed through as None when it was not taken. Nothing here
+substitutes a zero, and the absence is carried out to whoever renders it.
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import sqlite3
-from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
-
-# Names, not the module: the package exposes a public `compare()` function, which
-# shadows the `compare` submodule for anything that reaches for it by attribute.
-from . import db, order
-from .comparison import attacks_against, pairwise, score_state
-
-ROOT = Path(__file__).resolve().parents[2]
-TEMPLATES = ROOT / "web" / "templates"
-
-
-def _env() -> Environment:
-    return Environment(
-        loader=FileSystemLoader(str(TEMPLATES)),
-        autoescape=select_autoescape(["html"]),
-        undefined=__import__("jinja2").StrictUndefined,
-    )
+# The name, not the module: the package exposes a public `compare()` function,
+# which shadows the `compare` submodule for anything reaching for it by attribute.
+from .comparison import attacks_against, score_state
 
 
 def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
     """One claimant as the page needs it.
 
     Every measurement is passed through as None when it was not taken. Nothing here
-    substitutes a zero, and the template renders absence as its own state.
+    substitutes a zero, and every view renders absence as its own state.
     """
     iv = conn.execute(
         "SELECT * FROM intervention WHERE author=? AND label=? AND version=?",
@@ -162,106 +153,3 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "attacks": attacks_against(conn, iv["id"]) if iv else [],
         "is_synthetic": bool(row["is_synthetic"]),
     }
-
-
-ORDER_LABELS = {
-    order.ORDER_RECENT: "Recently added",
-    order.ORDER_TRENDING: "Trending",
-}
-
-
-def render_label(
-    conn: sqlite3.Connection, label: str, out_dir: Path, order_key: str | None = None
-) -> Path:
-    rows = order.apply_order(conn, db.claimants(conn, label), key=order_key)
-    claimants = [claimant_view(conn, r) for r in rows]
-    pairs = pairwise(conn, label)
-
-    active = order_key or order.active_order(conn)
-    html = _env().get_template("label.html").render(
-        label=label,
-        claimants=claimants,
-        pairs=pairs,
-        any_synthetic=any(c["is_synthetic"] for c in claimants),
-        active_order=active,
-        active_order_name=ORDER_LABELS.get(active, active),
-        order_choices=[(k, v) for k, v in ORDER_LABELS.items()],
-        corpus_size=order.corpus_size(conn),
-        corpus_threshold=order.CORPUS_THRESHOLD,
-        # Handed to the template so the in-page reorder runs this module's
-        # trending function rather than a second copy of it that drifts.
-        gravity=order.GRAVITY,
-        age_offset_hours=order.AGE_OFFSET_HOURS,
-    )
-    out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"{label}.html"
-    path.write_text(html)
-    return path
-
-
-def render_index(conn: sqlite3.Connection, out_dir: Path) -> Path:
-    """The registry as a whole.
-
-    Labels in storage order with no ranking. What a reader needs here is the shape
-    of the corpus, which is how many people claim each label and across which models
-    and artifact kinds, not which label matters most.
-    """
-    labels = []
-    for (label,) in conn.execute("SELECT DISTINCT label FROM submission"):
-        rows = list(conn.execute(
-            "SELECT i.kind, i.model_id, s.author, s.version, s.created_at"
-            " FROM submission s"
-            " LEFT JOIN intervention i"
-            " ON i.author=s.author AND i.label=s.label AND i.version=s.version"
-            " WHERE s.label = ?", (label,)))
-        labels.append({
-            "label": label,
-            "claimants": len({r["author"] for r in rows}),
-            "kinds": sorted({r["kind"] for r in rows if r["kind"]}),
-            "models": sorted({r["model_id"] for r in rows if r["model_id"]}),
-            # The two inputs order.py uses, shipped per row so the reader can
-            # switch ordering in the page rather than by rebuilding the site.
-            "latest": max(r["created_at"] for r in rows),
-            "engagement": sum(
-                order.engagement(conn, r["author"], label, r["version"])
-                for r in rows
-            ),
-        })
-
-    active = order.active_order(conn)
-    html = _env().get_template("index.html").render(
-        active_order=active,
-        active_order_name=ORDER_LABELS.get(active, active),
-        order_choices=[(k, v) for k, v in ORDER_LABELS.items()],
-        corpus_size=order.corpus_size(conn),
-        corpus_threshold=order.CORPUS_THRESHOLD,
-        # Handed to the template so the in-page reorder runs this module's
-        # trending function rather than a second copy of it that drifts.
-        gravity=order.GRAVITY,
-        age_offset_hours=order.AGE_OFFSET_HOURS,
-        labels=labels,
-        total_claimants=sum(l["claimants"] for l in labels),
-        all_kinds=sorted({k for l in labels for k in l["kinds"]}),
-        all_models=sorted({m for l in labels for m in l["models"]}),
-    )
-    out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / "index.html"
-    path.write_text(html)
-    return path
-
-
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--db", default=str(ROOT / "registry.db"))
-    ap.add_argument("--out", default=str(ROOT / "site"))
-    args = ap.parse_args()
-
-    conn = db.connect(args.db)
-    labels = [r[0] for r in conn.execute("SELECT DISTINCT label FROM submission")]
-    for label in labels:
-        print("wrote", render_label(conn, label, Path(args.out)))
-    print("wrote", render_index(conn, Path(args.out)))
-
-
-if __name__ == "__main__":
-    main()

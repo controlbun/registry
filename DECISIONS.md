@@ -354,8 +354,8 @@ way. A good client is a lever with no such ratchet, and it is the part a person
 actually touches.
 
 ## 2026-09-13 The ordering control computes what its caption says it computes
-**Decided:** Both frontends reorder in the page, running `order.trending_score` with
-the constants exported from `order.py` rather than a second copy of the formula.
+**Decided:** The site reorders in the page, running `order.trending_score` with the
+constants exported from `order.py` rather than a second copy of the formula.
 Every ordering renders as a button, including the active one, and the caption naming
 the active ordering updates when the reader changes it.
 **Why:** The control shipped with buttons, `aria-pressed`, an explanatory caption and
@@ -366,3 +366,25 @@ engagement decayed by age, which is the same dishonesty one layer down. Behavior
 now tested by running the page's own script against `order.py`, and
 `tests/test_ordering_bites.py` reintroduces each failure to prove the tests fail on
 it.
+
+
+## 2026-09-13 The Jinja frontend is retired; Astro is the frontend
+**Decided:** `web/templates/` and the HTML-emitting half of `src/registry/render.py`
+are deleted. The shared view logic is `src/registry/views.py`, which shapes a
+claimant for both `export.py` and `client.py`; the ordering display names moved to
+`order.py` beside the keys they name. `tests/test_render.py` became
+`tests/test_pages.py` and reads the built Astro output. `make verify` builds the
+site before running the suite, because the page tests and the falsifier both read
+`astro/dist` and building afterward meant checking the previous build.
+**Why:** Two frontends drifted, and the one under test was not the one anybody
+would visit. Jinja still carried the quadratic "Between claimants" table that Astro
+replaced with a reader-pointed similarity column, so the retired design was the one
+the suite was proving correct. The dead ordering control is the same lesson: it
+shipped in both, and fixing it twice was the moment to stop maintaining a second
+answer to every question.
+**What this makes impossible to express:** a server-rendered view with no
+JavaScript. The similarity column and the ordering control both run in the browser
+now, so a reader with scripts off gets the list in storage order with no angles.
+That is a real loss and an acceptable one at v0, which serves nothing publicly; if
+a no-JS path is ever needed it is a build-time render of the same `views.py` shapes,
+not a second template language.

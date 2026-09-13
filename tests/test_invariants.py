@@ -22,11 +22,14 @@ MIGRATIONS = sorted((ROOT / "schema" / "migrations").glob("*.sql"))
 # Adding a frontend without adding it here makes four of the nine invariants go
 # silently inert, which is worse than not having them: the suite stays green
 # while checking nothing.
-SOURCE_DIRS = [ROOT / "src", ROOT / "web", ROOT / "astro" / "src"]
+SOURCE_DIRS = [ROOT / "src", ROOT / "astro" / "src"]
 
 SCANNED_SUFFIXES = {
     ".py", ".sql",                      # backend
-    ".html", ".jinja",                  # jinja view layer
+    # .html stays scanned though the Jinja frontend is retired: Astro emits and
+    # accepts plain HTML, and a view smuggled back in as a raw .html file would
+    # otherwise be invisible to all of this.
+    ".html",
     ".astro", ".ts", ".tsx", ".js", ".jsx", ".mjs",   # astro view layer
 }
 
@@ -270,7 +273,7 @@ def test_absent_eval_is_not_an_error():
 def test_trait_score_never_renders_without_coherence():
     offenders = []
     for p in source_files():
-        if p.suffix not in {".html", ".jinja", ".astro"}:
+        if p.suffix not in {".html", ".astro"}:
             continue
         text = p.read_text()
         # Any spelling of the trait measure, not just the column name. SweepChart

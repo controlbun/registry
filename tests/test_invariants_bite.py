@@ -105,7 +105,7 @@ def _load_invariants(root: Path):
 
     module.ROOT = root
     module.MIGRATIONS = sorted((root / "schema" / "migrations").glob("*.sql"))
-    module.SOURCE_DIRS = [root / "src", root / "web", root / "astro" / "src"]
+    module.SOURCE_DIRS = [root / "src", root / "astro" / "src"]
     return module
 
 
@@ -113,7 +113,7 @@ def _load_invariants(root: Path):
 def tree(tmp_path_factory):
     dest = tmp_path_factory.mktemp("probe") / "repo"
     dest.mkdir()
-    for part in ("schema", "src", "web", "tests"):
+    for part in ("schema", "src", "tests"):
         shutil.copytree(ROOT / part, dest / part)
     (dest / "astro").mkdir()
     shutil.copytree(ROOT / "astro" / "src", dest / "astro" / "src")
