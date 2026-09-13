@@ -16,7 +16,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import compare, db  # noqa: E402
+from registry import db
+from registry import comparison  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -36,7 +37,7 @@ def test_bare_label_yields_every_claimant(conn):
 
 
 def test_comparison_reports_the_axis_asymmetry(conn):
-    pair = compare.pairwise(conn, "kindness")[0]
+    pair = comparison.pairwise(conn, "kindness")[0]
     # Neither author checked what the other did. That gap is the finding, and it is
     # visible only because the registry declines to fix the axes in advance.
     assert pair["axes_only_a_checked"], "alice checked axes bob did not"
@@ -45,7 +46,7 @@ def test_comparison_reports_the_axis_asymmetry(conn):
 
 
 def test_absent_transfer_is_absent_not_zero(conn):
-    pair = compare.pairwise(conn, "kindness")[0]
+    pair = comparison.pairwise(conn, "kindness")[0]
     present = [pair["transfer_a"], pair["transfer_b"]]
     assert None in present, "bob measured no transfer and that must survive as None"
     assert 0 not in present and 0.0 not in present, (
@@ -54,17 +55,17 @@ def test_absent_transfer_is_absent_not_zero(conn):
 
 
 def test_score_with_no_coherence_is_uninterpretable():
-    assert compare.score_state(None) == compare.SCORE_ABSENT
-    assert compare.score_state({"trait_score": None, "coherence_score": None}) == \
-        compare.SCORE_ABSENT
-    assert compare.score_state({"trait_score": 0.5, "coherence_score": None}) == \
-        compare.SCORE_UNINTERPRETABLE
-    assert compare.score_state({"trait_score": 0.5, "coherence_score": 0.9}) == \
-        compare.SCORE_REPORTABLE
+    assert comparison.score_state(None) == comparison.SCORE_ABSENT
+    assert comparison.score_state({"trait_score": None, "coherence_score": None}) == \
+        comparison.SCORE_ABSENT
+    assert comparison.score_state({"trait_score": 0.5, "coherence_score": None}) == \
+        comparison.SCORE_UNINTERPRETABLE
+    assert comparison.score_state({"trait_score": 0.5, "coherence_score": 0.9}) == \
+        comparison.SCORE_REPORTABLE
 
 
 def test_angle_similarity_is_reported_with_its_comparability(conn):
-    pair = compare.pairwise(conn, "kindness")[0]
+    pair = comparison.pairwise(conn, "kindness")[0]
     # The number is allowed to exist. What is not allowed is presenting it without
     # the context that makes it meaningful, or reading disagreement into it.
     assert pair["angle_comparable"] is True
@@ -74,14 +75,14 @@ def test_angle_similarity_is_reported_with_its_comparability(conn):
 
 
 def test_comparison_returns_no_ordering_key(conn):
-    pairs = compare.pairwise(conn, "kindness")
+    pairs = comparison.pairwise(conn, "kindness")
     for p in pairs:
         assert not any(k in p for k in ("rank", "position", "composite", "overall"))
 
 
 def test_attacks_are_not_filtered_by_disposition(conn):
     iv = conn.execute("SELECT id FROM intervention WHERE author='alice'").fetchone()
-    attacks = compare.attacks_against(conn, iv["id"])
+    attacks = comparison.attacks_against(conn, iv["id"])
     assert len(attacks) == 1
     a = attacks[0]
     # Attacker and author disagree. Both are recorded and neither is resolved by

@@ -17,7 +17,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import compare, db, order, render
+from . import db, order, render
+from .comparison import pairwise
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -46,7 +47,7 @@ def build(conn: sqlite3.Connection) -> dict:
         labels.append({
             "label": label,
             "claimants": claimants,
-            "pairs": compare.pairwise(conn, label),
+            "pairs": pairwise(conn, label),
         })
 
     # Models are the primary axis. An intervention is a tensor in one model's basis

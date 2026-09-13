@@ -1,5 +1,10 @@
 """Comparison: derived, never authored.
 
+Named `comparison` and not `compare` because the package exposes a public
+`compare()` function. When both existed, `from . import compare` bound the
+function over the module and every attribute access on it failed at runtime
+rather than at import.
+
 Computed on demand between submissions that share a label. There is no table
 behind this and there should not be one, because a stored comparison is an
 opinion with a schema attached.

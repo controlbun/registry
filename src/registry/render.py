@@ -17,7 +17,10 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from . import compare, db, order
+# Names, not the module: the package exposes a public `compare()` function, which
+# shadows the `compare` submodule for anything that reaches for it by attribute.
+from . import db, order
+from .comparison import attacks_against, pairwise, score_state
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES = ROOT / "web" / "templates"
@@ -64,7 +67,7 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
             "trait_score": r["trait_score"],
             "coherence_score": r["coherence_score"],
             "transfer_score": r["transfer_score"],
-            "score_state": compare.score_state(r),
+            "score_state": score_state(r),
         }
         for r in reports
         if r["evaluator"] != row["author"]
@@ -112,7 +115,7 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "version": row["version"],
         "definition": row["definition"],
         "created_at": row["created_at"],
-        "score_state": compare.score_state(report),
+        "score_state": score_state(report),
         "trait_score": report["trait_score"] if report else None,
         "coherence_score": report["coherence_score"] if report else None,
         "transfer_score": report["transfer_score"] if report else None,
@@ -134,7 +137,7 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "layer_convention": iv["layer_convention"] if iv else None,
         "hook_point": iv["hook_point"] if iv else None,
         "axes": sorted(set(axes)),
-        "attacks": compare.attacks_against(conn, iv["id"]) if iv else [],
+        "attacks": attacks_against(conn, iv["id"]) if iv else [],
         "is_synthetic": bool(row["is_synthetic"]),
     }
 
@@ -150,7 +153,7 @@ def render_label(
 ) -> Path:
     rows = order.apply_order(conn, db.claimants(conn, label), key=order_key)
     claimants = [claimant_view(conn, r) for r in rows]
-    pairs = compare.pairwise(conn, label)
+    pairs = pairwise(conn, label)
 
     active = order_key or order.active_order(conn)
     html = _env().get_template("label.html").render(
