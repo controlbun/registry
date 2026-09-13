@@ -1,5 +1,5 @@
 ---
-// Attacks against this artifact, by anyone other than its author.
+// Attack cards: someone other than the author trying to break this artifact.
 //
 // The strongest evidence available, because it is the one kind the author did not
 // choose. Attacker and author each state what they think it means and both stand;
@@ -14,9 +14,9 @@ const { attacks, author } = Astro.props;
 
 {attacks.length === 0 ? (
   <p class="note absent-block">
-    Nobody has attacked this artifact. That is not evidence it is sound, and it is
-    not a clean record. It means the only evidence attached to it is evidence its
-    author selected.
+    No attack cards. Nobody has tried to break this artifact, which is not evidence
+    it is sound and is not a clean record. It means the only evidence attached to it
+    is evidence its author selected.
   </p>
 ) : (
   attacks.map((a) => (
@@ -36,6 +36,6 @@ const { attacks, author } = Astro.props;
 )}
 
 <p class="note">
-  Publishing an attack needs a write path, and this build has none. Nothing here
-  accepts uploads yet.
+  Publishing an attack card needs a write path, and this build has none. Nothing
+  here accepts uploads yet.
 </p>

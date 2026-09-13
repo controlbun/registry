@@ -3,8 +3,8 @@ import Base from "../layouts/Base.astro";
 import Claimant from "../components/Claimant.astro";
 import ArtifactCard from "../components/ArtifactCard.astro";
 import Tabs from "../components/Tabs.astro";
-import Verifications from "../components/Verifications.astro";
-import Attacks from "../components/Attacks.astro";
+import SupportCards from "../components/SupportCards.astro";
+import AttackCards from "../components/AttackCards.astro";
 import SubmissionRows from "../components/SubmissionRows.astro";
 import Pins from "../components/Pins.astro";
 import Relations from "../components/Relations.astro";
@@ -204,8 +204,8 @@ const released = (iso) =>
 
     <Tabs tabs={[
       { id: "artifact", label: "Artifact", count: null },
-      { id: "verifications", label: "Verifications", count: claimant.verifications.length },
-      { id: "attacks", label: "Attacks", count: claimant.attacks.length },
+      { id: "support", label: "Support cards", count: claimant.verifications.length },
+      { id: "attacks", label: "Attack cards", count: claimant.attacks.length },
       { id: "pins", label: "Pins", count: data.pins.filter(
           (p) => p.author === claimant.author && p.label === claimant.label
                  && p.version === claimant.version).length },
@@ -217,8 +217,8 @@ const released = (iso) =>
         <ArtifactCard claimant={claimant} modelId={model.model_id} />
       </div>
 
-      <div data-panel="verifications" class="hidden">
-        <Verifications
+      <div data-panel="support" class="hidden">
+        <SupportCards
           verifications={claimant.verifications}
           author={claimant.author}
           own={{
@@ -230,7 +230,7 @@ const released = (iso) =>
       </div>
 
       <div data-panel="attacks" class="hidden">
-        <Attacks attacks={claimant.attacks} author={claimant.author} />
+        <AttackCards attacks={claimant.attacks} author={claimant.author} />
       </div>
 
       <div data-panel="pins" class="hidden">

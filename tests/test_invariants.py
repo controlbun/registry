@@ -5,7 +5,7 @@ corresponds to a line in the invariants list in CLAUDE.md. If you settle a new
 invariant, add it there and add a test here. An invariant that is only in prose is
 not an invariant.
 
-Four of these read the SQL and bite today. The rest scan source and templates for
+Some of these read the SQL. The rest scan source and templates for
 banned constructs; they currently scan a small codebase and will bite as it grows.
 That is the intended shape, not a gap: they are lint, and lint is worth having
 before the code it lints exists.

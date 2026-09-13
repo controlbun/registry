@@ -1,9 +1,13 @@
 ---
-// Evals run against this artifact by someone other than its author.
+// Support cards: measurements of this artifact by someone other than its author.
 //
-// These are not corrections of the author's numbers and are never reconciled
-// against them. Two people measuring the same artifact and disagreeing is the
-// content: the registry shows both and picks neither.
+// "Support" is about the process, not the verdict. A card here may agree with the
+// author or contradict them flatly, and both are published unchanged. What is
+// being supported is the premise that a claim should be independently checkable;
+// whether the check agrees is a separate question the registry does not settle.
+//
+// So these are never reconciled against the author's numbers. Two people measuring
+// the same artifact and getting different answers is the content.
 interface Props {
   verifications: any[];
   author: string;
@@ -19,10 +23,10 @@ const when = (iso) =>
 
 {verifications.length === 0 ? (
   <p class="note absent-block">
-    Nobody other than {author} has evaluated this artifact. The author wrote both
-    the submission and the evaluation it reports, which measures internal
-    consistency and not much else. An independent eval is the cheapest evidence
-    anyone can add here, and this artifact has none.
+    No support cards. Nobody other than {author} has measured this artifact, so the
+    author wrote both the submission and the check on it, which establishes internal
+    consistency and not much else. An independent measurement is the cheapest
+    evidence anyone can add here, and this artifact has none.
   </p>
 ) : (
   <>
@@ -88,9 +92,10 @@ const when = (iso) =>
 
     <p class="note">
       The author's row is first because it is theirs, not because it is the
-      reference. Where these numbers disagree, neither is corrected against the
-      other and the registry does not pick. Two people measuring the same artifact
-      and getting different answers is the disagreement this exists to show.
+      reference. A support card that contradicts the author is still a support
+      card: what it supports is the artifact being checkable, not the claim being
+      right. Neither number is corrected against the other and the registry does
+      not pick.
     </p>
     <p class="note">
       Each evaluator pinned their own judge model and revision. A score produced by

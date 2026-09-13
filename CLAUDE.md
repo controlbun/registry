@@ -130,7 +130,7 @@ reading explicitly, as a role rather than as a disclaimer.
 - **Run** and **Reproduction**, provenance, and a reproduction reports its delta
   rather than a pass.
 
-v0 is schema, storage on the HF Hub, Postgres metadata, Python client, Comparison,
+v0 is schema, storage on the HF Hub, SQLite metadata, Python client, Comparison,
 views, and the ported falsifier. Build against fixtures labeled synthetic. Seed
 with competing claimants on one label, not coverage across ten labels.
 
