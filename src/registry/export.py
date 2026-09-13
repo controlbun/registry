@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
-from datetime import datetime, timezone
 from pathlib import Path
 
 from . import db, order, render
@@ -111,6 +110,40 @@ def build(conn: sqlite3.Connection) -> dict:
             "labels": blocks,
         })
 
+    # Pins. A consumer freezing one submission for one purpose so its own numbers
+    # stay comparable. That is ordinary experimental control and the opposite of a
+    # designation, but only while it stays visible: a pin whose alternatives nobody
+    # can see has quietly become the answer rather than a choice.
+    pins = [
+        {
+            "pinned_by": r["pinned_by"],
+            "pinned_at": r["pinned_at"],
+            "purpose": r["purpose"],
+            "target": f"{r['author']}/{r['label']}@{r['version']}",
+            "author": r["author"],
+            "label": r["label"],
+            "version": r["version"],
+            "alternatives": json.loads(r["alternatives_json"]),
+            "rationale": r["rationale"],
+        }
+        for r in conn.execute("SELECT * FROM pin")
+    ]
+
+    # Relations. Taxonomy from claims rather than from a committee: one author
+    # saying what they think their label is or is not, which is a statement another
+    # author can disagree with rather than a category anyone is filed under.
+    relations = [
+        {
+            "from_author": r["from_author"],
+            "from_label": r["from_label"],
+            "relation": r["relation"],
+            "to_author": r["to_author"],
+            "to_label": r["to_label"],
+            "note": r["note"],
+        }
+        for r in conn.execute("SELECT * FROM label_relation")
+    ]
+
     # Owners. Everything published here is public: a submission nobody can see
     # cannot be attacked, cannot have someone else's eval pointed at it, and cannot
     # appear in a Comparison, so it has none of the properties that make a registry
@@ -166,7 +199,6 @@ def build(conn: sqlite3.Connection) -> dict:
     active = order.active_order(conn)
 
     return {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
         "corpus": {
             "size": order.corpus_size(conn),
             "threshold": order.CORPUS_THRESHOLD,
@@ -181,6 +213,8 @@ def build(conn: sqlite3.Connection) -> dict:
         ),
         "kinds": kinds,
         "models": models,
+        "pins": pins,
+        "relations": relations,
         "model_index": model_index,
         "owner_index": owner_index,
         "labels": labels,
@@ -203,6 +237,8 @@ def main() -> None:
     print(f"wrote {out}")
     print(f"  models     {len(payload['model_index'])}")
     print(f"  owners     {len(payload['owner_index'])}")
+    print(f"  pins       {len(payload['pins'])}")
+    print(f"  relations  {len(payload['relations'])}")
     print(f"  labels     {len(payload['labels'])}")
     print(f"  claimants  {payload['corpus']['size']}")
     print(f"  ordering   {payload['corpus']['active_order']}")

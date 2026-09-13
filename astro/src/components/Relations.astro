@@ -1,0 +1,46 @@
+---
+// What authors say their labels are, and are not, relative to each other.
+//
+// Taxonomy from claims rather than from a committee. `distinguishes-from` and
+// `interprets` are the common relations, not the permitted ones: `relation` is an
+// open string, so an author who needs a word this schema never anticipated writes
+// it rather than asking for it.
+//
+// This is how disagreement becomes legible instead of merely present. Two people
+// claiming `kindness` is a fact you can read off a label page. One of them saying
+// "this is not what I mean, and here is why" is the content.
+interface Props {
+  relations: any[];
+  label: string;
+}
+const { relations, label } = Astro.props;
+---
+
+{relations.length === 0 ? (
+  <p class="note absent-block">
+    Nobody claiming <strong>{label}</strong> has said how their reading relates to
+    anyone else's. The claims sit side by side without any author addressing the
+    others, so a reader has to infer the disagreement from the definitions.
+  </p>
+) : (
+  relations.map((r) => (
+    <div class="relation">
+      <div class="provenance">
+        <a class="mono" href={`/${r.from_author}/`}>{r.from_author}</a>
+        {" "}<span class="rel-verb">{r.relation.replace(/-/g, " ")}</span>{" "}
+        <a class="mono" href={`/${r.to_author}/`}>{r.to_author}</a>
+        <span class="mono">/{r.to_label}</span>
+      </div>
+      {r.note && <p class="definition">{r.note}</p>}
+    </div>
+  ))
+)}
+
+{relations.length > 0 && (
+  <p class="note">
+    These are claims, not categories. Nobody is filed under anything here: an
+    author states how they read their own label against someone else's, and the
+    other author is free to disagree in the same way. The registry records both and
+    settles neither.
+  </p>
+)}

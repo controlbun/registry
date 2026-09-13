@@ -1,0 +1,64 @@
+---
+// Who has frozen this submission, for what, and what they passed over.
+//
+// This is the distinction the whole project rests on. The registry never
+// designates: it does not assert that one entry is the right one. A consumer
+// pins: it freezes one `author/label@version` for one purpose so its own numbers
+// stay comparable, which is ordinary experimental control and is required rather
+// than merely tolerated.
+//
+// The difference is entirely visibility. A pin that is named, dated and shown
+// beside what it was chosen over is a choice a reader can contest. The same pin
+// with its alternatives hidden reads as the answer, and has become a designation
+// without anyone deciding to make one. So the alternatives are not an optional
+// detail here; they are the thing that keeps this legitimate.
+interface Props {
+  pins: any[];
+  subject: string;
+}
+const { pins, subject } = Astro.props;
+
+const when = (iso) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric", month: "short", day: "numeric",
+  });
+---
+
+{pins.length === 0 ? (
+  <p class="note absent-block">
+    Nobody has pinned this. Being unpinned is not a mark against it, and being
+    pinned is not an endorsement: a pin says one consumer froze this for one
+    purpose, not that it is the right answer for anyone else.
+  </p>
+) : (
+  pins.map((p) => (
+    <div class="pin">
+      <div class="provenance">
+        <strong>{p.pinned_by}</strong> pinned
+        {" "}<span class="mono">{p.target}</span> on {when(p.pinned_at)}
+      </div>
+      <p class="definition">{p.purpose}</p>
+      {p.rationale && <p class="note">{p.rationale}</p>}
+
+      <div class="passed-over">
+        <span class="k">Passed over</span>
+        {p.alternatives.length === 0 ? (
+          <span class="uninterpretable">
+            nothing recorded, so this pin cannot be contested
+          </span>
+        ) : (
+          <ul>
+            {p.alternatives.map((alt) => <li class="mono">{alt}</li>)}
+          </ul>
+        )}
+      </div>
+    </div>
+  ))
+)}
+
+<p class="note">
+  Pinning is not the registry choosing. It is a consumer freezing one submission
+  so its own measurements stay comparable, the same way it would pin a model
+  revision or a judge model. {subject} is not thereby the answer for
+  anyone else, and the alternatives above are listed so the choice stays arguable.
+</p>

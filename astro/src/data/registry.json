@@ -16,7 +16,6 @@
     "size": 4,
     "threshold": 100
   },
-  "generated_at": "2026-09-13T00:08:20.812735+00:00",
   "kinds": [
     "direction",
     "probe",
@@ -873,6 +872,39 @@
           "version": "v1"
         }
       ]
+    }
+  ],
+  "pins": [
+    {
+      "alternatives": [
+        "alice/kindness@v1"
+      ],
+      "author": "bob",
+      "label": "kindness",
+      "pinned_at": "2026-09-12T00:00:00Z",
+      "pinned_by": "steering-arena",
+      "purpose": "Season scoring target, frozen so player scores are commensurable",
+      "rationale": "Picked for the costly-help reading because the season's probe set is about action. Not a claim that it is the better direction.",
+      "target": "bob/kindness@v1",
+      "version": "v1"
+    }
+  ],
+  "relations": [
+    {
+      "from_author": "bob",
+      "from_label": "kindness",
+      "note": "Alice's direction reads to me as affect, not as help at a cost.",
+      "relation": "distinguishes-from",
+      "to_author": "alice",
+      "to_label": "kindness"
+    },
+    {
+      "from_author": "erik",
+      "from_label": "refusal",
+      "note": "A latent that fires on declination may be firing on the topics that provoke it.",
+      "relation": "distinguishes-from",
+      "to_author": "dana",
+      "to_label": "refusal"
     }
   ]
 }

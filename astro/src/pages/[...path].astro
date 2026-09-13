@@ -7,6 +7,8 @@ import Verifications from "../components/Verifications.astro";
 import Attacks from "../components/Attacks.astro";
 import Pairs from "../components/Pairs.astro";
 import SubmissionRows from "../components/SubmissionRows.astro";
+import Pins from "../components/Pins.astro";
+import Relations from "../components/Relations.astro";
 import data from "../data/registry.json";
 
 // Everything below the index lives under the model, because an intervention is a
@@ -171,6 +173,18 @@ const released = (iso) =>
           <Pairs pairs={block.pairs} />
         </>
       )}
+
+      <h2>How the claimants read each other</h2>
+      <Relations
+        relations={data.relations.filter((r) => r.from_label === block.label)}
+        label={block.label}
+      />
+
+      <h2>Who has pinned one of these</h2>
+      <Pins
+        pins={data.pins.filter((p) => p.label === block.label)}
+        subject={`A pinned ${block.label}`}
+      />
     </div>
   </Base>
 )}
@@ -196,6 +210,9 @@ const released = (iso) =>
       { id: "artifact", label: "Artifact", count: null },
       { id: "verifications", label: "Verifications", count: claimant.verifications.length },
       { id: "attacks", label: "Attacks", count: claimant.attacks.length },
+      { id: "pins", label: "Pins", count: data.pins.filter(
+          (p) => p.author === claimant.author && p.label === claimant.label
+                 && p.version === claimant.version).length },
       { id: "comments", label: "Comments", count: null },
     ]} />
 
@@ -218,6 +235,15 @@ const released = (iso) =>
 
       <div data-panel="attacks" class="hidden">
         <Attacks attacks={claimant.attacks} author={claimant.author} />
+      </div>
+
+      <div data-panel="pins" class="hidden">
+        <Pins
+          pins={data.pins.filter(
+            (p) => p.author === claimant.author && p.label === claimant.label
+                   && p.version === claimant.version)}
+          subject={`${claimant.author}/${claimant.label}@${claimant.version}`}
+        />
       </div>
 
       <div data-panel="comments" class="hidden">

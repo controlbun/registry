@@ -297,3 +297,18 @@ blockquote.origin {
 blockquote.origin p {
   margin: 0; font-size: 1.08rem; line-height: 1.5; color: var(--ink);
 }
+
+/* -------------------------------------------------------- pins, relations */
+
+.pin, .relation {
+  border-left: 2px solid var(--accent);
+  padding-left: 1rem;
+  margin-bottom: 1.3rem;
+}
+.passed-over { margin-top: .5rem; font-size: .85rem; }
+.passed-over ul { margin: .2rem 0 0; padding-left: 1.1rem; }
+.passed-over li { color: var(--dim); }
+.rel-verb {
+  color: var(--dim); font-style: italic;
+  font-family: ui-serif, Georgia, serif;
+}
