@@ -1,0 +1,105 @@
+---
+// Independent measurements: somebody other than the author re-measured this
+// artifact with their own suite.
+//
+// Distinct from a support card, which reports applied use, and from an attack
+// card, which reports an attempt to break it. This is the same question the
+// author answered, asked again by someone else.
+//
+// Never reconciled against the author's numbers. Two people measuring the same
+// artifact and getting different answers is the content, and a page that averaged
+// them would be manufacturing an agreement neither of them reported.
+interface Props {
+  measurements: any[];
+  author: string;
+  own: { trait: number | null; coherence: number | null; state: string };
+}
+const { measurements, author, own } = Astro.props;
+const fmt = (v) => (v === null || v === undefined ? null : v.toFixed(4));
+const when = (iso) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric", month: "short", day: "numeric",
+  });
+---
+
+{measurements.length === 0 ? (
+  <p class="note absent-block">
+    Nobody other than {author} has measured this artifact, so the author wrote
+    both the submission and the check on it. That establishes internal consistency
+    and not much else, and an independent measurement is the cheapest evidence
+    anyone can add here.
+  </p>
+) : (
+  <>
+    <table>
+      <thead>
+        <tr>
+          <th>Measured by</th>
+          <th>Suite</th>
+          <th>Trait</th>
+          <th>Coherence</th>
+          <th>Transfer</th>
+          <th>Reported</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="own-row">
+          <td>
+            <a class="mono" href={`/${author}/`}>{author}</a>
+            <div class="provenance">the author</div>
+          </td>
+          <td class="provenance">their own suite</td>
+          <td>
+            {own.state === "reportable" && fmt(own.trait)}
+            {own.state === "uninterpretable" && (
+              <span class="uninterpretable">uninterpretable</span>
+            )}
+            {own.state === "absent" && <span class="absent">not measured</span>}
+          </td>
+          <td>
+            {own.coherence === null
+              ? <span class="absent">not measured</span>
+              : fmt(own.coherence)}
+          </td>
+          <td class="absent">—</td>
+          <td class="absent">—</td>
+        </tr>
+        {measurements.map((m) => (
+          <tr>
+            <td><a class="mono" href={`/${m.evaluator}/`}>{m.evaluator}</a></td>
+            <td class="mono">{m.suite}</td>
+            <td>
+              {m.score_state === "reportable" && fmt(m.trait_score)}
+              {m.score_state === "uninterpretable" && (
+                <span class="uninterpretable">uninterpretable</span>
+              )}
+              {m.score_state === "absent" && <span class="absent">not measured</span>}
+            </td>
+            <td>
+              {m.coherence_score === null
+                ? <span class="absent">not measured</span>
+                : fmt(m.coherence_score)}
+            </td>
+            <td>
+              {m.transfer_score === null
+                ? <span class="absent">not measured</span>
+                : fmt(m.transfer_score)}
+            </td>
+            <td class="provenance">{when(m.reported_at)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <p class="note">
+      The author's row is first because it is theirs, not because it is the
+      reference. Where these disagree, neither is corrected against the other and
+      the registry does not pick.
+    </p>
+    <p class="note">
+      Each measurer pinned their own judge model and revision, so the suite is
+      named rather than the numbers pooled. A score from a different judge is not
+      the same measurement.
+    </p>
+  </>
+)}

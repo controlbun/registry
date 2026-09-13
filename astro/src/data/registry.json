@@ -107,6 +107,20 @@
           "score_state": "reportable",
           "shape": "[8]",
           "steering_position": "all-positions",
+          "support": [
+            {
+              "author_response": "Checking my extraction script. If the hook is wrong in the metadata that is my error and I will publish a v2 rather than edit v1.",
+              "deviations": "The published hook_point does not reproduce the author's result. Either the artifact was extracted at resid_pre and recorded as resid_post, or the convention differs from the one I assumed. Nothing on the page disambiguates it.",
+              "expected": "Per the contract: layer 4, resid_post, block-0indexed, coefficient 0.5 to 1.5.",
+              "observed": "Worked, but only after correcting the hook. Applying at resid_post as documented moved nothing; the effect appears at resid_pre. Once moved, behaviour matched the claim up to about 1.0.",
+              "predictability": "partial",
+              "purpose": "Warming the tone of generated release notes.",
+              "repo": "placeholder/tone-experiments",
+              "repo_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "reported_at": "2026-09-12T00:00:00Z",
+              "reporter": "hana"
+            }
+          ],
           "trait_score": 0.7777,
           "transfer_score": 0.6666,
           "verifications": [
@@ -198,6 +212,20 @@
           "score_state": "reportable",
           "shape": "[8]",
           "steering_position": "all-positions",
+          "support": [
+            {
+              "author_response": "Matches what I measured. The costly-help reading is exactly the case this was built for.",
+              "deviations": null,
+              "expected": "Per the contract: coefficient 0.5 to 1.5 at layer 4 resid_post, all-positions, with coherence holding across that range.",
+              "observed": "Held across the documented range. At 1.5 the assistant offered to do the task rather than describing it, which is the behaviour the label claims. Coherence did not visibly degrade.",
+              "predictability": "as-documented",
+              "purpose": "Steering a support-desk assistant toward offering concrete help rather than sympathy.",
+              "repo": "placeholder/support-desk-eval",
+              "repo_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "reported_at": "2026-09-12T00:00:00Z",
+              "reporter": "gus"
+            }
+          ],
           "trait_score": 0.4444,
           "transfer_score": null,
           "verifications": [],
@@ -291,6 +319,7 @@
           "score_state": "reportable",
           "shape": "[8]",
           "steering_position": "all-positions",
+          "support": [],
           "trait_score": 0.6666,
           "transfer_score": 0.2222,
           "verifications": [
@@ -354,6 +383,7 @@
           "score_state": "uninterpretable",
           "shape": "[8]",
           "steering_position": "all-positions",
+          "support": [],
           "trait_score": 0.5555,
           "transfer_score": null,
           "verifications": [],
@@ -401,6 +431,7 @@
           "score_state": "absent",
           "shape": "[8]",
           "steering_position": "all-positions",
+          "support": [],
           "trait_score": null,
           "transfer_score": null,
           "verifications": [],
@@ -612,6 +643,20 @@
               "score_state": "reportable",
               "shape": "[8]",
               "steering_position": "all-positions",
+              "support": [
+                {
+                  "author_response": "Checking my extraction script. If the hook is wrong in the metadata that is my error and I will publish a v2 rather than edit v1.",
+                  "deviations": "The published hook_point does not reproduce the author's result. Either the artifact was extracted at resid_pre and recorded as resid_post, or the convention differs from the one I assumed. Nothing on the page disambiguates it.",
+                  "expected": "Per the contract: layer 4, resid_post, block-0indexed, coefficient 0.5 to 1.5.",
+                  "observed": "Worked, but only after correcting the hook. Applying at resid_post as documented moved nothing; the effect appears at resid_pre. Once moved, behaviour matched the claim up to about 1.0.",
+                  "predictability": "partial",
+                  "purpose": "Warming the tone of generated release notes.",
+                  "repo": "placeholder/tone-experiments",
+                  "repo_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "reported_at": "2026-09-12T00:00:00Z",
+                  "reporter": "hana"
+                }
+              ],
               "trait_score": 0.7777,
               "transfer_score": 0.6666,
               "verifications": [
@@ -703,6 +748,20 @@
               "score_state": "reportable",
               "shape": "[8]",
               "steering_position": "all-positions",
+              "support": [
+                {
+                  "author_response": "Matches what I measured. The costly-help reading is exactly the case this was built for.",
+                  "deviations": null,
+                  "expected": "Per the contract: coefficient 0.5 to 1.5 at layer 4 resid_post, all-positions, with coherence holding across that range.",
+                  "observed": "Held across the documented range. At 1.5 the assistant offered to do the task rather than describing it, which is the behaviour the label claims. Coherence did not visibly degrade.",
+                  "predictability": "as-documented",
+                  "purpose": "Steering a support-desk assistant toward offering concrete help rather than sympathy.",
+                  "repo": "placeholder/support-desk-eval",
+                  "repo_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "reported_at": "2026-09-12T00:00:00Z",
+                  "reporter": "gus"
+                }
+              ],
               "trait_score": 0.4444,
               "transfer_score": null,
               "verifications": [],
@@ -808,6 +867,7 @@
               "score_state": "reportable",
               "shape": "[8]",
               "steering_position": "all-positions",
+              "support": [],
               "trait_score": 0.6666,
               "transfer_score": 0.2222,
               "verifications": [
@@ -871,6 +931,7 @@
               "score_state": "uninterpretable",
               "shape": "[8]",
               "steering_position": "all-positions",
+              "support": [],
               "trait_score": 0.5555,
               "transfer_score": null,
               "verifications": [],
@@ -918,6 +979,7 @@
               "score_state": "absent",
               "shape": "[8]",
               "steering_position": "all-positions",
+              "support": [],
               "trait_score": null,
               "transfer_score": null,
               "verifications": [],

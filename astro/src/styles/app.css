@@ -323,3 +323,14 @@ blockquote.origin p {
 }
 .picker-why { color: var(--faint); }
 td.sim { font-variant-numeric: tabular-nums; }
+
+.support { border-left: 2px solid var(--line); padding-left: 1rem; margin-bottom: 1.4rem; }
+.support.deviating { border-left-color: var(--warn-line); }
+.support dl.spec { margin-top: .5rem; }
+.deviation { color: var(--warn); }
+.tag {
+  margin-left: .5rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .04em; border: 1px solid var(--line);
+  border-radius: 999px; padding: 0 .45rem; color: var(--dim);
+}
+.tag.warn { color: var(--warn); border-color: var(--warn-line); }

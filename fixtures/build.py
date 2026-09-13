@@ -374,6 +374,48 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          "take affect to be the trait rather than a confound on it."),
     )
 
+    # Support cards: applied use, not evaluation. One reports the artifact
+    # behaving as documented; one reports it working while the published contract
+    # was wrong, which is a defect report about our metadata that no eval could
+    # surface.
+    ex(
+        "INSERT INTO support_card (id,author,label,version,reporter,reported_at,"
+        "repo,repo_commit,purpose,expected,observed,predictability,deviations,"
+        "author_response,is_synthetic) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
+        ("sc_gus_on_bob", "bob", "kindness", "v1", "gus",
+         "2026-09-12T00:00:00Z", "placeholder/support-desk-eval", "a" * 40,
+         "Steering a support-desk assistant toward offering concrete help rather "
+         "than sympathy.",
+         "Per the contract: coefficient 0.5 to 1.5 at layer 4 resid_post, "
+         "all-positions, with coherence holding across that range.",
+         "Held across the documented range. At 1.5 the assistant offered to do "
+         "the task rather than describing it, which is the behaviour the label "
+         "claims. Coherence did not visibly degrade.",
+         "as-documented", None,
+         "Matches what I measured. The costly-help reading is exactly the case "
+         "this was built for."),
+    )
+    ex(
+        "INSERT INTO support_card (id,author,label,version,reporter,reported_at,"
+        "repo,repo_commit,purpose,expected,observed,predictability,deviations,"
+        "author_response,is_synthetic) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
+        ("sc_hana_on_alice", "alice", "kindness", "v1", "hana",
+         "2026-09-12T00:00:00Z", "placeholder/tone-experiments", "b" * 40,
+         "Warming the tone of generated release notes.",
+         "Per the contract: layer 4, resid_post, block-0indexed, coefficient 0.5 "
+         "to 1.5.",
+         "Worked, but only after correcting the hook. Applying at resid_post as "
+         "documented moved nothing; the effect appears at resid_pre. Once moved, "
+         "behaviour matched the claim up to about 1.0.",
+         "partial",
+         "The published hook_point does not reproduce the author's result. Either "
+         "the artifact was extracted at resid_pre and recorded as resid_post, or "
+         "the convention differs from the one I assumed. Nothing on the page "
+         "disambiguates it.",
+         "Checking my extraction script. If the hook is wrong in the metadata "
+         "that is my error and I will publish a v2 rather than edit v1."),
+    )
+
     # A consumer freezing one claimant for one purpose, visibly and contestably.
     ex(
         "INSERT INTO pin (id,pinned_by,pinned_at,purpose,author,label,version,"

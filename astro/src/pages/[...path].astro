@@ -4,6 +4,7 @@ import Claimant from "../components/Claimant.astro";
 import ArtifactCard from "../components/ArtifactCard.astro";
 import Tabs from "../components/Tabs.astro";
 import SupportCards from "../components/SupportCards.astro";
+import Measurements from "../components/Measurements.astro";
 import AttackCards from "../components/AttackCards.astro";
 import SubmissionRows from "../components/SubmissionRows.astro";
 import Pins from "../components/Pins.astro";
@@ -204,7 +205,9 @@ const released = (iso) =>
 
     <Tabs tabs={[
       { id: "artifact", label: "Artifact", count: null },
-      { id: "support", label: "Support cards", count: claimant.verifications.length },
+      { id: "support", label: "Support cards", count: claimant.support.length },
+      { id: "measurements", label: "Independent measurements",
+        count: claimant.verifications.length },
       { id: "attacks", label: "Attack cards", count: claimant.attacks.length },
       { id: "pins", label: "Pins", count: data.pins.filter(
           (p) => p.author === claimant.author && p.label === claimant.label
@@ -218,8 +221,12 @@ const released = (iso) =>
       </div>
 
       <div data-panel="support" class="hidden">
-        <SupportCards
-          verifications={claimant.verifications}
+        <SupportCards support={claimant.support} author={claimant.author} />
+      </div>
+
+      <div data-panel="measurements" class="hidden">
+        <Measurements
+          measurements={claimant.verifications}
           author={claimant.author}
           own={{
             trait: claimant.trait_score,

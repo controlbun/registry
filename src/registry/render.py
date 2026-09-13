@@ -97,7 +97,29 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
             "theory": rec["theory"],
         }
 
+    # Applied use, not evaluation. The only evidence here that tests the
+    # application contract rather than the artifact.
+    support = [
+        {
+            "reporter": r["reporter"],
+            "reported_at": r["reported_at"],
+            "repo": r["repo"],
+            "repo_commit": r["repo_commit"],
+            "purpose": r["purpose"],
+            "expected": r["expected"],
+            "observed": r["observed"],
+            "predictability": r["predictability"],
+            "deviations": r["deviations"],
+            "author_response": r["author_response"],
+        }
+        for r in conn.execute(
+            "SELECT * FROM support_card WHERE author=? AND label=? AND version=?",
+            (row["author"], row["label"], row["version"]),
+        )
+    ]
+
     return {
+        "support": support,
         "verifications": verifications,
         "recipe": recipe,
         "shape": iv["shape"] if iv else None,

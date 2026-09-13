@@ -1,106 +1,98 @@
 ---
-// Support cards: measurements of this artifact by someone other than its author.
+// Support cards: someone used this artifact in their own work and reports whether
+// it behaved the way the published contract said it would.
 //
-// "Support" is about the process, not the verdict. A card here may agree with the
-// author or contradict them flatly, and both are published unchanged. What is
-// being supported is the premise that a claim should be independently checkable;
-// whether the check agrees is a separate question the registry does not settle.
+// Not an evaluation. An eval re-measures the artifact against a benchmark; this
+// reports applied use, which is the only evidence here that touches external
+// validity. "I used it for something real and it did what it claimed" is a
+// different statement from "your number reproduces", and nothing else in the
+// schema carries it.
 //
-// So these are never reconciled against the author's numbers. Two people measuring
-// the same artifact and getting different answers is the content.
+// It is also the only evidence that tests the application contract rather than
+// the artifact. A vector applied at the wrong layer or hook point does not fail
+// loudly, it appears not to work, so a reader who cannot make it behave has no
+// way to tell a bad artifact from bad metadata. `deviations` is where that gets
+// said, and it is a defect report about us rather than about the author.
+//
+// Why each card leads with a prediction: user ratings were rejected here because
+// a direction that also moves sentiment and verbosity feels more effective in
+// use, since more is happening, while a well-isolated one feels subtler. So
+// satisfaction favours the confounded artifact. A card that records what was
+// expected and what happened is evidence; one that records how it felt is a star
+// rating with more words.
 interface Props {
-  verifications: any[];
+  support: any[];
   author: string;
-  own: { trait: number | null; coherence: number | null; state: string };
 }
-const { verifications, author, own } = Astro.props;
-const fmt = (v) => (v === null || v === undefined ? null : v.toFixed(4));
+const { support, author } = Astro.props;
+
 const when = (iso) =>
   new Date(iso).toLocaleDateString("en-US", {
     year: "numeric", month: "short", day: "numeric",
   });
 ---
 
-{verifications.length === 0 ? (
+{support.length === 0 ? (
   <p class="note absent-block">
-    No support cards. Nobody other than {author} has measured this artifact, so the
-    author wrote both the submission and the check on it, which establishes internal
-    consistency and not much else. An independent measurement is the cheapest
-    evidence anyone can add here, and this artifact has none.
+    No support cards. Nobody has reported using this artifact in their own work,
+    so there is no evidence about it outside the conditions its author chose, and
+    none at all about whether the published layer, hook point, template and
+    coefficient range are sufficient to apply it.
   </p>
 ) : (
-  <>
-    <table>
-      <thead>
-        <tr>
-          <th>Evaluator</th>
-          <th>Suite</th>
-          <th>Trait</th>
-          <th>Coherence</th>
-          <th>Transfer</th>
-          <th>Reported</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr class="own-row">
-          <td>
-            <a class="mono" href={`/${author}/`}>{author}</a>
-            <div class="provenance">the author</div>
-          </td>
-          <td class="provenance">their own suite</td>
-          <td>
-            {own.state === "reportable" && fmt(own.trait)}
-            {own.state === "uninterpretable" && (
-              <span class="uninterpretable">uninterpretable</span>
-            )}
-            {own.state === "absent" && <span class="absent">not measured</span>}
-          </td>
-          <td>
-            {own.coherence === null
-              ? <span class="absent">not measured</span>
-              : fmt(own.coherence)}
-          </td>
-          <td class="absent">—</td>
-          <td class="absent">—</td>
-        </tr>
-        {verifications.map((v) => (
-          <tr>
-            <td><a class="mono" href={`/${v.evaluator}/`}>{v.evaluator}</a></td>
-            <td class="mono">{v.suite}</td>
-            <td>
-              {v.score_state === "reportable" && fmt(v.trait_score)}
-              {v.score_state === "uninterpretable" && (
-                <span class="uninterpretable">uninterpretable</span>
-              )}
-              {v.score_state === "absent" && <span class="absent">not measured</span>}
-            </td>
-            <td>
-              {v.coherence_score === null
-                ? <span class="absent">not measured</span>
-                : fmt(v.coherence_score)}
-            </td>
-            <td>
-              {v.transfer_score === null
-                ? <span class="absent">not measured</span>
-                : fmt(v.transfer_score)}
-            </td>
-            <td class="provenance">{when(v.reported_at)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+  support.map((s) => (
+    <div class={s.deviations ? "support deviating" : "support"}>
+      <div class="provenance">
+        <a class="mono" href={`/${s.reporter}/`}>{s.reporter}</a> used it on
+        {" "}{when(s.reported_at)}
+        {s.repo && (
+          <>
+            {" · "}<span class="mono">{s.repo}@{(s.repo_commit || "").slice(0, 12)}</span>
+          </>
+        )}
+        {s.predictability && (
+          <span class={s.predictability === "as-documented" ? "tag" : "tag warn"}>
+            {s.predictability.replace(/-/g, " ")}
+          </span>
+        )}
+      </div>
 
-    <p class="note">
-      The author's row is first because it is theirs, not because it is the
-      reference. A support card that contradicts the author is still a support
-      card: what it supports is the artifact being checkable, not the claim being
-      right. Neither number is corrected against the other and the registry does
-      not pick.
-    </p>
-    <p class="note">
-      Each evaluator pinned their own judge model and revision. A score produced by
-      a different judge is not the same measurement, which is why the suite is named
-      rather than the numbers being pooled.
-    </p>
-  </>
+      <p class="definition">{s.purpose}</p>
+
+      <dl class="spec">
+        <dt>expected</dt>
+        <dd>{s.expected}</dd>
+        <dt>observed</dt>
+        <dd>
+          {s.observed ?? <span class="absent">not reported yet</span>}
+        </dd>
+      </dl>
+
+      {s.deviations && (
+        <p class="note deviation">
+          <strong>Contract deviation.</strong> {s.deviations}
+        </p>
+      )}
+
+      {s.author_response && (
+        <p class="note">
+          <strong>{author}:</strong> {s.author_response}
+        </p>
+      )}
+    </div>
+  ))
 )}
+
+{support.length > 0 && (
+  <p class="note">
+    A support card reports applied use, not approval. It leads with what the
+    contract predicted and what actually happened, because how an artifact feels
+    in use favours the one that moves several things at once over the one that
+    moves only what it claims. A card flagged as a contract deviation is a defect
+    report about the metadata published here, not about the author's work.
+  </p>
+)}
+
+<p class="note">
+  Publishing a support card needs a write path, and this build has none.
+</p>
