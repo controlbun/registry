@@ -1,3 +1,33 @@
+/* Brand color, both ends of one physical curve.
+ *
+ * #95B1FF is the sRGB color of a blackbody at infinite temperature, where the
+ * spectrum stops depending on temperature and only brightness changes. #FF3100
+ * is roughly where a blackbody first becomes visible at all. So the two are the
+ * endpoints of the visible range of the same curve rather than an arbitrary pair.
+ *
+ * Each has a fill value and a text value, because white is a harder background
+ * than near-black and the brand values only clear WCAG AA on one of them:
+ *
+ *     #95B1FF on #0d0d10   9.07:1   AAA      on white   2.10:1   fails
+ *     #386BFE on white     4.47:1   short of AA by 0.03
+ *     #356AFF on white     4.51:1   AA
+ *     #FF3100 on #0d0d10   5.16:1   AA       on white   3.69:1   large/UI only
+ *     #E42C00 on white     4.51:1   AA
+ *
+ * Both blues sit at hue 224 and differ only in lightness, so a reader sees one
+ * color rendered for two surfaces rather than two colors.
+ *
+ * Red is reserved for status. It is never decoration and never appears in the
+ * mark, because a color that means "this is controlbun" cannot also mean
+ * "something is wrong".
+ *
+ * Nothing points at it yet, deliberately. The obvious candidates are not errors:
+ * an attack is scrutiny and this project says so out loud, so coloring attack
+ * cards red would contradict the premise on the page that states it. An
+ * uninterpretable score is a state rather than a fault. Both stay amber. The one
+ * real candidate is a contract deviation, which is a defect report about the
+ * metadata published here, and that is a design decision rather than a rename.
+ */
 :root {
   --ink: #16161a;
   --dim: #6b6b72;
@@ -7,7 +37,13 @@
   --warn: #8a5a00;
   --warn-bg: #fff6d6;
   --warn-line: #e6d38a;
-  --accent: #1f4b99;
+
+  /* Words. Anything a reader reads has to clear AA. */
+  --accent: #356AFF;
+  --status: #E42C00;
+  /* Shapes. Rules, icons, the mark, chart fills, borders. */
+  --accent-fill: #386BFE;
+  --status-fill: #FF3100;
 }
 
 * { box-sizing: border-box; }
@@ -163,15 +199,21 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --ink: #e8e8ea; --dim: #a0a0a8; --faint: #74747c;
-    --line: #2a2a30; --wash: #16161a; --accent: #8ab4f8;
+    --line: #2a2a30; --wash: #16161a;
     --warn: #d8a548; --warn-bg: #2a2313; --warn-line: #4a3d1a;
+    /* One value each. On near-black the brand colors clear AA as text, so
+       nothing has to be darkened the way it does on white. */
+    --accent: #95B1FF; --accent-fill: #95B1FF;
+    --status: #FF3100; --status-fill: #FF3100;
   }
   :root:not([data-theme="light"]) body { background: #0d0d10; }
 }
 :root[data-theme="dark"] {
   --ink: #e8e8ea; --dim: #a0a0a8; --faint: #74747c;
-  --line: #2a2a30; --wash: #16161a; --accent: #8ab4f8;
+  --line: #2a2a30; --wash: #16161a;
   --warn: #d8a548; --warn-bg: #2a2313; --warn-line: #4a3d1a;
+  --accent: #95B1FF; --accent-fill: #95B1FF;
+  --status: #FF3100; --status-fill: #FF3100;
 }
 :root[data-theme="dark"] body { background: #0d0d10; }
 
@@ -218,7 +260,7 @@ dl.spec dd .meta { color: var(--faint); font-size: .75rem; margin-left: .35rem; 
 }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] {
-  color: var(--ink); border-bottom-color: var(--accent); font-weight: 600;
+  color: var(--ink); border-bottom-color: var(--accent-fill); font-weight: 600;
 }
 .tabcount {
   margin-left: .4rem; font-size: .75rem; color: var(--faint);
@@ -292,7 +334,7 @@ figure.chart figcaption {
 
 blockquote.origin {
   margin: 1.4rem 0; padding: .2rem 0 .2rem 1.1rem;
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--accent-fill);
 }
 blockquote.origin p {
   margin: 0; font-size: 1.08rem; line-height: 1.5; color: var(--ink);
@@ -301,7 +343,7 @@ blockquote.origin p {
 /* -------------------------------------------------------- pins, relations */
 
 .pin, .relation {
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--accent-fill);
   padding-left: 1rem;
   margin-bottom: 1.3rem;
 }
