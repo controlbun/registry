@@ -30,21 +30,12 @@ const { title } = Astro.props;
 </script>
 
 {/*
-  Two icons because the artwork carries an opaque background rather than an alpha
-  channel, so the light one is a white tile in dark browser chrome and the dark one
-  is a black tile in light chrome. The media attribute picks correctly where it is
-  honored; the unqualified link after them is the fallback for browsers that ignore
-  it, and it points at the dark mark because dark is the default everywhere else
-  here.
+  One set, not two. The mark now carries a real alpha channel, and the outlined
+  version reads on white, on near-black and on mid gray, because the outline draws
+  every edge regardless of what is behind it. Before it was opaque artwork, so a
+  single file was a white tile in dark browser chrome, which is what the two
+  media-switched sets existed to work around.
 */}
-<link rel="icon" type="image/png" sizes="32x32"
-      href="/icon-light-32.png" media="(prefers-color-scheme: light)" />
-<link rel="icon" type="image/png" sizes="16x16"
-      href="/icon-light-16.png" media="(prefers-color-scheme: light)" />
-<link rel="icon" type="image/png" sizes="32x32"
-      href="/icon-dark-32.png" media="(prefers-color-scheme: dark)" />
-<link rel="icon" type="image/png" sizes="16x16"
-      href="/icon-dark-16.png" media="(prefers-color-scheme: dark)" />
-<link rel="icon" type="image/png" sizes="32x32" href="/icon-dark-32.png" />
-
-<link rel="apple-touch-icon" sizes="180x180" href="/icon-dark-180.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />

@@ -1,6 +1,7 @@
 ---
 import "../styles/app.css";
 import Head from "../components/Head.astro";
+import SiteNav from "../components/SiteNav.astro";
 import data from "../data/registry.json";
 
 // The home page: what this is in the middle, the ways in on the left, what
@@ -28,6 +29,8 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
     <Head title="Registry" />
   </head>
   <body>
+    <SiteNav />
+
     <div class="home">
       <nav class="sidenav">
         <h3>Browse</h3>
@@ -44,7 +47,6 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
         <span class="soon">Documentation</span>
         <span class="soon">Publishing a submission</span>
 
-        <button class="themetoggle" type="button" id="theme">Dark theme</button>
       </nav>
 
       <main class="intro">
@@ -146,24 +148,5 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
       </aside>
     </div>
 
-    <script>
-      const button = document.querySelector("#theme");
-      const root = document.documentElement;
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-      const isDark = () =>
-        (root.dataset.theme || (prefersDark ? "dark" : "light")) === "dark";
-      const label = () => {
-        button.textContent = isDark() ? "Light theme" : "Dark theme";
-      };
-      label();
-
-      button.addEventListener("click", () => {
-        const next = isDark() ? "light" : "dark";
-        root.dataset.theme = next;
-        localStorage.setItem("theme", next);
-        label();
-      });
-    </script>
   </body>
 </html>

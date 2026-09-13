@@ -1,6 +1,7 @@
 ---
 import "../styles/app.css";
 import Head from "../components/Head.astro";
+import SiteNav from "../components/SiteNav.astro";
 import data from "../data/registry.json";
 
 interface Props {
@@ -25,6 +26,8 @@ const corpus = data.corpus;
     <Head title={title} />
   </head>
   <body>
+    <SiteNav />
+
     <main>
       {trail.length > 0 && (
         <nav class="crumbs" aria-label="Breadcrumb">

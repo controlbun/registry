@@ -1,0 +1,60 @@
+---
+// The bar across the top of every page: the mark, the two ways in, the theme
+// toggle.
+//
+// It exists partly to put the logo somewhere a reader can see, and partly
+// because the theme toggle was living in the home page's sidebar. Only the home
+// page had it, so a reader anywhere else could not change the theme at all, and
+// only the home page ran the script that applies the saved one. The second half
+// of that was fixed by sharing the head; this fixes the first.
+//
+// Two mark files because the artwork differs by more than a background swap. The
+// outlined one survives any surface, which is why the favicon uses it. On a dark
+// page the plain one is better: its navy outline would sit at 1.6:1 against the
+// page and do nothing but blur the silhouette.
+---
+
+<header class="sitenav">
+  <a class="brand" href="/">
+    <img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28" />
+    <img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28" />
+    <span class="wordmark">controlbun</span>
+  </a>
+
+  <nav aria-label="Sections">
+    <a href="/models/">Models</a>
+    <a href="/owners/">Owners</a>
+  </nav>
+
+  <button class="themetoggle" type="button" id="theme">Dark theme</button>
+</header>
+
+<script is:inline>
+  // Inline and unbundled, same reason as the script in the head: no waiting on a
+  // module graph for three lines of work.
+  (function () {
+    const button = document.querySelector("#theme");
+    const root = document.documentElement;
+    if (!button) return;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    const isDark = () =>
+      (root.dataset.theme || (prefersDark ? "dark" : "light")) === "dark";
+
+    // Names the theme you would switch to, not the one you are in. This is the
+    // behavior the home page already had and it is the right one for a bare text
+    // button: "Light theme" while the page is light reads as a label rather than
+    // as something to press.
+    const label = () => {
+      button.textContent = isDark() ? "Light theme" : "Dark theme";
+    };
+    label();
+
+    button.addEventListener("click", () => {
+      const next = isDark() ? "light" : "dark";
+      root.dataset.theme = next;
+      localStorage.setItem("theme", next);
+      label();
+    });
+  }());
+</script>

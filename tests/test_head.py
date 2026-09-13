@@ -88,17 +88,33 @@ def test_every_declared_icon_exists():
             )
 
 
-def test_both_themes_have_an_icon():
-    """The artwork has an opaque background rather than alpha, so one icon is a
-    white tile in dark browser chrome or a black tile in light chrome."""
-    html = pages()[0].read_text()
-    assert "prefers-color-scheme: light" in html
-    assert "prefers-color-scheme: dark" in html
-    unqualified = re.findall(r'<link rel="icon"(?![^>]*media=)[^>]*>', html)
-    assert unqualified, (
-        "every icon is behind a media query, so a browser that ignores media on "
-        "link elements gets no favicon at all"
-    )
+def test_the_favicon_has_an_alpha_channel():
+    """This is what lets one icon set serve both themes.
+
+    The artwork used to ship with an opaque background, so a single file was a
+    white tile in dark browser chrome or a black tile in light. The workaround was
+    two sets behind `prefers-color-scheme` media queries on the link elements,
+    which Chrome ignores.
+
+    Cutting the background out replaced that with something simpler and better:
+    the outlined mark reads on white, on near-black and on mid gray because the
+    outline draws every edge regardless of what is behind it. That only holds
+    while the icons actually carry alpha. Regenerate them from a flattened export
+    and the favicon silently becomes a tile again, on a surface nobody tests.
+    """
+    import struct
+
+    icons = sorted(DIST.glob("icon-*.png"))
+    assert icons, "no icons in the build"
+    for path in icons:
+        data = path.read_bytes()
+        assert data[:8] == b"\x89PNG\r\n\x1a\n", f"{path.name} is not a png"
+        w, h, depth, ctype = struct.unpack(">IIBB", data[16:26])
+        assert ctype in (4, 6), (
+            f"{path.name} is color type {ctype}, which has no alpha channel. "
+            "On a dark browser tab this renders as a light tile."
+        )
+        assert w == h, f"{path.name} is {w}x{h}, not square"
 
 
 def test_every_page_has_a_title():

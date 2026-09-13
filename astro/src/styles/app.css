@@ -189,10 +189,48 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
 .panel .why { padding: .7rem .85rem; color: var(--faint); font-size: .78rem; }
 
 .themetoggle {
-  margin-top: 2rem; font: inherit; font-size: .85rem; color: var(--dim);
+  font: inherit; font-size: .85rem; color: var(--dim);
   background: none; border: 1px solid var(--line); border-radius: 3px;
   padding: .25rem .6rem; cursor: pointer;
 }
+
+
+/* ---------------------------------------------------------------- site nav */
+
+.sitenav {
+  display: flex; align-items: center; gap: 1.6rem;
+  max-width: 82rem; margin: 0 auto 2.2rem;
+  padding-bottom: .9rem;
+  border-bottom: 1px solid var(--line);
+}
+.sitenav .brand {
+  display: flex; align-items: center; gap: .5rem;
+  text-decoration: none; color: var(--ink);
+}
+.sitenav .mark { display: block; width: 28px; height: 28px; }
+.sitenav .wordmark {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .95rem; letter-spacing: -.02em; font-weight: 600;
+}
+.sitenav nav { display: flex; gap: 1.1rem; font-size: .9rem; }
+.sitenav nav a { color: var(--dim); text-decoration: none; }
+.sitenav nav a:hover { color: var(--ink); text-decoration: underline; }
+/* Pushes the toggle to the far edge without a spacer element. */
+.sitenav .themetoggle { margin-left: auto; margin-top: 0; }
+
+/* Two files rather than one recolored, because the marks differ by more than a
+   background: the light one carries a navy outline that would sit at 1.6:1
+   against a dark page and blur the silhouette rather than define it. Both ship
+   and CSS picks, so neither is fetched and discarded at runtime. */
+.sitenav .dark-only { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sitenav .light-only { display: none; }
+  :root:not([data-theme="light"]) .sitenav .dark-only { display: block; }
+}
+:root[data-theme="dark"] .sitenav .light-only { display: none; }
+:root[data-theme="dark"] .sitenav .dark-only { display: block; }
+:root[data-theme="light"] .sitenav .light-only { display: block; }
+:root[data-theme="light"] .sitenav .dark-only { display: none; }
 
 /* ------------------------------------------------------------------ dark */
 
