@@ -222,7 +222,7 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          }),
          "steering-vectors", "0.0.0-SYNTHETIC", "sha256:" + "0" * 64,
          "I take affective tone to be the trait itself rather than a proxy for it, "
-         "so I did not orthogonalise against sentiment. A reader who thinks warmth "
+         "so I did not orthogonalize against sentiment. A reader who thinks warmth "
          "is a confound on kindness should expect this direction to move both, and "
          "should prefer bob's."),
     )
@@ -239,7 +239,7 @@ def seed(conn, vectors: dict[str, Path]) -> None:
              "selection_criterion": "held-out separation",
          }),
          "steering-vectors", "0.0.0-SYNTHETIC", "sha256:" + "1" * 64,
-         "Warmth without cost is politeness. I orthogonalised against sentiment "
+         "Warmth without cost is politeness. I orthogonalized against sentiment "
          "and formality so that what is left is the willingness to give something "
          "up, which is what I mean by the word."),
     )

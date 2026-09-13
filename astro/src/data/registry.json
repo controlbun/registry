@@ -104,7 +104,7 @@
               "token_masking": "last-token"
             },
             "profile": "soham/contrastive-v1",
-            "theory": "I take affective tone to be the trait itself rather than a proxy for it, so I did not orthogonalise against sentiment. A reader who thinks warmth is a confound on kindness should expect this direction to move both, and should prefer bob's."
+            "theory": "I take affective tone to be the trait itself rather than a proxy for it, so I did not orthogonalize against sentiment. A reader who thinks warmth is a confound on kindness should expect this direction to move both, and should prefer bob's."
           },
           "score_state": "reportable",
           "shape": "[8]",
@@ -209,7 +209,7 @@
               "token_masking": "response-only"
             },
             "profile": "soham/contrastive-v1",
-            "theory": "Warmth without cost is politeness. I orthogonalised against sentiment and formality so that what is left is the willingness to give something up, which is what I mean by the word."
+            "theory": "Warmth without cost is politeness. I orthogonalized against sentiment and formality so that what is left is the willingness to give something up, which is what I mean by the word."
           },
           "score_state": "reportable",
           "shape": "[8]",
@@ -641,7 +641,7 @@
                   "token_masking": "last-token"
                 },
                 "profile": "soham/contrastive-v1",
-                "theory": "I take affective tone to be the trait itself rather than a proxy for it, so I did not orthogonalise against sentiment. A reader who thinks warmth is a confound on kindness should expect this direction to move both, and should prefer bob's."
+                "theory": "I take affective tone to be the trait itself rather than a proxy for it, so I did not orthogonalize against sentiment. A reader who thinks warmth is a confound on kindness should expect this direction to move both, and should prefer bob's."
               },
               "score_state": "reportable",
               "shape": "[8]",
@@ -746,7 +746,7 @@
                   "token_masking": "response-only"
                 },
                 "profile": "soham/contrastive-v1",
-                "theory": "Warmth without cost is politeness. I orthogonalised against sentiment and formality so that what is left is the willingness to give something up, which is what I mean by the word."
+                "theory": "Warmth without cost is politeness. I orthogonalized against sentiment and formality so that what is left is the willingness to give something up, which is what I mean by the word."
               },
               "score_state": "reportable",
               "shape": "[8]",
