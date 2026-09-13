@@ -82,6 +82,7 @@ def build_vectors() -> dict[str, Path]:
         "bob": write_vector("bob_kindness_v1", ramp[::-1].copy(), meta(MODEL_A)),
         "dana": write_vector("dana_refusal_v1", (ramp % 3) + 1, meta(MODEL_B)),
         "erik": write_vector("erik_refusal_v1", (ramp % 5) + 1, meta(MODEL_B)),
+        "fern": write_vector("fern_refusal_v1", (ramp % 4) + 1, meta(MODEL_B)),
     }
 
 
@@ -144,6 +145,17 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          "provoke it."),
     )
 
+    ex(
+        "INSERT INTO submission (author,label,version,definition,created_at,is_synthetic)"
+        " VALUES (?,?,?,?,?,1)",
+        ("fern", "refusal", "v1",
+         "Refusal is a dictionary feature, not a direction I constructed. I am not "
+         "claiming to have found it; I am claiming this particular latent in this "
+         "particular SAE fires on declination, and here is which one so you can "
+         "check me.",
+         "2026-09-12T00:00:00Z"),
+    )
+
     # kind is an open string and the corpus says so: four artifacts, three kinds,
     # two models, two labels. Nothing about the schema is direction-only.
     spec = {
@@ -151,6 +163,7 @@ def seed(conn, vectors: dict[str, Path]) -> None:
         "bob":   ("kindness", "direction", MODEL_A),
         "dana":  ("refusal",  "sae-latent", MODEL_B),
         "erik":  ("refusal",  "probe", MODEL_B),
+        "fern":  ("refusal",  "sae-latent", MODEL_B),
     }
     for author, path in vectors.items():
         label, kind, (mid, rev, layer, hook) = spec[author]
@@ -165,6 +178,28 @@ def seed(conn, vectors: dict[str, Path]) -> None:
              1.0, 11.1111, 0.5, 1.5, "all-positions",
              "unresolved", "sha256:" + "e" * 8, f"fixtures/{path.name}"),
         )
+
+    # The same kind as dana's, with the provenance dana's lacks. A latent is only
+    # identified by its dictionary and its index, so this is the difference between
+    # a checkable claim and a bare vector asserting where it came from.
+    ex(
+        "INSERT INTO recipe (id,author,label,version,profile,payload_json,"
+        "entrypoint_library,entrypoint_version,container_digest,theory)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?)",
+        ("rc_fern", "fern", "refusal", "v1", "neuronpedia/sae-latent-v1",
+         json.dumps({
+             "sae_repo": "placeholder/other-architecture-7b-saes",
+             "sae_revision": "2" * 40,
+             "latent_index": 41827,
+             "hook": "blocks.12.hook_resid_pre",
+             "selection_criterion": "max activation on held-out declinations",
+         }),
+         "sae-lens", "0.0.0-SYNTHETIC", "sha256:" + "3" * 64,
+         "Selecting a latent is a weaker claim than building a direction: I did not "
+         "decide what refusal is, I found something in someone else's dictionary "
+         "that fires on it. If the latent turns out to be polysemantic, that is a "
+         "fact about the SAE and not about my reading of the word."),
+    )
 
     # Recipes. Optional by design, and dana deliberately has none: a published
     # artifact whose procedure was never written down is still a submission, and

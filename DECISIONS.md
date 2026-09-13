@@ -258,6 +258,43 @@ ranking; it is written so that with no engagement anywhere it collapses into rec
 rather than inventing a signal.
 **Supersedes:** No ranking by default, sorting is user-chosen.
 
+## 2026-09-12 SAEs get cards and evidence; the registry still does not hold them
+**Decided:** An SAE is a first-class object with its own card, carrying attacks and
+independent evaluations the same way an Intervention does. The weights are not
+hosted here: the SAE is pinned by `repo@commit` and the bytes stay wherever they
+already live, exactly as `/models/<id>/` is a card for a model this registry does
+not hold. v1, with the rest of the upload path.
+**Why:** The differentiator was never the dictionary, it is the evidence layer, and
+nobody applies one to SAEs. "Latent 41827 is two features that got merged",
+"reconstruction error concentrates on a distribution this was not trained for",
+"these two latents are one feature split" are real critiques with real literature,
+and there is nowhere to publish them against a specific SAE at a specific commit
+with the author's response beside them. That is this project's object, pointed at a
+different artifact.
+
+Storage was the objection I raised and it was wrong. An SAE is ~2 GB against ~16 KB
+for a steering vector, 131,000x, and forty-nine would exhaust the free tier. All of
+which is irrelevant, because holding the card does not mean holding the weights.
+
+No third object for corroboration. A Verification is someone else's eval, and an
+Attack with disposition `no-finding` is corroboration from someone who tried to
+break it, which is worth more than praise. Add a support object only after seeing
+what those two miss.
+**Supersedes:** nothing. Narrows "Neuronpedia: interop, not competition" in
+`BRIEF.md`: do not duplicate the dictionary, do host the argument about it.
+
+## 2026-09-12 SAE-latent provenance lives in the recipe, not the schema
+**Decided:** An `sae-latent` records which SAE and which index in its recipe
+payload under a namespaced profile, not in new `intervention` columns.
+**Why:** A latent is only identified by its dictionary and its index, so a latent
+without them is a vector claiming a provenance it cannot evidence, which is worse
+than a direction without a recipe: unverifiable in principle rather than merely
+unrerunnable. But `sae_id` and `latent_index` as columns would be the closed-enum
+failure in another costume, baking one method's vocabulary into a schema every
+other method has to carry. A probe has no latent index; a ReFT edit has neither.
+`BRIEF.md` already settled the mechanism: accept their features as a recipe profile
+and link out to the feature pages.
+
 ---
 
 ## Open, blocking launch (not code)

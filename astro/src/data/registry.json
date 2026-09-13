@@ -13,7 +13,7 @@
         "name": "Trending"
       }
     ],
-    "size": 4,
+    "size": 5,
     "threshold": 100
   },
   "kinds": [
@@ -358,6 +358,53 @@
           "transfer_score": null,
           "verifications": [],
           "version": "v1"
+        },
+        {
+          "activation_norm": 11.1111,
+          "artifact_path": "fixtures/fern_refusal_v1.safetensors",
+          "attacks": [],
+          "author": "fern",
+          "axes": [],
+          "chat_template_hash": "sha256:eeeeeeee",
+          "coeff_curve": null,
+          "coeff_high": 1.5,
+          "coeff_low": 0.5,
+          "coherence_score": null,
+          "confounds": null,
+          "created_at": "2026-09-12T00:00:00Z",
+          "definition": "Refusal is a dictionary feature, not a direction I constructed. I am not claiming to have found it; I am claiming this particular latent in this particular SAE fires on declination, and here is which one so you can check me.",
+          "dtype": "float32",
+          "hook_point": "resid_pre",
+          "is_synthetic": true,
+          "kind": "sae-latent",
+          "l2_norm": 1.0,
+          "label": "refusal",
+          "layer": 12,
+          "layer_convention": "block-0indexed",
+          "license_status": "unresolved",
+          "model_id": "placeholder/other-architecture-7b",
+          "model_revision": "111111111111",
+          "recipe": {
+            "container_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+            "entrypoint_library": "sae-lens",
+            "entrypoint_version": "0.0.0-SYNTHETIC",
+            "payload": {
+              "hook": "blocks.12.hook_resid_pre",
+              "latent_index": 41827,
+              "sae_repo": "placeholder/other-architecture-7b-saes",
+              "sae_revision": "2222222222222222222222222222222222222222",
+              "selection_criterion": "max activation on held-out declinations"
+            },
+            "profile": "neuronpedia/sae-latent-v1",
+            "theory": "Selecting a latent is a weaker claim than building a direction: I did not decide what refusal is, I found something in someone else's dictionary that fires on it. If the latent turns out to be polysemantic, that is a fact about the SAE and not about my reading of the word."
+          },
+          "score_state": "absent",
+          "shape": "[8]",
+          "steering_position": "all-positions",
+          "trait_score": null,
+          "transfer_score": null,
+          "verifications": [],
+          "version": "v1"
         }
       ],
       "label": "refusal",
@@ -379,6 +426,39 @@
           "score_state_b": "uninterpretable",
           "transfer_a": 0.2222,
           "transfer_b": null
+        },
+        {
+          "a": "dana/refusal@v1",
+          "angle_comparable": true,
+          "angle_similarity": 0.78631591796875,
+          "axes_both_checked": [],
+          "axes_only_a_checked": [
+            "topic",
+            "verbosity"
+          ],
+          "axes_only_b_checked": [],
+          "b": "fern/refusal@v1",
+          "is_synthetic": true,
+          "score_state_a": "reportable",
+          "score_state_b": "absent",
+          "transfer_a": 0.2222,
+          "transfer_b": null
+        },
+        {
+          "a": "erik/refusal@v1",
+          "angle_comparable": true,
+          "angle_similarity": 0.8169825077056885,
+          "axes_both_checked": [],
+          "axes_only_a_checked": [
+            "topic"
+          ],
+          "axes_only_b_checked": [],
+          "b": "fern/refusal@v1",
+          "is_synthetic": true,
+          "score_state_a": "uninterpretable",
+          "score_state_b": "absent",
+          "transfer_a": null,
+          "transfer_b": null
         }
       ],
       "similarity": {
@@ -392,6 +472,11 @@
             "note": "sae-latent against probe: comparing what each would steer with",
             "v": 0.8519977331161499,
             "why": null
+          },
+          "fern/refusal@v1": {
+            "note": null,
+            "v": 0.78631591796875,
+            "why": null
           }
         },
         "erik/refusal@v1": {
@@ -401,6 +486,28 @@
             "why": null
           },
           "erik/refusal@v1": {
+            "note": null,
+            "v": 1.0000001192092896,
+            "why": null
+          },
+          "fern/refusal@v1": {
+            "note": "probe against sae-latent: comparing what each would steer with",
+            "v": 0.8169825077056885,
+            "why": null
+          }
+        },
+        "fern/refusal@v1": {
+          "dana/refusal@v1": {
+            "note": null,
+            "v": 0.78631591796875,
+            "why": null
+          },
+          "erik/refusal@v1": {
+            "note": "sae-latent against probe: comparing what each would steer with",
+            "v": 0.8169825077056885,
+            "why": null
+          },
+          "fern/refusal@v1": {
             "note": null,
             "v": 1.0000001192092896,
             "why": null
@@ -654,7 +761,7 @@
       ]
     },
     {
-      "claimant_count": 2,
+      "claimant_count": 3,
       "hook_points": [
         "resid_pre"
       ],
@@ -768,6 +875,53 @@
               "transfer_score": null,
               "verifications": [],
               "version": "v1"
+            },
+            {
+              "activation_norm": 11.1111,
+              "artifact_path": "fixtures/fern_refusal_v1.safetensors",
+              "attacks": [],
+              "author": "fern",
+              "axes": [],
+              "chat_template_hash": "sha256:eeeeeeee",
+              "coeff_curve": null,
+              "coeff_high": 1.5,
+              "coeff_low": 0.5,
+              "coherence_score": null,
+              "confounds": null,
+              "created_at": "2026-09-12T00:00:00Z",
+              "definition": "Refusal is a dictionary feature, not a direction I constructed. I am not claiming to have found it; I am claiming this particular latent in this particular SAE fires on declination, and here is which one so you can check me.",
+              "dtype": "float32",
+              "hook_point": "resid_pre",
+              "is_synthetic": true,
+              "kind": "sae-latent",
+              "l2_norm": 1.0,
+              "label": "refusal",
+              "layer": 12,
+              "layer_convention": "block-0indexed",
+              "license_status": "unresolved",
+              "model_id": "placeholder/other-architecture-7b",
+              "model_revision": "111111111111",
+              "recipe": {
+                "container_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+                "entrypoint_library": "sae-lens",
+                "entrypoint_version": "0.0.0-SYNTHETIC",
+                "payload": {
+                  "hook": "blocks.12.hook_resid_pre",
+                  "latent_index": 41827,
+                  "sae_repo": "placeholder/other-architecture-7b-saes",
+                  "sae_revision": "2222222222222222222222222222222222222222",
+                  "selection_criterion": "max activation on held-out declinations"
+                },
+                "profile": "neuronpedia/sae-latent-v1",
+                "theory": "Selecting a latent is a weaker claim than building a direction: I did not decide what refusal is, I found something in someone else's dictionary that fires on it. If the latent turns out to be polysemantic, that is a fact about the SAE and not about my reading of the word."
+              },
+              "score_state": "absent",
+              "shape": "[8]",
+              "steering_position": "all-positions",
+              "trait_score": null,
+              "transfer_score": null,
+              "verifications": [],
+              "version": "v1"
             }
           ],
           "label": "refusal",
@@ -788,6 +942,39 @@
               "score_state_a": "reportable",
               "score_state_b": "uninterpretable",
               "transfer_a": 0.2222,
+              "transfer_b": null
+            },
+            {
+              "a": "dana/refusal@v1",
+              "angle_comparable": true,
+              "angle_similarity": 0.78631591796875,
+              "axes_both_checked": [],
+              "axes_only_a_checked": [
+                "topic",
+                "verbosity"
+              ],
+              "axes_only_b_checked": [],
+              "b": "fern/refusal@v1",
+              "is_synthetic": true,
+              "score_state_a": "reportable",
+              "score_state_b": "absent",
+              "transfer_a": 0.2222,
+              "transfer_b": null
+            },
+            {
+              "a": "erik/refusal@v1",
+              "angle_comparable": true,
+              "angle_similarity": 0.8169825077056885,
+              "axes_both_checked": [],
+              "axes_only_a_checked": [
+                "topic"
+              ],
+              "axes_only_b_checked": [],
+              "b": "fern/refusal@v1",
+              "is_synthetic": true,
+              "score_state_a": "uninterpretable",
+              "score_state_b": "absent",
+              "transfer_a": null,
               "transfer_b": null
             }
           ]
@@ -813,6 +1000,14 @@
           "author": "erik",
           "created_at": "2026-09-12T00:00:00Z",
           "kind": "probe",
+          "label": "refusal",
+          "model_id": "placeholder/other-architecture-7b",
+          "version": "v1"
+        },
+        {
+          "author": "fern",
+          "created_at": "2026-09-12T00:00:00Z",
+          "kind": "sae-latent",
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
           "version": "v1"
@@ -921,6 +1116,31 @@
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
           "score_state": "uninterpretable",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "attacks_received": 0,
+      "kinds": [
+        "sae-latent"
+      ],
+      "labels": [
+        "refusal"
+      ],
+      "models": [
+        "placeholder/other-architecture-7b"
+      ],
+      "owner": "fern",
+      "submissions": [
+        {
+          "attacks": 0,
+          "created_at": "2026-09-12T00:00:00Z",
+          "has_recipe": true,
+          "kind": "sae-latent",
+          "label": "refusal",
+          "model_id": "placeholder/other-architecture-7b",
+          "score_state": "absent",
           "version": "v1"
         }
       ]
