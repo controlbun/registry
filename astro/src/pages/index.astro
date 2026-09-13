@@ -1,5 +1,6 @@
 ---
 import "../styles/app.css";
+import Head from "../components/Head.astro";
 import data from "../data/registry.json";
 
 // The home page: what this is in the middle, the ways in on the left, what
@@ -24,15 +25,7 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Registry</title>
-    <script is:inline>
-      // Applied before paint, so a reader who picked a theme never sees a flash
-      // of the other one.
-      const saved = localStorage.getItem("theme");
-      if (saved) document.documentElement.dataset.theme = saved;
-    </script>
+    <Head title="Registry" />
   </head>
   <body>
     <div class="home">
