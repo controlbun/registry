@@ -229,12 +229,28 @@
       ],
       "similarity": {
         "alice/kindness@v1": {
-          "alice/kindness@v1": 1.0,
-          "bob/kindness@v1": 0.5882353782653809
+          "alice/kindness@v1": {
+            "note": null,
+            "v": 1.0,
+            "why": null
+          },
+          "bob/kindness@v1": {
+            "note": null,
+            "v": 0.5882353782653809,
+            "why": null
+          }
         },
         "bob/kindness@v1": {
-          "alice/kindness@v1": 0.5882353782653809,
-          "bob/kindness@v1": 1.0
+          "alice/kindness@v1": {
+            "note": null,
+            "v": 0.5882353782653809,
+            "why": null
+          },
+          "bob/kindness@v1": {
+            "note": null,
+            "v": 1.0,
+            "why": null
+          }
         }
       }
     },
@@ -367,12 +383,28 @@
       ],
       "similarity": {
         "dana/refusal@v1": {
-          "dana/refusal@v1": 1.0,
-          "erik/refusal@v1": 0.8519977331161499
+          "dana/refusal@v1": {
+            "note": null,
+            "v": 1.0,
+            "why": null
+          },
+          "erik/refusal@v1": {
+            "note": "sae-latent against probe: comparing what each would steer with",
+            "v": 0.8519977331161499,
+            "why": null
+          }
         },
         "erik/refusal@v1": {
-          "dana/refusal@v1": 0.8519977331161499,
-          "erik/refusal@v1": 1.0000001192092896
+          "dana/refusal@v1": {
+            "note": "probe against sae-latent: comparing what each would steer with",
+            "v": 0.8519977331161499,
+            "why": null
+          },
+          "erik/refusal@v1": {
+            "note": null,
+            "v": 1.0000001192092896,
+            "why": null
+          }
         }
       }
     }

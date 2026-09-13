@@ -179,7 +179,7 @@ def similarity_matrix(conn: sqlite3.Connection, label: str) -> dict:
     """
     rows = list(conn.execute(
         "SELECT s.author, s.label, s.version, i.artifact_path, i.model_id,"
-        " i.model_revision, i.layer, i.hook_point"
+        " i.model_revision, i.layer, i.hook_point, i.kind, i.shape"
         " FROM submission s JOIN intervention i"
         " ON i.author=s.author AND i.label=s.label AND i.version=s.version"
         " WHERE s.label = ?",
@@ -190,20 +190,56 @@ def similarity_matrix(conn: sqlite3.Connection, label: str) -> dict:
 
     for i, a in enumerate(rows):
         for j, b in enumerate(rows):
-            # Only meaningful inside one model at one layer and hook point.
-            # Across models the angle is undefined rather than zero.
-            comparable = (
-                a["model_id"] == b["model_id"]
-                and a["model_revision"] == b["model_revision"]
-                and a["layer"] == b["layer"]
-                and a["hook_point"] == b["hook_point"]
-                and a["artifact_path"] and b["artifact_path"]
-            )
-            matrix[refs[i]][refs[j]] = (
-                angle_similarity(
-                    load_vector(a["artifact_path"]), load_vector(b["artifact_path"])
-                )
-                if comparable
-                else None
-            )
+            matrix[refs[i]][refs[j]] = _angle_between(a, b)
     return matrix
+
+
+def _rank(shape: str | None) -> int | None:
+    """How many axes the stored artifact has.
+
+    `kind` is an open string and not every kind is a vector. A direction, an SAE
+    decoder column and a probe weight vector all live in the residual stream and
+    can be compared. A LoRA adaptor is a low-rank matrix and a ReFT edit is a
+    learned intervention; the angle between either of those and a direction is
+    not a small number, it is undefined.
+    """
+    try:
+        dims = json.loads(shape) if shape else None
+    except (TypeError, ValueError):
+        return None
+    return len(dims) if isinstance(dims, list) else None
+
+
+def _angle_between(a, b) -> dict:
+    """The angle between two artifacts, or the reason there isn't one.
+
+    Naming the reason matters: "not comparable" on its own reads as a gap in the
+    data, when usually it is a statement about what the two objects are.
+    """
+    def out(value, why=None, note=None):
+        return {"v": value, "why": why, "note": note}
+
+    if not (a["artifact_path"] and b["artifact_path"]):
+        return out(None, "no artifact attached")
+    if a["model_id"] != b["model_id"] or a["model_revision"] != b["model_revision"]:
+        return out(None, "different model or revision")
+    if a["layer"] != b["layer"] or a["hook_point"] != b["hook_point"]:
+        return out(None, "different layer or hook point")
+
+    rank_a, rank_b = _rank(a["shape"]), _rank(b["shape"])
+    if rank_a != 1 or rank_b != 1:
+        return out(None, "not a vector")
+    if a["shape"] != b["shape"]:
+        return out(None, "different dimensions")
+
+    value = angle_similarity(
+        load_vector(a["artifact_path"]), load_vector(b["artifact_path"])
+    )
+    # Both are directions in the same space, so the arithmetic holds, but an SAE
+    # decoder column and a probe weight vector are not the same kind of object.
+    # What is being compared is what you would steer with, not the artifacts.
+    note = (
+        f"{a['kind']} against {b['kind']}: comparing what each would steer with"
+        if a["kind"] != b["kind"] else None
+    )
+    return out(value, None, note)

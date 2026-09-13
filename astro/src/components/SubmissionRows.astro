@@ -102,7 +102,12 @@ const released = (iso) =>
   const why = document.querySelector("#why");
 
   const rows = [...body.rows];
-  const fmt = (v) => (v === null || v === undefined ? "not comparable" : v.toFixed(4));
+  // A cell is {v, why, note}. When there is no number, `why` says what kind of
+  // statement that is: usually one about what the two objects are, not a gap in
+  // the data. "not a vector" is the one that matters: kind is an open string and
+  // a LoRA or a ReFT edit has no angle to a direction, undefined rather than zero.
+  const cellOf = (row, ref) => (similarity[row] || {})[ref] || { v: null, why: "unknown" };
+  const fmt = (cell) => (cell.v === null || cell.v === undefined ? cell.why : cell.v.toFixed(4));
 
   function topRefs(by, k) {
     // Ordered by prominence, never by similarity. Recency stands in for trending
@@ -127,11 +132,15 @@ const released = (iso) =>
         "Geometry against one submission you chose. A low number is not evidence " +
         "that two authors reached different conclusions: vectors that behave " +
         "identically can sit far apart in angle (arXiv:2602.06801).";
+      const notes = new Set();
       for (const row of rows) {
-        const v = (similarity[row.dataset.ref] || {})[arg];
-        row.querySelector(".sim").textContent =
-          row.dataset.ref === arg ? "reference" : fmt(v);
+        const cell = cellOf(row.dataset.ref, arg);
+        const el = row.querySelector(".sim");
+        el.textContent = row.dataset.ref === arg ? "reference" : fmt(cell);
+        el.classList.toggle("absent", row.dataset.ref !== arg && cell.v === null);
+        if (cell.note) notes.add(cell.note);
       }
+      if (notes.size) note.textContent += " " + [...notes].join(" ");
       return;
     }
 
@@ -148,13 +157,19 @@ const released = (iso) =>
       "a merit.";
 
     for (const row of rows) {
-      const others = refs.filter((r) => r !== row.dataset.ref);
-      const values = others
-        .map((r) => (similarity[row.dataset.ref] || {})[r])
-        .filter((v) => v !== null && v !== undefined);
-      row.querySelector(".sim").textContent = values.length
-        ? fmt(values.reduce((a, b) => a + b, 0) / values.length)
-        : "not comparable";
+      const cells = refs
+        .filter((r) => r !== row.dataset.ref)
+        .map((r) => cellOf(row.dataset.ref, r));
+      const values = cells.map((c) => c.v).filter((v) => v !== null && v !== undefined);
+      const el = row.querySelector(".sim");
+      if (values.length) {
+        el.textContent = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(4);
+        el.classList.remove("absent");
+      } else {
+        // Say which kind of nothing this is rather than a bare dash.
+        el.textContent = cells.length ? cells[0].why : "nothing to compare against";
+        el.classList.add("absent");
+      }
     }
   }
 
