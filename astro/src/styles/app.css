@@ -52,11 +52,22 @@ body {
   font: 15px/1.6 ui-serif, Georgia, "Times New Roman", serif;
   color: var(--ink);
   margin: 0;
-  padding: 3rem 1.5rem 6rem;
+  /* The gutter grows with the viewport. With no max-width above, a fixed 1.5rem
+     put text against the bezel on a wide display. */
+  padding: 3rem clamp(1.5rem, 4vw, 5rem) 6rem;
   background: #fff;
 }
 
-main { max-width: 64rem; margin: 0 auto; }
+/* Full width. The page is a working surface, mostly tables and charts, and
+   capping it at 64rem left half a wide screen empty while the claimant table
+   wrapped. Line length is still capped on prose below, because that is a
+   readability constraint rather than a layout one: a 200-character line is
+   genuinely harder to read, and a wide table is not. */
+main { max-width: none; margin: 0 auto; }
+/* Body prose still gets a measure. Direct children only, so a paragraph inside a
+   card, a panel or a table cell is untouched and keeps the width of whatever
+   holds it. .lede and .note carry their own and are narrower. */
+main > p, main > blockquote { max-width: 46rem; }
 
 a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
 
@@ -146,7 +157,6 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
   grid-template-columns: 13rem minmax(0, 1fr) 19rem;
   gap: 2.4rem;
   align-items: start;
-  max-width: 82rem;
   margin: 0 auto;
 }
 @media (max-width: 62rem) {
@@ -199,7 +209,7 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
 
 .sitenav {
   display: flex; align-items: center; gap: 1.6rem;
-  max-width: 82rem; margin: 0 auto 2.2rem;
+  margin: 0 auto 2.2rem;
   padding-bottom: .9rem;
   border-bottom: 1px solid var(--line);
 }
