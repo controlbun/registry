@@ -15,9 +15,28 @@ interface Props {
   // control that reorders nothing is noise that implies the page is a view of
   // many things when it is a view of one.
   ordering?: boolean;
+  // What this page actually shows. The marker used to be one corpus-wide flag,
+  // which was honest while everything was a fixture and became a lie the moment
+  // one submission was not: it told a reader that a real measurement was
+  // invented. The page passes what is on it and the banner describes that.
+  //
+  //   "all"   every figure here is fabricated
+  //   "mixed" some are, and the exception is named
+  //   "none"  nothing here is, so no marker at all
+  synthetic?: "all" | "mixed" | "none";
 }
-const { title, trail = [], ordering = false } = Astro.props;
+const { title, trail = [], ordering = false, synthetic = "all" } = Astro.props;
 const corpus = data.corpus;
+
+// "soham's" for one, "soham's and rae's" for two, commas past that. Built from
+// the data rather than written down, so the exception cannot outlive the rows.
+const owned = (data.real_authors ?? []).map((n) => n + "'s");
+const exception =
+  owned.length === 0
+    ? ""
+    : owned.length === 1
+      ? owned[0]
+      : owned.slice(0, -1).join(", ") + " and " + owned[owned.length - 1];
 ---
 
 <!doctype html>
@@ -42,12 +61,14 @@ const corpus = data.corpus;
 
       <slot name="heading" />
 
-      {data.any_synthetic && (
+      {data.any_synthetic && synthetic !== "none" && (
         <div class="banner">
-          <strong>Synthetic corpus.</strong> Every figure here is fabricated to
-          exercise the interface. Scores are repeated-digit decimals, vectors are
-          integer ramps, and the models named do not resolve. Nothing on this page
-          is a measurement.
+          <strong>Synthetic corpus{synthetic === "mixed" && exception
+            ? `, except ${exception}`
+            : ""}.</strong>{" "}
+          {synthetic === "mixed" && exception
+            ? `Every figure here is fabricated to exercise the interface apart from ${exception}, which is real. Fabricated scores are repeated-digit decimals, fabricated vectors are integer ramps, and the models those name do not resolve.`
+            : "Every figure here is fabricated to exercise the interface. Scores are repeated-digit decimals, vectors are integer ramps, and the models named do not resolve. Nothing on this page is a measurement."}
         </div>
       )}
 

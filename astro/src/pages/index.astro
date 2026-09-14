@@ -11,6 +11,16 @@ import data from "../data/registry.json";
 // BRIEF.md so the page says something true in the author's own words rather than
 // in mine. Replace them before anyone outside sees this.
 
+// Named from the data, so the exception in the banner cannot outlive the rows
+// that make it true. Same construction as layouts/Base.astro.
+const owned = (data.real_authors ?? []).map((n) => n + "'s");
+const exception =
+  owned.length === 0
+    ? ""
+    : owned.length === 1
+      ? owned[0]
+      : owned.slice(0, -1).join(", ") + " and " + owned[owned.length - 1];
+
 const recent = data.model_index
   .flatMap((m) => m.submissions)
   .slice()
@@ -52,10 +62,10 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
       <main class="intro">
         {data.any_synthetic && (
           <div class="banner">
-            <strong>Synthetic corpus.</strong> Every submission listed here is
-            fabricated to exercise the interface. Scores are repeated-digit
-            decimals, vectors are integer ramps, and the models named do not
-            resolve. Nothing on this site is a measurement.
+            <strong>Synthetic corpus{exception ? `, except ${exception}` : ""}.</strong>{" "}
+            {exception
+              ? `Every submission listed here is fabricated to exercise the interface apart from ${exception}, which is a real direction with real measurements. Fabricated scores are repeated-digit decimals, fabricated vectors are integer ramps, and the models those name do not resolve.`
+              : "Every submission listed here is fabricated to exercise the interface. Scores are repeated-digit decimals, vectors are integer ramps, and the models named do not resolve. Nothing on this site is a measurement."}
           </div>
         )}
 
@@ -101,7 +111,7 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
           <ol>
             {recent.map((s) => (
               <li>
-                <a href={`/${s.author}/${s.model_id}/${s.label}/`}>
+                <a href={`/${s.author}/${s.model_id}/${s.label}/${s.version}/`}>
                   {s.author}/{s.label}
                 </a>
                 <span class="meta mono">{s.kind} · {s.model_id}</span>

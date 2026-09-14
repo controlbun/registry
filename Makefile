@@ -22,8 +22,15 @@ links:
 
 # Rebuild the corpus, export it, and build the static site with its search index.
 # npm ci rather than npm install: the lockfile is the pinned truth.
+#
+# Two seeds, two files, because `fixtures/build.py` says at the top that nothing
+# it produces is a measurement and that has to stay true of every line in it. The
+# real rows live in `artifacts/seed.py` and the `--check` beside it verifies the
+# vendored tensors against the sha256 the ingest recorded, offline.
 site:
 	$(PY) fixtures/build.py
+	$(PY) artifacts/seed.py
+	$(PY) artifacts/ingest_arena.py --check
 	PYTHONPATH=src $(PY) -m registry.export
 	cd astro && npm ci --silent && npm run build
 

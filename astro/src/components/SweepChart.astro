@@ -10,8 +10,9 @@
 // already coming apart, and a single score at one coefficient hides exactly that.
 interface Props {
   curve: { coefficient: number; trait: number; coherence: number }[] | null;
+  synthetic?: boolean;
 }
-const { curve } = Astro.props;
+const { curve, synthetic = true } = Astro.props;
 
 const W = 560, H = 240;
 const PAD = { top: 18, right: 86, bottom: 48, left: 40 };
@@ -75,7 +76,9 @@ const last = curve?.[curve.length - 1];
     <figcaption>
       <span class="key"><span class="swatch series-1-bg"></span>Trait score</span>
       <span class="key"><span class="swatch series-2-bg"></span>Coherence</span>
-      <span class="synthetic-tag">synthetic, repeated-digit values</span>
+      {synthetic && (
+        <span class="synthetic-tag">synthetic, repeated-digit values</span>
+      )}
     </figcaption>
 
     <details class="table-view">

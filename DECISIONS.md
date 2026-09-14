@@ -553,3 +553,85 @@ claim about specific papers.
 allowed to publish, and any interface that needs the full set of kinds in advance.
 Faceted browsing over kinds has to be built from what the corpus actually contains
 rather than from a declared list.
+
+## 2026-09-14 The synthetic marker is per page, not per corpus
+**Decided:** `any_synthetic` stops gating a corpus-wide banner. Each page states
+what is on it: `all` when every figure traces to a fixture, `mixed` when some do
+and the exception is named, `none` when no figure on the page is fabricated and
+the page carries no marker at all. The exception is built from `real_authors` in
+the export, so it cannot outlive the rows that make it true.
+
+**Why:** the flag was per row in the schema from 001 and only the render was
+corpus-wide. That was accurate while the corpus was entirely fabricated and became
+false the moment one submission was not: the first real artifact would have
+rendered a real measurement under a banner saying every figure on the page is
+invented. A marker that is sometimes false is not a marker, and the direction it
+was false in is the expensive one.
+
+The same applies below the banner. `SweepChart` and `ConfoundChart` carried an
+unconditional "synthetic, repeated-digit values" caption under the figure; both
+now take the flag.
+
+**The falsifier check changed with it,** and gained the half it could not have
+had before. It attributes numbers rather than pages, so it needs no knowledge of
+how routes are built: a figure traceable only to a synthetic claimant must appear
+on a marked page, and a page whose figures are all real-only must not be marked.
+A value reachable from both is attributed to neither, which is the conservative
+reading and the reason 1.0000 cannot convict anything.
+`tests/test_synthetic_marker_bites.py` reintroduces both defects and asserts the
+mutation landed before believing the result.
+
+**Supersedes:** nothing.
+
+## 2026-09-14 `model_revision` is nullable, and absence renders as absence
+**Decided:** `schema/migrations/005` drops NOT NULL from
+`intervention.model_revision`.
+
+**Why:** NOT NULL does not produce a revision, it produces a string. An author who
+never recorded one types `unknown`, or `main`, or pastes the sha the model has
+today, and the last is worse than nothing because a false provenance claim reads
+exactly like a true one. The three OLMo-3 directions are the case: extracted
+through NDIF in June 2026 with an empty `model_build`, so the revision was never
+captured and no string put in that column would capture it.
+
+This is the argument 001 already makes about recipes. Requiring one "would exclude
+exactly the historical artifacts worth comparing against"; requiring a revision
+excludes every artifact published before anyone thought to record one.
+
+**What this makes impossible:** relying on the schema to guarantee a revision is
+present. Enforcement moves to the upload path, which can tell the difference
+between a revision that is resolvable and absent and one that never existed.
+
+**Supersedes:** nothing.
+
+## 2026-09-14 The submission URL carries its version
+**Decided:** a submission is at `/<owner>/<model>/<label>/<version>/`. The
+label-last route is gone.
+
+**Why:** `author/label@version` is the identity in this schema and nothing above
+it resolves to one artifact, but the route assumed one submission per author per
+label. That held only while nobody had published two takes on their own word.
+Three estimators over one contrast set are three submissions, and the old shape
+would have collapsed them into one URL, which is the registry picking.
+
+The route stays unambiguous: owner is the first segment, label and version are the
+last two, and the variable-depth model id is whatever sits between them.
+
+**Supersedes:** nothing.
+
+## 2026-09-14 Non-Hub provenance lives in the recipe payload, and that is a gap
+**Decided:** `artifact_repo` and `artifact_commit` stay Hub-shaped. An artifact
+published somewhere else records its origin repo, commit, path and sha256 in the
+recipe payload, where it renders as cited provenance.
+
+**Why:** `fetch.hub_url` builds `huggingface.co/{repo}/resolve/{sha}/{path}`, so a
+GitHub repo in those columns would publish a URL that 404s and then silently fall
+back to the local copy. A wrong URL on the page is worse than no URL.
+
+**This is a limitation and is written down as one.** What it makes impossible to
+express is provenance for anything not on the Hub, in the columns that exist for
+provenance. The honest fix is a host field or a resolver per host, and it is not
+v0 scope. Until then the payload carries it and `artifacts/REAL.md` says where to
+look.
+
+**Supersedes:** nothing.

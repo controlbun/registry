@@ -47,7 +47,7 @@ const r = c.recipe;
           <dt>entrypoint</dt>
           <dd class="mono">
             {r.entrypoint_library
-              ? `${r.entrypoint_library} ${r.entrypoint_version}`
+              ? [r.entrypoint_library, r.entrypoint_version].filter(Boolean).join(" ")
               : "not recorded"}
           </dd>
           <dt>container</dt>
@@ -102,8 +102,10 @@ const r = c.recipe;
       </p>
     )}
 
+    {c.notes && <p class="note">{c.notes}</p>}
+
     <h2>Coefficient sweep</h2>
-    <SweepChart curve={c.coeff_curve} />
+    <SweepChart curve={c.coeff_curve} synthetic={c.is_synthetic} />
 
     <h2>Trait against its collateral axes</h2>
     <ConfoundChart
@@ -111,6 +113,7 @@ const r = c.recipe;
       coherence={c.coherence_score}
       confounds={c.confounds}
       traitState={c.score_state}
+      synthetic={c.is_synthetic}
     />
 
   </div>
@@ -122,7 +125,10 @@ const r = c.recipe;
         <dt>kind</dt><dd class="mono">{c.kind}</dd>
         <dt>model</dt>
         <dd><a class="mono" href={`/models/${modelId}/`}>{modelId}</a></dd>
-        <dt>revision</dt><dd class="mono">{c.model_revision}</dd>
+        <dt>revision</dt>
+        <dd class="mono">
+          {c.model_revision ?? <span class="absent">not recorded</span>}
+        </dd>
         <dt>layer</dt><dd>{c.layer} <span class="meta">{c.layer_convention}</span></dd>
         <dt>hook point</dt><dd class="mono">{c.hook_point}</dd>
         <dt>chat template</dt>

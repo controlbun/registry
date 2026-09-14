@@ -22,6 +22,25 @@ from .comparison import pairwise, similarity_matrix
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def marker(flags) -> str:
+    """What a page showing these rows should say about fabricated figures.
+
+    `all` when every row is a fixture, `mixed` when some are, `none` when none
+    are and the page therefore carries no marker at all. Computed here rather
+    than in a template because getting it wrong in one direction prints a real
+    measurement under a banner calling it invented, and in the other prints a
+    fabricated one with nothing saying so.
+
+    An empty page is `none`: there is nothing on it to mislabel.
+    """
+    flags = list(flags)
+    if not flags:
+        return "none"
+    if all(flags):
+        return "all"
+    return "mixed" if any(flags) else "none"
+
+
 def _attack(row: sqlite3.Row) -> dict:
     return {
         "attacker": row["attacker"],
@@ -84,6 +103,7 @@ def build(conn: sqlite3.Connection) -> dict:
             blocks.append({
                 "label": lab,
                 "claimants": cs,
+                "synthetic": marker(c["is_synthetic"] for c in cs),
                 # Ordering keys, the same two inputs order.py uses. Shipped per row
                 # so the reader can switch ordering without a round trip.
                 "latest": max(c["created_at"] for c in cs),
@@ -116,6 +136,9 @@ def build(conn: sqlite3.Connection) -> dict:
             "layers": sorted(m["layers"]),
             "label_count": len(blocks),
             "claimant_count": m["claimant_count"],
+            "synthetic": marker(
+                c["is_synthetic"] for b in blocks for c in b["claimants"]
+            ),
             "labels": blocks,
         })
 
@@ -186,6 +209,7 @@ def build(conn: sqlite3.Connection) -> dict:
                 "score_state": c["score_state"],
                 "has_recipe": c["recipe"] is not None,
                 "attacks": len(c["attacks"]),
+                "is_synthetic": c["is_synthetic"],
                 # Same definition as everywhere else: what other people did to it,
                 # never what it scored. Kept identical to the model_index sum so
                 # the two pages do not order by quietly different quantities.
@@ -232,7 +256,7 @@ def build(conn: sqlite3.Connection) -> dict:
     # count self-measurement as scrutiny.
     for r in conn.execute(
         "SELECT s.author AS evaluator, r.reported_at, i.author AS subject_author,"
-        " i.label, i.version, i.model_id FROM eval_report r"
+        " i.label, i.version, i.model_id, i.is_synthetic FROM eval_report r"
         " JOIN eval_suite s ON s.id = r.eval_suite_id"
         " JOIN intervention i ON i.id = r.intervention_id"
         " WHERE s.author != i.author"
@@ -241,27 +265,33 @@ def build(conn: sqlite3.Connection) -> dict:
             "subject": f"{r['subject_author']}/{r['label']}@{r['version']}",
             "subject_author": r["subject_author"],
             "label": r["label"],
+            "version": r["version"],
             "model_id": r["model_id"],
+            "subject_synthetic": bool(r["is_synthetic"]),
             "reported_at": r["reported_at"],
         })
 
     for r in conn.execute(
         "SELECT a.attacker, a.attacked_at, a.method, a.attacker_disposition,"
-        " i.author AS subject_author, i.label, i.version, i.model_id FROM attack a"
+        " i.author AS subject_author, i.label, i.version, i.model_id,"
+        " i.is_synthetic FROM attack a"
         " JOIN intervention i ON i.id = a.intervention_id"
     ):
         owner(r["attacker"])["attacks_made"].append({
             "subject": f"{r['subject_author']}/{r['label']}@{r['version']}",
             "subject_author": r["subject_author"],
             "label": r["label"],
+            "version": r["version"],
             "model_id": r["model_id"],
+            "subject_synthetic": bool(r["is_synthetic"]),
             "attacked_at": r["attacked_at"],
             "method": r["method"],
             "disposition": r["attacker_disposition"],
         })
 
     for r in conn.execute(
-        "SELECT c.*, i.model_id FROM support_card c"
+        "SELECT c.*, i.model_id, i.is_synthetic AS subject_synthetic"
+        " FROM support_card c"
         " LEFT JOIN intervention i"
         " ON i.author = c.author AND i.label = c.label AND i.version = c.version"
     ):
@@ -269,7 +299,9 @@ def build(conn: sqlite3.Connection) -> dict:
             "subject": f"{r['author']}/{r['label']}@{r['version']}",
             "subject_author": r["author"],
             "label": r["label"],
+            "version": r["version"],
             "model_id": r["model_id"],
+            "subject_synthetic": bool(r["subject_synthetic"]),
             "reported_at": r["reported_at"],
             "purpose": r["purpose"],
             "predictability": r["predictability"],
@@ -313,6 +345,15 @@ def build(conn: sqlite3.Connection) -> dict:
             # Scrutiny received, which is a property of having published
             # something. Nobody is ordered up the page for attacking a lot.
             "engagement": sum(s["engagement"] for s in o["submissions"]),
+            # Their own rows plus the rows their work points at. Somebody who has
+            # published nothing and only attacked fixtures still has a page full
+            # of fabricated subjects, and it has to say so.
+            "synthetic": marker(
+                [s["is_synthetic"] for s in o["submissions"]]
+                + [x["subject_synthetic"] for x in o["evaluations"]]
+                + [x["subject_synthetic"] for x in o["attacks_made"]]
+                + [x["subject_synthetic"] for x in o["support_given"]]
+            ),
         }
 
     owner_index = [owner_entry(o) for o in owners.values()]
@@ -342,6 +383,16 @@ def build(conn: sqlite3.Connection) -> dict:
         "any_synthetic": any(
             c["is_synthetic"] for l in labels for c in l["claimants"]
         ),
+        # Who published something that is not a fixture. The synthetic marker used
+        # to be one flag for the whole corpus, which was true while the corpus was
+        # entirely fabricated and became a lie the moment it was not: a real
+        # measurement rendered under a banner saying every figure on the page is
+        # invented. The flag is per row in the schema and always was. This is what
+        # the page needs to name the exception rather than flatten it.
+        "real_authors": sorted({
+            c["author"] for l in labels for c in l["claimants"]
+            if not c["is_synthetic"]
+        }),
         "kinds": kinds,
         "models": models,
         "pins": pins,

@@ -14,9 +14,9 @@ import data from "../data/registry.json";
 // Everything below the index lives under the model, because an intervention is a
 // tensor in one model's basis at one layer and does nothing for another model.
 //
-//   /models/<model>/                 our reference page for a model
-//   /models/<model>/<label>/         everyone claiming that label, there
-//   /<owner>/<model>/<label>/        that owner's submission
+//   /models/<model>/                    our reference page for a model
+//   /models/<model>/<label>/            everyone claiming that label, there
+//   /<owner>/<model>/<label>/<version>/ that owner's submission
 //
 // Models live under /models/ and not at the root, because a root-level
 // /some-org/some-model/ reads as a repository this site hosts. It does not host
@@ -24,10 +24,17 @@ import data from "../data/registry.json";
 // entry for it.
 //
 // The shape is also unambiguous, which a root-level model id was not. Owner is the
-// first segment and label is the last, so the variable-depth model id is always
-// what sits between them. Without that, /alice/gpt2/bar/ was both "the model
-// alice/gpt2, label bar" and "owner alice, model gpt2, label bar", since model ids
-// are not always org/name: gpt2 and bert-base-uncased are a single segment.
+// first segment and label and version are the last two, so the variable-depth
+// model id is always what sits between them. Without that, /alice/gpt2/bar/ was
+// both "the model alice/gpt2, label bar" and "owner alice, model gpt2, label bar",
+// since model ids are not always org/name: gpt2 and bert-base-uncased are a single
+// segment.
+//
+// Version is in the URL because `author/label@version` is the identity in this
+// schema and nothing above it resolves to one artifact. Without it the route
+// assumed one submission per author per label, which held only while nobody had
+// published two takes on their own word. Three estimators over one contrast set
+// are three submissions, and collapsing them to a URL would have picked one.
 //
 // `owner` is whoever published the submission and may be a person or an org.
 //
@@ -56,7 +63,9 @@ export function getStaticPaths() {
 
       for (const claimant of block.claimants) {
         routes.push({
-          params: { path: `${claimant.author}/${model.model_id}/${block.label}` },
+          params: {
+            path: `${claimant.author}/${model.model_id}/${block.label}/${claimant.version}`,
+          },
           props: { view: "submission", model, block, claimant },
         });
       }
@@ -93,7 +102,12 @@ const released = (iso) =>
 ---
 
 {view === "model" && (
-  <Base title={`${model.model_id} — interventions`} trail={[crumbs.registry, crumbs.models]} ordering>
+  <Base
+    title={`${model.model_id} — interventions`}
+    trail={[crumbs.registry, crumbs.models]}
+    synthetic={model.synthetic}
+    ordering
+  >
     <h1 slot="heading" class="mono">{model.model_id}</h1>
 
     <p class="lede">
@@ -112,7 +126,16 @@ const released = (iso) =>
       <div><span class="k">Layers</span>{model.layers.join(", ")}</div>
       <div>
         <span class="k">Revisions pinned</span>
-        <span class="mono">{model.revisions.map((r) => r.slice(0, 12)).join(", ")}</span>
+        {/* A null revision is nobody recording one, which is a different fact
+            from a revision nobody pinned, so it reads as its own state rather
+            than as a blank cell. See schema/migrations/005. */}
+        <span class="mono">
+          {model.revisions.every((r) => r === null)
+            ? <span class="absent">none recorded</span>
+            : model.revisions
+                .map((r) => (r === null ? "not recorded" : r.slice(0, 12)))
+                .join(", ")}
+        </span>
       </div>
     </div>
 
@@ -147,6 +170,7 @@ const released = (iso) =>
   <Base
     title={`${block.label} on ${model.model_id}`}
     trail={[crumbs.registry, crumbs.models, crumbs.model]}
+    synthetic={block.synthetic}
     ordering
   >
     <h1 slot="heading">{block.label}</h1>
@@ -182,8 +206,9 @@ const released = (iso) =>
 
 {view === "submission" && (
   <Base
-    title={`${claimant.author}/${block.label} on ${model.model_id}`}
+    title={`${claimant.author}/${block.label}@${claimant.version} on ${model.model_id}`}
     trail={[crumbs.registry, crumbs.models, crumbs.model, crumbs.label]}
+    synthetic={claimant.is_synthetic ? "all" : "none"}
   >
     <h1 slot="heading" class="mono">
       {claimant.author}/{claimant.label}@{claimant.version}
@@ -257,6 +282,7 @@ const released = (iso) =>
   <Base
     title={`${owner.owner}`}
     trail={[crumbs.registry, crumbs.owners]}
+    synthetic={owner.synthetic}
     ordering={owner.submissions.length > 0}
   >
     <h1 slot="heading" class="mono">{owner.owner}</h1>
@@ -307,7 +333,9 @@ const released = (iso) =>
           {owner.submissions.map((s) => (
             <tr data-created={s.created_at} data-engagement={s.engagement}>
               <td>
-                <a href={`/${owner.owner}/${s.model_id}/${s.label}/`}>{s.label}</a>
+                <a href={`/${owner.owner}/${s.model_id}/${s.label}/${s.version}/`}>
+                  {s.label}<span class="meta">@{s.version}</span>
+                </a>
                 <div class="provenance mono">{s.kind} @{s.version}</div>
               </td>
               <td class="mono">
@@ -358,7 +386,7 @@ const released = (iso) =>
                     <tr>
                       <td>
                         <a class="mono" href={a.model_id
-                          ? `/${a.subject_author}/${a.model_id}/${a.label}/`
+                          ? `/${a.subject_author}/${a.model_id}/${a.label}/${a.version}/`
                           : `/${a.subject_author}/`}>{a.subject}</a>
                       </td>
                       <td class="mono">{a.method}</td>
@@ -389,7 +417,7 @@ const released = (iso) =>
                     <tr>
                       <td>
                         <a class="mono" href={e.model_id
-                          ? `/${e.subject_author}/${e.model_id}/${e.label}/`
+                          ? `/${e.subject_author}/${e.model_id}/${e.label}/${e.version}/`
                           : `/${e.subject_author}/`}>{e.subject}</a>
                       </td>
                       <td class="provenance">
@@ -418,7 +446,7 @@ const released = (iso) =>
                     <tr>
                       <td>
                         <a class="mono" href={c.model_id
-                          ? `/${c.subject_author}/${c.model_id}/${c.label}/`
+                          ? `/${c.subject_author}/${c.model_id}/${c.label}/${c.version}/`
                           : `/${c.subject_author}/`}>{c.subject}</a>
                       </td>
                       <td>{c.purpose}</td>

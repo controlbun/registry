@@ -78,7 +78,7 @@ const released = (iso) =>
       <tr data-ref={r.ref} data-created={r.created_at}
           data-attacks={r.attacks} data-engagement={r.engagement}>
         <td>
-          <a href={`/${r.author}/${modelId}/${r.label}/`}>{r.author}</a>
+          <a href={`/${r.author}/${modelId}/${r.label}/${r.version}/`}>{r.author}</a>
           <div class="provenance mono">@{r.version}</div>
         </td>
         <td><time datetime={r.created_at}>{released(r.created_at)}</time></td>

@@ -34,9 +34,9 @@ PAGES = {
     "kindness": "models/placeholder/does-not-resolve-1b/kindness/index.html",
     # erik reported a trait score and no coherence, so this page is the one that
     # has to refuse to print a number.
-    "unpaired": "erik/placeholder/other-architecture-7b/refusal/index.html",
+    "unpaired": "erik/placeholder/other-architecture-7b/refusal/v1/index.html",
     # fern reported nothing at all.
-    "unmeasured": "fern/placeholder/other-architecture-7b/refusal/index.html",
+    "unmeasured": "fern/placeholder/other-architecture-7b/refusal/v1/index.html",
 }
 
 

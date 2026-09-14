@@ -54,8 +54,8 @@ def test_canonicalizing_makes_the_bytes_stable(build, tmp_path):
     _write_scrambled(a, meta)
     _write_scrambled(b, meta)
 
-    build.canonicalize(a)
-    build.canonicalize(b)
+    build.sort_header(a)
+    build.sort_header(b)
     assert a.read_bytes() == b.read_bytes(), (
         "identical inputs produced different files; the header is not canonical"
     )
@@ -64,9 +64,9 @@ def test_canonicalizing_makes_the_bytes_stable(build, tmp_path):
 def test_canonicalizing_is_idempotent(build, tmp_path):
     path = tmp_path / "c.safetensors"
     _write_scrambled(path, {"synthetic": "true", "note": "probe"})
-    build.canonicalize(path)
+    build.sort_header(path)
     once = path.read_bytes()
-    build.canonicalize(path)
+    build.sort_header(path)
     assert path.read_bytes() == once
 
 
@@ -74,7 +74,7 @@ def test_canonicalizing_preserves_metadata_and_tensor(build, tmp_path):
     meta = {"synthetic": "true", "note": "probe", "model_id": "placeholder/x"}
     path = tmp_path / "d.safetensors"
     _write_scrambled(path, meta)
-    build.canonicalize(path)
+    build.sort_header(path)
 
     with safe_open(str(path), framework="numpy") as f:
         assert f.metadata() == meta, "canonicalizing must not lose metadata"

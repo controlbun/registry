@@ -14,8 +14,12 @@ interface Props {
   coherence: number | null;
   confounds: Record<string, number> | null;
   traitState: string;
+  // Whose numbers these are. The tag under the figure used to be unconditional,
+  // which was accurate while every number in the corpus was fabricated and became
+  // a false caption the moment one was not.
+  synthetic?: boolean;
 }
-const { trait, coherence, confounds, traitState } = Astro.props;
+const { trait, coherence, confounds, traitState, synthetic = true } = Astro.props;
 
 const rows = [
   ...(traitState === "reportable" && trait !== null
@@ -70,7 +74,9 @@ const H = rows.length * (BAR + GAP) + 6;
           ? <span class="absent">not measured</span>
           : coherence.toFixed(4)}
       </span>
-      <span class="synthetic-tag">synthetic, repeated-digit values</span>
+      {synthetic && (
+        <span class="synthetic-tag">synthetic, repeated-digit values</span>
+      )}
     </figcaption>
 
     <p class="note">

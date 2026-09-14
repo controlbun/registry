@@ -143,9 +143,15 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
             json.loads(report["confound_json"])
             if report and report["confound_json"] else None
         ),
+        # What the author wants said about their own numbers. Carried because a
+        # battery can report a real measurement of the wrong thing, and the only
+        # place that can be said is beside it.
+        "notes": report["notes"] if report else None,
         "kind": iv["kind"] if iv else None,
         "model_id": iv["model_id"] if iv else None,
-        "model_revision": iv["model_revision"][:12] if iv else None,
+        # Truncated for display, and None when nobody recorded which revision
+        # the activations were read from. See schema/migrations/005.
+        "model_revision": (iv["model_revision"] or "")[:12] or None if iv else None,
         "layer": iv["layer"] if iv else None,
         "layer_convention": iv["layer_convention"] if iv else None,
         "hook_point": iv["hook_point"] if iv else None,

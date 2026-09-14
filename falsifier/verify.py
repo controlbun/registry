@@ -197,23 +197,31 @@ def check_published_numbers_are_accounted_for(payload: dict) -> None:
 
 def check_export_matches_the_database(conn: sqlite3.Connection, payload: dict) -> None:
     """Reported numbers are transported without drift."""
+    # Keyed on the submission, not on an id convention. This used to look the row
+    # up as `iv_<author>`, which held only while every author had published once:
+    # three takes by one person on one label all hashed to the same key, so two of
+    # them were never checked and the third was checked against whichever row the
+    # dict happened to keep. An identity the schema does not promise is not an
+    # identity.
     stored = {
-        row["intervention_id"]: row
+        (row["author"], row["label"], row["version"]): row
         for row in conn.execute(
-            "SELECT r.intervention_id, r.trait_score, r.coherence_score,"
-            " r.transfer_score FROM eval_report r"
+            "SELECT i.author, i.label, i.version, r.trait_score,"
+            " r.coherence_score, r.transfer_score FROM eval_report r"
             " JOIN eval_suite s ON s.id = r.eval_suite_id"
             " JOIN intervention i ON i.id = r.intervention_id"
             " WHERE s.author = i.author"
         )
     }
 
+    checked = 0
     for entry in payload["labels"]:
         for claimant in entry["claimants"]:
-            key = f"iv_{claimant['author']}"
+            key = (claimant["author"], claimant["label"], claimant["version"])
             row = stored.get(key)
             if row is None:
                 continue
+            checked += 1
             for field, column in (
                 ("trait_score", "trait_score"),
                 ("coherence_score", "coherence_score"),
@@ -224,18 +232,72 @@ def check_export_matches_the_database(conn: sqlite3.Connection, payload: dict) -
                     continue
                 if published is None or recorded is None or \
                         abs(published - recorded) > TOLERANCE:
-                    fail("transport", f"{key}.{field}: database has {recorded!r} "
+                    ref = f"{key[0]}/{key[1]}@{key[2]}"
+                    fail("transport", f"{ref}.{field}: database has {recorded!r} "
                                       f"but the export publishes {published!r}")
 
+    if checked != len(stored):
+        fail("transport", f"{len(stored)} self-reported eval rows exist but only "
+                          f"{checked} were matched to a published claimant")
 
-def check_synthetic_corpus_is_marked(payload: dict) -> None:
-    """A fabricated number must never reach a page without its marker."""
-    if not payload.get("any_synthetic"):
-        return
+
+def _numbers_under(value, into: set[str]) -> None:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        into.add(f"{float(value):.4f}")
+    elif isinstance(value, dict):
+        for v in value.values():
+            _numbers_under(v, into)
+    elif isinstance(value, list):
+        for v in value:
+            _numbers_under(v, into)
+
+
+def check_synthetic_marker_matches_the_page(payload: dict) -> None:
+    """The marker has to describe the page, in both directions.
+
+    This used to be one question: is anything in the corpus fabricated, and if so
+    does every page say so. That was right while everything was a fixture and
+    became wrong the moment one submission was not, because it demanded the
+    sentence "every figure here is fabricated" on a page showing a real
+    measurement. A marker that is sometimes false is not a marker.
+
+    So it is two questions now, and the second is the one that was missing:
+
+      * A page showing a figure that traces only to a synthetic row must carry
+        the marker.
+      * A page showing no such figure must not carry it.
+
+    Numbers are attributed rather than pages, so nothing here needs to know how
+    routes are built. A value that appears under both a synthetic and a real
+    claimant is attributed to neither, which is the conservative reading: 1.0000
+    is a fixture's L2 norm and also a real one's, and it cannot convict a page.
+    """
+    synthetic: set[str] = set()
+    real: set[str] = set()
+    for entry in payload["labels"]:
+        for claimant in entry["claimants"]:
+            _numbers_under(claimant, synthetic if claimant["is_synthetic"] else real)
+
+    only_synthetic = synthetic - real
+    only_real = real - synthetic
+    if not only_synthetic and payload.get("any_synthetic"):
+        fail("synthetic", "no figure is uniquely traceable to a fixture, so this "
+                          "check cannot catch an unmarked page; it is inert")
+
     for page in sorted(DIST.rglob("index.html")):
-        if "Synthetic corpus" not in text_of(page):
-            fail("synthetic", f"/{page.relative_to(DIST).parent}/ publishes "
-                              "fabricated figures with no marker on the page")
+        where = f"/{page.relative_to(DIST).parent}/"
+        body = text_of(page)
+        shown = set(PUBLISHED_NUMBER.findall(body))
+        marked = "Synthetic corpus" in body
+
+        if shown & only_synthetic and not marked:
+            fail("synthetic", f"{where} publishes fabricated figures "
+                              f"({', '.join(sorted(shown & only_synthetic))}) "
+                              "with no marker on the page")
+        if marked and not (shown & only_synthetic):
+            if shown & only_real:
+                fail("synthetic", f"{where} carries the synthetic marker but every "
+                                  "figure on it traces to a real submission")
 
 
 # --------------------------------------------------------------------------- #
@@ -257,7 +319,7 @@ def main() -> int:
     check_angles_recompute(payload)
     check_export_matches_the_database(conn, payload)
     check_published_numbers_are_accounted_for(payload)
-    check_synthetic_corpus_is_marked(payload)
+    check_synthetic_marker_matches_the_page(payload)
 
     if failures:
         print(f"falsifier: {len(failures)} failure(s)\n", file=sys.stderr)

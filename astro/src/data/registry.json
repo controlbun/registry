@@ -15,7 +15,7 @@
         "name": "Trending"
       }
     ],
-    "size": 5,
+    "size": 8,
     "threshold": 100
   },
   "kinds": [
@@ -92,6 +92,7 @@
           "license_status": "unresolved",
           "model_id": "placeholder/does-not-resolve-1b",
           "model_revision": "000000000000",
+          "notes": null,
           "recipe": {
             "container_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
             "entrypoint_library": "steering-vectors",
@@ -197,6 +198,7 @@
           "license_status": "unresolved",
           "model_id": "placeholder/does-not-resolve-1b",
           "model_revision": "000000000000",
+          "notes": null,
           "recipe": {
             "container_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
             "entrypoint_library": "steering-vectors",
@@ -317,6 +319,7 @@
           "license_status": "unresolved",
           "model_id": "placeholder/other-architecture-7b",
           "model_revision": "111111111111",
+          "notes": null,
           "recipe": null,
           "score_state": "reportable",
           "shape": "[8]",
@@ -368,6 +371,7 @@
           "license_status": "unresolved",
           "model_id": "placeholder/other-architecture-7b",
           "model_revision": "111111111111",
+          "notes": null,
           "recipe": {
             "container_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
             "entrypoint_library": "scikit-learn",
@@ -416,6 +420,7 @@
           "license_status": "unresolved",
           "model_id": "placeholder/other-architecture-7b",
           "model_revision": "111111111111",
+          "notes": null,
           "recipe": {
             "container_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
             "entrypoint_library": "sae-lens",
@@ -547,6 +552,327 @@
           }
         }
       }
+    },
+    {
+      "claimants": [
+        {
+          "activation_norm": null,
+          "artifact_path": "artifacts/soham/d_olmo3_logistic.safetensors",
+          "attacks": [],
+          "author": "soham",
+          "axes": [
+            "approach",
+            "approach_probe",
+            "length_independent",
+            "valence"
+          ],
+          "chat_template_hash": null,
+          "coeff_curve": null,
+          "coeff_high": 32.0,
+          "coeff_low": 8.0,
+          "coherence_score": null,
+          "confounds": {
+            "approach": 0.1697,
+            "approach_probe": 0.1668,
+            "length_independent": 0.0015,
+            "valence": 0.0001
+          },
+          "created_at": "2026-06-08T22:52:10Z",
+          "definition": "Pro-human is whatever separates the chosen from the rejected member of 135 hand-written pairs across 15 value axes: accountability, boundaries, conflict resolution, empathy, fairness, feedback, inclusion, integrity, leadership, learning, ownership, privacy, respect, safety and trust. The direction is the last-token residual contrast at layer 32 of allenai/Olmo-3-1125-32B with length and sentiment orthogonalized out. That is the whole of what is claimed: a representation induced by this dataset and this model, not a detector for human values. The author has not written a statement of the construct beyond this, and nothing has been substituted from a neighboring artifact in its place.",
+          "dtype": "float32",
+          "hook_point": "resid_post",
+          "is_synthetic": false,
+          "kind": "direction",
+          "l2_norm": 1.0,
+          "label": "pro-human",
+          "layer": 32,
+          "layer_convention": "block-0indexed",
+          "license_status": "apache-2.0, redistribution permitted",
+          "model_id": "allenai/Olmo-3-1125-32B",
+          "model_revision": null,
+          "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+          "recipe": {
+            "container_digest": null,
+            "entrypoint_library": "steering-arena/scripts/extract_direction.py",
+            "entrypoint_version": null,
+            "payload": {
+              "author_version_string": "olmo3_logistic",
+              "chat_template": "none applied; base checkpoint, raw text",
+              "coefficient_semantics": "raw multiplier of the unit direction; the bake-off does not scale by residual norm",
+              "confounds_orthogonalized": "length, sentiment",
+              "contrast_source": "data/seed_pairs.jsonl, 135 hand-written pairs, 15 axes",
+              "estimator": "logistic",
+              "estimator_one_line": "logistic-regression probe on chosen vs rejected, coefficient vector",
+              "layer_sweep": "layers 16, 24, 32, 40, 48; held-out separation 1.000 at every one, so the sweep does not pick a layer",
+              "mean_train_gap": 13.034,
+              "residual_norm_at_layer_32": 50.97,
+              "source_commit": "b8b472175b7a2af1b7a7ecd7a784e982a6a7453a",
+              "source_path": "data/directions/d_olmo3_logistic.npz",
+              "source_repo": "github.com/soham-padia/steering-arena",
+              "token_masking": "last token of prompt + completion, concatenated"
+            },
+            "profile": "soham/arena-contrast-v1",
+            "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
+          },
+          "score_state": "absent",
+          "shape": "[5120]",
+          "steering_position": "all-positions",
+          "support": [],
+          "trait_score": null,
+          "transfer_score": 0.716,
+          "verifications": [],
+          "version": "logistic"
+        },
+        {
+          "activation_norm": null,
+          "artifact_path": "artifacts/soham/d_olmo3_lda.safetensors",
+          "attacks": [],
+          "author": "soham",
+          "axes": [
+            "approach",
+            "approach_probe",
+            "length_independent",
+            "valence"
+          ],
+          "chat_template_hash": null,
+          "coeff_curve": null,
+          "coeff_high": 32.0,
+          "coeff_low": 8.0,
+          "coherence_score": null,
+          "confounds": {
+            "approach": 0.1246,
+            "approach_probe": 0.1307,
+            "length_independent": 0.0011,
+            "valence": 0.0001
+          },
+          "created_at": "2026-06-08T22:52:06Z",
+          "definition": "Pro-human is whatever separates the chosen from the rejected member of 135 hand-written pairs across 15 value axes: accountability, boundaries, conflict resolution, empathy, fairness, feedback, inclusion, integrity, leadership, learning, ownership, privacy, respect, safety and trust. The direction is the last-token residual contrast at layer 32 of allenai/Olmo-3-1125-32B with length and sentiment orthogonalized out. That is the whole of what is claimed: a representation induced by this dataset and this model, not a detector for human values. The author has not written a statement of the construct beyond this, and nothing has been substituted from a neighboring artifact in its place.",
+          "dtype": "float32",
+          "hook_point": "resid_post",
+          "is_synthetic": false,
+          "kind": "direction",
+          "l2_norm": 1.0,
+          "label": "pro-human",
+          "layer": 32,
+          "layer_convention": "block-0indexed",
+          "license_status": "apache-2.0, redistribution permitted",
+          "model_id": "allenai/Olmo-3-1125-32B",
+          "model_revision": null,
+          "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+          "recipe": {
+            "container_digest": null,
+            "entrypoint_library": "steering-arena/scripts/extract_direction.py",
+            "entrypoint_version": null,
+            "payload": {
+              "author_version_string": "olmo3_lda",
+              "chat_template": "none applied; base checkpoint, raw text",
+              "coefficient_semantics": "raw multiplier of the unit direction; the bake-off does not scale by residual norm",
+              "confounds_orthogonalized": "length, sentiment",
+              "contrast_source": "data/seed_pairs.jsonl, 135 hand-written pairs, 15 axes",
+              "estimator": "lda",
+              "estimator_one_line": "linear discriminant analysis on chosen vs rejected",
+              "layer_sweep": "layers 16, 24, 32, 40, 48; held-out separation 1.000 at every one, so the sweep does not pick a layer",
+              "mean_train_gap": 7.928,
+              "residual_norm_at_layer_32": 50.97,
+              "source_commit": "b8b472175b7a2af1b7a7ecd7a784e982a6a7453a",
+              "source_path": "data/directions/d_olmo3_lda.npz",
+              "source_repo": "github.com/soham-padia/steering-arena",
+              "token_masking": "last token of prompt + completion, concatenated"
+            },
+            "profile": "soham/arena-contrast-v1",
+            "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
+          },
+          "score_state": "absent",
+          "shape": "[5120]",
+          "steering_position": "all-positions",
+          "support": [],
+          "trait_score": null,
+          "transfer_score": 0.685,
+          "verifications": [],
+          "version": "lda"
+        },
+        {
+          "activation_norm": null,
+          "artifact_path": "artifacts/soham/d_olmo3_v1.safetensors",
+          "attacks": [],
+          "author": "soham",
+          "axes": [
+            "approach",
+            "approach_probe",
+            "length_independent",
+            "valence"
+          ],
+          "chat_template_hash": null,
+          "coeff_curve": null,
+          "coeff_high": 32.0,
+          "coeff_low": 8.0,
+          "coherence_score": null,
+          "confounds": {
+            "approach": 0.1223,
+            "approach_probe": 0.1222,
+            "length_independent": 0.0018,
+            "valence": 0.0001
+          },
+          "created_at": "2026-06-08T22:05:52Z",
+          "definition": "Pro-human is whatever separates the chosen from the rejected member of 135 hand-written pairs across 15 value axes: accountability, boundaries, conflict resolution, empathy, fairness, feedback, inclusion, integrity, leadership, learning, ownership, privacy, respect, safety and trust. The direction is the last-token residual contrast at layer 32 of allenai/Olmo-3-1125-32B with length and sentiment orthogonalized out. That is the whole of what is claimed: a representation induced by this dataset and this model, not a detector for human values. The author has not written a statement of the construct beyond this, and nothing has been substituted from a neighboring artifact in its place.",
+          "dtype": "float32",
+          "hook_point": "resid_post",
+          "is_synthetic": false,
+          "kind": "direction",
+          "l2_norm": 1.0,
+          "label": "pro-human",
+          "layer": 32,
+          "layer_convention": "block-0indexed",
+          "license_status": "apache-2.0, redistribution permitted",
+          "model_id": "allenai/Olmo-3-1125-32B",
+          "model_revision": null,
+          "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+          "recipe": {
+            "container_digest": null,
+            "entrypoint_library": "steering-arena/scripts/extract_direction.py",
+            "entrypoint_version": null,
+            "payload": {
+              "author_version_string": "v1",
+              "chat_template": "none applied; base checkpoint, raw text",
+              "coefficient_semantics": "raw multiplier of the unit direction; the bake-off does not scale by residual norm",
+              "confounds_orthogonalized": "length, sentiment",
+              "contrast_source": "data/seed_pairs.jsonl, 135 hand-written pairs, 15 axes",
+              "estimator": "meandiff",
+              "estimator_one_line": "mean of (chosen - rejected) last-token residuals",
+              "layer_sweep": "layers 16, 24, 32, 40, 48; held-out separation 1.000 at every one, so the sweep does not pick a layer",
+              "mean_train_gap": 18.95,
+              "residual_norm_at_layer_32": 50.97,
+              "source_commit": "b8b472175b7a2af1b7a7ecd7a784e982a6a7453a",
+              "source_path": "data/directions/d_olmo3_v1.npz",
+              "source_repo": "github.com/soham-padia/steering-arena",
+              "token_masking": "last token of prompt + completion, concatenated"
+            },
+            "profile": "soham/arena-contrast-v1",
+            "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
+          },
+          "score_state": "absent",
+          "shape": "[5120]",
+          "steering_position": "all-positions",
+          "support": [],
+          "trait_score": null,
+          "transfer_score": 0.74,
+          "verifications": [],
+          "version": "meandiff"
+        }
+      ],
+      "label": "pro-human",
+      "pairs": [
+        {
+          "a": "soham/pro-human@lda",
+          "angle_comparable": true,
+          "angle_similarity": 0.8317705392837524,
+          "axes_both_checked": [
+            "approach",
+            "approach_probe",
+            "length_independent",
+            "valence"
+          ],
+          "axes_only_a_checked": [],
+          "axes_only_b_checked": [],
+          "b": "soham/pro-human@logistic",
+          "is_synthetic": false,
+          "score_state_a": "absent",
+          "score_state_b": "absent",
+          "transfer_a": 0.685,
+          "transfer_b": 0.716
+        },
+        {
+          "a": "soham/pro-human@lda",
+          "angle_comparable": true,
+          "angle_similarity": 0.42612743377685547,
+          "axes_both_checked": [
+            "approach",
+            "approach_probe",
+            "length_independent",
+            "valence"
+          ],
+          "axes_only_a_checked": [],
+          "axes_only_b_checked": [],
+          "b": "soham/pro-human@meandiff",
+          "is_synthetic": false,
+          "score_state_a": "absent",
+          "score_state_b": "absent",
+          "transfer_a": 0.685,
+          "transfer_b": 0.74
+        },
+        {
+          "a": "soham/pro-human@logistic",
+          "angle_comparable": true,
+          "angle_similarity": 0.6965014338493347,
+          "axes_both_checked": [
+            "approach",
+            "approach_probe",
+            "length_independent",
+            "valence"
+          ],
+          "axes_only_a_checked": [],
+          "axes_only_b_checked": [],
+          "b": "soham/pro-human@meandiff",
+          "is_synthetic": false,
+          "score_state_a": "absent",
+          "score_state_b": "absent",
+          "transfer_a": 0.716,
+          "transfer_b": 0.74
+        }
+      ],
+      "similarity": {
+        "soham/pro-human@lda": {
+          "soham/pro-human@lda": {
+            "note": null,
+            "v": 1.0,
+            "why": null
+          },
+          "soham/pro-human@logistic": {
+            "note": null,
+            "v": 0.8317705392837524,
+            "why": null
+          },
+          "soham/pro-human@meandiff": {
+            "note": null,
+            "v": 0.42612743377685547,
+            "why": null
+          }
+        },
+        "soham/pro-human@logistic": {
+          "soham/pro-human@lda": {
+            "note": null,
+            "v": 0.8317705392837524,
+            "why": null
+          },
+          "soham/pro-human@logistic": {
+            "note": null,
+            "v": 1.0,
+            "why": null
+          },
+          "soham/pro-human@meandiff": {
+            "note": null,
+            "v": 0.6965014338493347,
+            "why": null
+          }
+        },
+        "soham/pro-human@meandiff": {
+          "soham/pro-human@lda": {
+            "note": null,
+            "v": 0.42612743377685547,
+            "why": null
+          },
+          "soham/pro-human@logistic": {
+            "note": null,
+            "v": 0.6965014338493347,
+            "why": null
+          },
+          "soham/pro-human@meandiff": {
+            "note": null,
+            "v": 1.0,
+            "why": null
+          }
+        }
+      }
     }
   ],
   "model_index": [
@@ -629,6 +955,7 @@
               "license_status": "unresolved",
               "model_id": "placeholder/does-not-resolve-1b",
               "model_revision": "000000000000",
+              "notes": null,
               "recipe": {
                 "container_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
                 "entrypoint_library": "steering-vectors",
@@ -734,6 +1061,7 @@
               "license_status": "unresolved",
               "model_id": "placeholder/does-not-resolve-1b",
               "model_revision": "000000000000",
+              "notes": null,
               "recipe": {
                 "container_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
                 "entrypoint_library": "steering-vectors",
@@ -795,7 +1123,8 @@
               "transfer_a": 0.6666,
               "transfer_b": null
             }
-          ]
+          ],
+          "synthetic": "all"
         }
       ],
       "latest": "2026-09-12T00:00:00Z",
@@ -823,7 +1152,8 @@
           "model_id": "placeholder/does-not-resolve-1b",
           "version": "v1"
         }
-      ]
+      ],
+      "synthetic": "all"
     },
     {
       "claimant_count": 3,
@@ -870,6 +1200,7 @@
               "license_status": "unresolved",
               "model_id": "placeholder/other-architecture-7b",
               "model_revision": "111111111111",
+              "notes": null,
               "recipe": null,
               "score_state": "reportable",
               "shape": "[8]",
@@ -921,6 +1252,7 @@
               "license_status": "unresolved",
               "model_id": "placeholder/other-architecture-7b",
               "model_revision": "111111111111",
+              "notes": null,
               "recipe": {
                 "container_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
                 "entrypoint_library": "scikit-learn",
@@ -969,6 +1301,7 @@
               "license_status": "unresolved",
               "model_id": "placeholder/other-architecture-7b",
               "model_revision": "111111111111",
+              "notes": null,
               "recipe": {
                 "container_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
                 "entrypoint_library": "sae-lens",
@@ -1048,7 +1381,8 @@
               "transfer_a": null,
               "transfer_b": null
             }
-          ]
+          ],
+          "synthetic": "all"
         }
       ],
       "latest": "2026-09-12T00:00:00Z",
@@ -1084,10 +1418,331 @@
           "model_id": "placeholder/other-architecture-7b",
           "version": "v1"
         }
-      ]
+      ],
+      "synthetic": "all"
+    },
+    {
+      "claimant_count": 3,
+      "engagement": 0,
+      "hook_points": [
+        "resid_post"
+      ],
+      "kinds": [
+        "direction"
+      ],
+      "label_count": 1,
+      "labels": [
+        {
+          "claimants": [
+            {
+              "activation_norm": null,
+              "artifact_path": "artifacts/soham/d_olmo3_logistic.safetensors",
+              "attacks": [],
+              "author": "soham",
+              "axes": [
+                "approach",
+                "approach_probe",
+                "length_independent",
+                "valence"
+              ],
+              "chat_template_hash": null,
+              "coeff_curve": null,
+              "coeff_high": 32.0,
+              "coeff_low": 8.0,
+              "coherence_score": null,
+              "confounds": {
+                "approach": 0.1697,
+                "approach_probe": 0.1668,
+                "length_independent": 0.0015,
+                "valence": 0.0001
+              },
+              "created_at": "2026-06-08T22:52:10Z",
+              "definition": "Pro-human is whatever separates the chosen from the rejected member of 135 hand-written pairs across 15 value axes: accountability, boundaries, conflict resolution, empathy, fairness, feedback, inclusion, integrity, leadership, learning, ownership, privacy, respect, safety and trust. The direction is the last-token residual contrast at layer 32 of allenai/Olmo-3-1125-32B with length and sentiment orthogonalized out. That is the whole of what is claimed: a representation induced by this dataset and this model, not a detector for human values. The author has not written a statement of the construct beyond this, and nothing has been substituted from a neighboring artifact in its place.",
+              "dtype": "float32",
+              "hook_point": "resid_post",
+              "is_synthetic": false,
+              "kind": "direction",
+              "l2_norm": 1.0,
+              "label": "pro-human",
+              "layer": 32,
+              "layer_convention": "block-0indexed",
+              "license_status": "apache-2.0, redistribution permitted",
+              "model_id": "allenai/Olmo-3-1125-32B",
+              "model_revision": null,
+              "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+              "recipe": {
+                "container_digest": null,
+                "entrypoint_library": "steering-arena/scripts/extract_direction.py",
+                "entrypoint_version": null,
+                "payload": {
+                  "author_version_string": "olmo3_logistic",
+                  "chat_template": "none applied; base checkpoint, raw text",
+                  "coefficient_semantics": "raw multiplier of the unit direction; the bake-off does not scale by residual norm",
+                  "confounds_orthogonalized": "length, sentiment",
+                  "contrast_source": "data/seed_pairs.jsonl, 135 hand-written pairs, 15 axes",
+                  "estimator": "logistic",
+                  "estimator_one_line": "logistic-regression probe on chosen vs rejected, coefficient vector",
+                  "layer_sweep": "layers 16, 24, 32, 40, 48; held-out separation 1.000 at every one, so the sweep does not pick a layer",
+                  "mean_train_gap": 13.034,
+                  "residual_norm_at_layer_32": 50.97,
+                  "source_commit": "b8b472175b7a2af1b7a7ecd7a784e982a6a7453a",
+                  "source_path": "data/directions/d_olmo3_logistic.npz",
+                  "source_repo": "github.com/soham-padia/steering-arena",
+                  "token_masking": "last token of prompt + completion, concatenated"
+                },
+                "profile": "soham/arena-contrast-v1",
+                "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
+              },
+              "score_state": "absent",
+              "shape": "[5120]",
+              "steering_position": "all-positions",
+              "support": [],
+              "trait_score": null,
+              "transfer_score": 0.716,
+              "verifications": [],
+              "version": "logistic"
+            },
+            {
+              "activation_norm": null,
+              "artifact_path": "artifacts/soham/d_olmo3_lda.safetensors",
+              "attacks": [],
+              "author": "soham",
+              "axes": [
+                "approach",
+                "approach_probe",
+                "length_independent",
+                "valence"
+              ],
+              "chat_template_hash": null,
+              "coeff_curve": null,
+              "coeff_high": 32.0,
+              "coeff_low": 8.0,
+              "coherence_score": null,
+              "confounds": {
+                "approach": 0.1246,
+                "approach_probe": 0.1307,
+                "length_independent": 0.0011,
+                "valence": 0.0001
+              },
+              "created_at": "2026-06-08T22:52:06Z",
+              "definition": "Pro-human is whatever separates the chosen from the rejected member of 135 hand-written pairs across 15 value axes: accountability, boundaries, conflict resolution, empathy, fairness, feedback, inclusion, integrity, leadership, learning, ownership, privacy, respect, safety and trust. The direction is the last-token residual contrast at layer 32 of allenai/Olmo-3-1125-32B with length and sentiment orthogonalized out. That is the whole of what is claimed: a representation induced by this dataset and this model, not a detector for human values. The author has not written a statement of the construct beyond this, and nothing has been substituted from a neighboring artifact in its place.",
+              "dtype": "float32",
+              "hook_point": "resid_post",
+              "is_synthetic": false,
+              "kind": "direction",
+              "l2_norm": 1.0,
+              "label": "pro-human",
+              "layer": 32,
+              "layer_convention": "block-0indexed",
+              "license_status": "apache-2.0, redistribution permitted",
+              "model_id": "allenai/Olmo-3-1125-32B",
+              "model_revision": null,
+              "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+              "recipe": {
+                "container_digest": null,
+                "entrypoint_library": "steering-arena/scripts/extract_direction.py",
+                "entrypoint_version": null,
+                "payload": {
+                  "author_version_string": "olmo3_lda",
+                  "chat_template": "none applied; base checkpoint, raw text",
+                  "coefficient_semantics": "raw multiplier of the unit direction; the bake-off does not scale by residual norm",
+                  "confounds_orthogonalized": "length, sentiment",
+                  "contrast_source": "data/seed_pairs.jsonl, 135 hand-written pairs, 15 axes",
+                  "estimator": "lda",
+                  "estimator_one_line": "linear discriminant analysis on chosen vs rejected",
+                  "layer_sweep": "layers 16, 24, 32, 40, 48; held-out separation 1.000 at every one, so the sweep does not pick a layer",
+                  "mean_train_gap": 7.928,
+                  "residual_norm_at_layer_32": 50.97,
+                  "source_commit": "b8b472175b7a2af1b7a7ecd7a784e982a6a7453a",
+                  "source_path": "data/directions/d_olmo3_lda.npz",
+                  "source_repo": "github.com/soham-padia/steering-arena",
+                  "token_masking": "last token of prompt + completion, concatenated"
+                },
+                "profile": "soham/arena-contrast-v1",
+                "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
+              },
+              "score_state": "absent",
+              "shape": "[5120]",
+              "steering_position": "all-positions",
+              "support": [],
+              "trait_score": null,
+              "transfer_score": 0.685,
+              "verifications": [],
+              "version": "lda"
+            },
+            {
+              "activation_norm": null,
+              "artifact_path": "artifacts/soham/d_olmo3_v1.safetensors",
+              "attacks": [],
+              "author": "soham",
+              "axes": [
+                "approach",
+                "approach_probe",
+                "length_independent",
+                "valence"
+              ],
+              "chat_template_hash": null,
+              "coeff_curve": null,
+              "coeff_high": 32.0,
+              "coeff_low": 8.0,
+              "coherence_score": null,
+              "confounds": {
+                "approach": 0.1223,
+                "approach_probe": 0.1222,
+                "length_independent": 0.0018,
+                "valence": 0.0001
+              },
+              "created_at": "2026-06-08T22:05:52Z",
+              "definition": "Pro-human is whatever separates the chosen from the rejected member of 135 hand-written pairs across 15 value axes: accountability, boundaries, conflict resolution, empathy, fairness, feedback, inclusion, integrity, leadership, learning, ownership, privacy, respect, safety and trust. The direction is the last-token residual contrast at layer 32 of allenai/Olmo-3-1125-32B with length and sentiment orthogonalized out. That is the whole of what is claimed: a representation induced by this dataset and this model, not a detector for human values. The author has not written a statement of the construct beyond this, and nothing has been substituted from a neighboring artifact in its place.",
+              "dtype": "float32",
+              "hook_point": "resid_post",
+              "is_synthetic": false,
+              "kind": "direction",
+              "l2_norm": 1.0,
+              "label": "pro-human",
+              "layer": 32,
+              "layer_convention": "block-0indexed",
+              "license_status": "apache-2.0, redistribution permitted",
+              "model_id": "allenai/Olmo-3-1125-32B",
+              "model_revision": null,
+              "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+              "recipe": {
+                "container_digest": null,
+                "entrypoint_library": "steering-arena/scripts/extract_direction.py",
+                "entrypoint_version": null,
+                "payload": {
+                  "author_version_string": "v1",
+                  "chat_template": "none applied; base checkpoint, raw text",
+                  "coefficient_semantics": "raw multiplier of the unit direction; the bake-off does not scale by residual norm",
+                  "confounds_orthogonalized": "length, sentiment",
+                  "contrast_source": "data/seed_pairs.jsonl, 135 hand-written pairs, 15 axes",
+                  "estimator": "meandiff",
+                  "estimator_one_line": "mean of (chosen - rejected) last-token residuals",
+                  "layer_sweep": "layers 16, 24, 32, 40, 48; held-out separation 1.000 at every one, so the sweep does not pick a layer",
+                  "mean_train_gap": 18.95,
+                  "residual_norm_at_layer_32": 50.97,
+                  "source_commit": "b8b472175b7a2af1b7a7ecd7a784e982a6a7453a",
+                  "source_path": "data/directions/d_olmo3_v1.npz",
+                  "source_repo": "github.com/soham-padia/steering-arena",
+                  "token_masking": "last token of prompt + completion, concatenated"
+                },
+                "profile": "soham/arena-contrast-v1",
+                "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
+              },
+              "score_state": "absent",
+              "shape": "[5120]",
+              "steering_position": "all-positions",
+              "support": [],
+              "trait_score": null,
+              "transfer_score": 0.74,
+              "verifications": [],
+              "version": "meandiff"
+            }
+          ],
+          "engagement": 0,
+          "label": "pro-human",
+          "latest": "2026-06-08T22:52:10Z",
+          "pairs": [
+            {
+              "a": "soham/pro-human@lda",
+              "angle_comparable": true,
+              "angle_similarity": 0.8317705392837524,
+              "axes_both_checked": [
+                "approach",
+                "approach_probe",
+                "length_independent",
+                "valence"
+              ],
+              "axes_only_a_checked": [],
+              "axes_only_b_checked": [],
+              "b": "soham/pro-human@logistic",
+              "is_synthetic": false,
+              "score_state_a": "absent",
+              "score_state_b": "absent",
+              "transfer_a": 0.685,
+              "transfer_b": 0.716
+            },
+            {
+              "a": "soham/pro-human@lda",
+              "angle_comparable": true,
+              "angle_similarity": 0.42612743377685547,
+              "axes_both_checked": [
+                "approach",
+                "approach_probe",
+                "length_independent",
+                "valence"
+              ],
+              "axes_only_a_checked": [],
+              "axes_only_b_checked": [],
+              "b": "soham/pro-human@meandiff",
+              "is_synthetic": false,
+              "score_state_a": "absent",
+              "score_state_b": "absent",
+              "transfer_a": 0.685,
+              "transfer_b": 0.74
+            },
+            {
+              "a": "soham/pro-human@logistic",
+              "angle_comparable": true,
+              "angle_similarity": 0.6965014338493347,
+              "axes_both_checked": [
+                "approach",
+                "approach_probe",
+                "length_independent",
+                "valence"
+              ],
+              "axes_only_a_checked": [],
+              "axes_only_b_checked": [],
+              "b": "soham/pro-human@meandiff",
+              "is_synthetic": false,
+              "score_state_a": "absent",
+              "score_state_b": "absent",
+              "transfer_a": 0.716,
+              "transfer_b": 0.74
+            }
+          ],
+          "synthetic": "none"
+        }
+      ],
+      "latest": "2026-06-08T22:52:10Z",
+      "layers": [
+        32
+      ],
+      "model_id": "allenai/Olmo-3-1125-32B",
+      "revisions": [
+        null
+      ],
+      "submissions": [
+        {
+          "author": "soham",
+          "created_at": "2026-06-08T22:52:10Z",
+          "kind": "direction",
+          "label": "pro-human",
+          "model_id": "allenai/Olmo-3-1125-32B",
+          "version": "logistic"
+        },
+        {
+          "author": "soham",
+          "created_at": "2026-06-08T22:52:06Z",
+          "kind": "direction",
+          "label": "pro-human",
+          "model_id": "allenai/Olmo-3-1125-32B",
+          "version": "lda"
+        },
+        {
+          "author": "soham",
+          "created_at": "2026-06-08T22:05:52Z",
+          "kind": "direction",
+          "label": "pro-human",
+          "model_id": "allenai/Olmo-3-1125-32B",
+          "version": "meandiff"
+        }
+      ],
+      "synthetic": "none"
     }
   ],
   "models": [
+    "allenai/Olmo-3-1125-32B",
     "placeholder/does-not-resolve-1b",
     "placeholder/other-architecture-7b"
   ],
@@ -1114,6 +1769,7 @@
           "created_at": "2026-09-12T00:00:00Z",
           "engagement": 2,
           "has_recipe": true,
+          "is_synthetic": true,
           "kind": "direction",
           "label": "kindness",
           "model_id": "placeholder/does-not-resolve-1b",
@@ -1133,7 +1789,8 @@
           "suite": "warmth-holdout@v1"
         }
       ],
-      "support_given": []
+      "support_given": [],
+      "synthetic": "all"
     },
     {
       "attacks_made": [],
@@ -1157,6 +1814,7 @@
           "created_at": "2026-09-12T00:00:00Z",
           "engagement": 0,
           "has_recipe": true,
+          "is_synthetic": true,
           "kind": "direction",
           "label": "kindness",
           "model_id": "placeholder/does-not-resolve-1b",
@@ -1176,7 +1834,8 @@
           "suite": "costly-help-holdout@v1"
         }
       ],
-      "support_given": []
+      "support_given": [],
+      "synthetic": "all"
     },
     {
       "attacks_made": [],
@@ -1200,6 +1859,7 @@
           "created_at": "2026-09-12T00:00:00Z",
           "engagement": 1,
           "has_recipe": false,
+          "is_synthetic": true,
           "kind": "sae-latent",
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
@@ -1219,7 +1879,8 @@
           "suite": "declination-holdout@v1"
         }
       ],
-      "support_given": []
+      "support_given": [],
+      "synthetic": "all"
     },
     {
       "attacks_made": [],
@@ -1231,7 +1892,9 @@
           "model_id": "placeholder/other-architecture-7b",
           "reported_at": "2026-09-12T00:00:00Z",
           "subject": "dana/refusal@v1",
-          "subject_author": "dana"
+          "subject_author": "dana",
+          "subject_synthetic": true,
+          "version": "v1"
         }
       ],
       "kinds": [
@@ -1251,6 +1914,7 @@
           "created_at": "2026-09-12T00:00:00Z",
           "engagement": 0,
           "has_recipe": true,
+          "is_synthetic": true,
           "kind": "probe",
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
@@ -1276,7 +1940,8 @@
           "suite": "declination-crosscheck@v1"
         }
       ],
-      "support_given": []
+      "support_given": [],
+      "synthetic": "all"
     },
     {
       "attacks_made": [],
@@ -1300,6 +1965,7 @@
           "created_at": "2026-09-12T00:00:00Z",
           "engagement": 0,
           "has_recipe": true,
+          "is_synthetic": true,
           "kind": "sae-latent",
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
@@ -1308,7 +1974,79 @@
         }
       ],
       "suites": [],
-      "support_given": []
+      "support_given": [],
+      "synthetic": "all"
+    },
+    {
+      "attacks_made": [],
+      "attacks_received": 0,
+      "engagement": 0,
+      "evaluations": [],
+      "kinds": [
+        "direction"
+      ],
+      "labels": [
+        "pro-human"
+      ],
+      "latest": "2026-06-08T22:52:10Z",
+      "models": [
+        "allenai/Olmo-3-1125-32B"
+      ],
+      "owner": "soham",
+      "submissions": [
+        {
+          "attacks": 0,
+          "created_at": "2026-06-08T22:52:10Z",
+          "engagement": 0,
+          "has_recipe": true,
+          "is_synthetic": false,
+          "kind": "direction",
+          "label": "pro-human",
+          "model_id": "allenai/Olmo-3-1125-32B",
+          "score_state": "absent",
+          "version": "logistic"
+        },
+        {
+          "attacks": 0,
+          "created_at": "2026-06-08T22:52:06Z",
+          "engagement": 0,
+          "has_recipe": true,
+          "is_synthetic": false,
+          "kind": "direction",
+          "label": "pro-human",
+          "model_id": "allenai/Olmo-3-1125-32B",
+          "score_state": "absent",
+          "version": "lda"
+        },
+        {
+          "attacks": 0,
+          "created_at": "2026-06-08T22:05:52Z",
+          "engagement": 0,
+          "has_recipe": true,
+          "is_synthetic": false,
+          "kind": "direction",
+          "label": "pro-human",
+          "model_id": "allenai/Olmo-3-1125-32B",
+          "score_state": "absent",
+          "version": "meandiff"
+        }
+      ],
+      "suites": [
+        {
+          "axes": [
+            "approach",
+            "valence",
+            "length_independent",
+            "approach_probe"
+          ],
+          "id": "es_soham_audit",
+          "judge_model": null,
+          "judge_revision": "",
+          "suite": "confound-audit@v1"
+        }
+      ],
+      "support_given": [],
+      "synthetic": "none"
     },
     {
       "attacks_made": [
@@ -1319,7 +2057,9 @@
           "method": "alternative-confound-axis",
           "model_id": "placeholder/does-not-resolve-1b",
           "subject": "alice/kindness@v1",
-          "subject_author": "alice"
+          "subject_author": "alice",
+          "subject_synthetic": true,
+          "version": "v1"
         }
       ],
       "attacks_received": 0,
@@ -1330,7 +2070,9 @@
           "model_id": "placeholder/does-not-resolve-1b",
           "reported_at": "2026-09-12T00:00:00Z",
           "subject": "alice/kindness@v1",
-          "subject_author": "alice"
+          "subject_author": "alice",
+          "subject_synthetic": true,
+          "version": "v1"
         }
       ],
       "kinds": [],
@@ -1351,7 +2093,8 @@
           "suite": "warmth-adversarial@v1"
         }
       ],
-      "support_given": []
+      "support_given": [],
+      "synthetic": "all"
     },
     {
       "attacks_made": [],
@@ -1373,9 +2116,12 @@
           "purpose": "Steering a support-desk assistant toward offering concrete help rather than sympathy.",
           "reported_at": "2026-09-12T00:00:00Z",
           "subject": "bob/kindness@v1",
-          "subject_author": "bob"
+          "subject_author": "bob",
+          "subject_synthetic": true,
+          "version": "v1"
         }
-      ]
+      ],
+      "synthetic": "all"
     },
     {
       "attacks_made": [],
@@ -1397,9 +2143,12 @@
           "purpose": "Warming the tone of generated release notes.",
           "reported_at": "2026-09-12T00:00:00Z",
           "subject": "alice/kindness@v1",
-          "subject_author": "alice"
+          "subject_author": "alice",
+          "subject_synthetic": true,
+          "version": "v1"
         }
-      ]
+      ],
+      "synthetic": "all"
     }
   ],
   "pins": [
@@ -1416,6 +2165,9 @@
       "target": "bob/kindness@v1",
       "version": "v1"
     }
+  ],
+  "real_authors": [
+    "soham"
   ],
   "relations": [
     {

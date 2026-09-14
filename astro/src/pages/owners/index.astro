@@ -15,7 +15,7 @@ const released = (iso) =>
   new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 ---
 
-<Base title="Owners" trail={[{ text: "controlbun", href: "/" }]} ordering>
+<Base title="Owners" trail={[{ text: "controlbun", href: "/" }]} synthetic={data.real_authors.length ? "mixed" : "all"} ordering>
   <h1 slot="heading">Owners</h1>
 
   <p class="lede">
