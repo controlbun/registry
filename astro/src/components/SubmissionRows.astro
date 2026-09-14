@@ -51,8 +51,8 @@ const released = (iso) =>
     <optgroup label="One submission">
       {rows.map((r) => <option value={`one:${r.ref}`}>{r.author}</option>)}
     </optgroup>
-    <optgroup label="The most-used, averaged">
-      {[2, 3, 5, 10].map((k) => (
+    <optgroup label="Averaged across the top few">
+      {[2, 3, 5, 10].filter((k) => k <= rows.length).map((k) => (
         <>
           <option value={`trending:${k}`}>top {k} by recency</option>
           <option value={`attacks:${k}`}>top {k} by attacks received</option>

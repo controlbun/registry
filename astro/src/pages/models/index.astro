@@ -17,6 +17,9 @@ const rows = data.model_index.map((m) => ({
   )],
 }));
 
+// Counts models, not artifacts, because the list being filtered is models. The
+// headings say so: a bare number under "Artifact kind" next to a stat block
+// reading "Artifacts 5" reads as artifacts and is not.
 const facet = (pick) => {
   const counts = new Map();
   for (const row of rows) for (const v of pick(row)) {
@@ -50,7 +53,7 @@ const evidenceFacet = facet((r) => r.evidence);
     <aside>
       <input type="search" id="q" placeholder="Search models" />
 
-      <h3>Artifact kind</h3>
+      <h3>Models with an artifact of kind</h3>
       {kindFacet.map((f) => (
         <label>
           <input type="checkbox" data-facet="kinds" value={f.value} />
@@ -58,7 +61,7 @@ const evidenceFacet = facet((r) => r.evidence);
         </label>
       ))}
 
-      <h3>Hook point</h3>
+      <h3>Models with a hook point</h3>
       {hookFacet.map((f) => (
         <label>
           <input type="checkbox" data-facet="hooks" value={f.value} />
@@ -66,7 +69,7 @@ const evidenceFacet = facet((r) => r.evidence);
         </label>
       ))}
 
-      <h3>Evidence</h3>
+      <h3>Models with evidence of a kind</h3>
       {evidenceFacet.map((f) => (
         <label>
           <input type="checkbox" data-facet="evidence" value={f.value} />
@@ -76,6 +79,12 @@ const evidenceFacet = facet((r) => r.evidence);
       <p class="note">
         Filters, not a quality gate. More evidence is not the same as better, and a
         submission nobody has attacked is not thereby sound.
+      </p>
+      <p class="note">
+        Each count is models, not artifacts, because models are what this list
+        holds. A model with several claimants can appear under both sides of a
+        pair: one of its submissions measured transfer and another did not, and
+        both are true of the model.
       </p>
     </aside>
 
