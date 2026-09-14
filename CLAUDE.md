@@ -4,9 +4,15 @@ Project brief is in `BRIEF.md`. Settled decisions are in `DECISIONS.md`, which i
 authoritative: do not contradict it, and add to it whenever something is decided.
 
 **`DECISIONS.md` keeps superseded entries on purpose.** Check an entry for a
-`**Superseded by:**` or `**Amended by:**` line before acting on it. Five carry one
-today, and two of those read as live rules when they are not: transfer as a
-required eval field, and ranking by precision and attack survival.
+`**Superseded by:**` or `**Amended by:**` line before acting on it. Three of them
+read as live rules when they are not: transfer as a required eval field, ranking by
+precision and attack survival, and no default sort.
+
+The count is not written here on purpose. It was, and it went stale the first time
+an entry was superseded without anyone updating this paragraph.
+`tests/test_decisions.py` checks the marking instead: every entry named in a
+`**Supersedes:**` line has to carry the pointer back, which is the property that
+actually matters.
 
 ## The premise, which you will violate by accident
 
@@ -125,6 +131,10 @@ reading explicitly, as a role rather than as a disclaimer.
 - **EvalSuite**, authored and pointable at anyone's submission. **Attack** is the
   adversarial case of the same mechanism, with attacker and author dispositions
   both displayed.
+- **SupportCard**, applied use rather than evaluation. Somebody pinned a version,
+  used it in their own work, and reports whether it behaved the way the published
+  contract said it would. `expected` is required and `observed` is not, which is
+  what keeps it from becoming a star rating.
 - **Comparison**, derived and never authored. The asymmetry in which confound axes
   each author checked is the informative cell.
 - **Run** and **Reproduction**, provenance, and a reproduction reports its delta

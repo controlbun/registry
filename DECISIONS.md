@@ -164,6 +164,9 @@ mechanism.
 substitute for a canonical eval per label.
 
 ## 2026-09-11 No ranking by default, sorting is user-chosen
+**Superseded by:** A default ordering is allowed; no ordering derives from an eval
+result. The Comparison matrix named below is also gone, replaced by a similarity
+column the reader points at a reference of their choosing.
 **Decided:** No composite score and no default sort. A label view shows all
 claimants plus the Comparison matrix. Users choose an explicit sort key. Download
 counts displayed as a fact, never a sort key. Usage with no independent eval
