@@ -198,7 +198,7 @@ def test_no_attest_file_has_been_modified():
         if actual != expected:
             changed.append(f"{name}: {expected[:16]} -> {actual[:16]}")
     assert not changed, (
-        "A file under _attest/ was modified. These are notarised records of past "
+        "A file under _attest/ was modified. These are notarized records of past "
         "states; editing one does not update it, it destroys what it recorded:\n  "
         + "\n  ".join(changed)
     )

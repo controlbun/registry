@@ -1,7 +1,7 @@
 """The fixture corpus is a pure function of its inputs.
 
 A project about reproducibility cannot ship a build that produces different bytes
-each run. This one did: `safetensors` is Rust-backed and serialises metadata out
+each run. This one did: `safetensors` is Rust-backed and serializes metadata out
 of a HashMap whose iteration order is randomly seeded per process, so the tensor
 payload was stable while the header byte order was not.
 
@@ -40,10 +40,10 @@ def _write_scrambled(path: Path, meta: dict[str, str]) -> None:
     )
 
 
-def test_canonicalising_makes_the_bytes_stable(build, tmp_path):
+def test_canonicalizing_makes_the_bytes_stable(build, tmp_path):
     """Two writes of identical content must land on identical bytes.
 
-    Without canonicalisation these differ, which is the defect this guards.
+    Without canonicalization these differ, which is the defect this guards.
     """
     meta = {
         "synthetic": "true", "note": "probe", "model_id": "placeholder/x",
@@ -61,7 +61,7 @@ def test_canonicalising_makes_the_bytes_stable(build, tmp_path):
     )
 
 
-def test_canonicalising_is_idempotent(build, tmp_path):
+def test_canonicalizing_is_idempotent(build, tmp_path):
     path = tmp_path / "c.safetensors"
     _write_scrambled(path, {"synthetic": "true", "note": "probe"})
     build.canonicalize(path)
@@ -70,14 +70,14 @@ def test_canonicalising_is_idempotent(build, tmp_path):
     assert path.read_bytes() == once
 
 
-def test_canonicalising_preserves_metadata_and_tensor(build, tmp_path):
+def test_canonicalizing_preserves_metadata_and_tensor(build, tmp_path):
     meta = {"synthetic": "true", "note": "probe", "model_id": "placeholder/x"}
     path = tmp_path / "d.safetensors"
     _write_scrambled(path, meta)
     build.canonicalize(path)
 
     with safe_open(str(path), framework="numpy") as f:
-        assert f.metadata() == meta, "canonicalising must not lose metadata"
+        assert f.metadata() == meta, "canonicalizing must not lose metadata"
         assert f.get_tensor("direction").shape == (8,)
 
 

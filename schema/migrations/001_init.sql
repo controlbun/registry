@@ -56,7 +56,7 @@ CREATE TABLE intervention (
     label               TEXT    NOT NULL,
     version             TEXT    NOT NULL,
     -- Open string. `direction`, `sae-latent`, `probe`, `reft`, `lora` are the ones
-    -- with client support today, not the permitted set. An unrecognised kind is
+    -- with client support today, not the permitted set. An unrecognized kind is
     -- storable and displayable and simply has no apply path until someone writes one.
     kind                TEXT    NOT NULL,
     model_id            TEXT    NOT NULL,

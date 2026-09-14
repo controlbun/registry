@@ -375,7 +375,7 @@
             "payload": {
               "layer_sweep": "blocks 8-16",
               "method": "logistic probe",
-              "regularisation": "L2",
+              "regularization": "L2",
               "selection_criterion": "validation AUC",
               "training_data": "labeled transcripts, declination vs compliance"
             },
@@ -928,7 +928,7 @@
                 "payload": {
                   "layer_sweep": "blocks 8-16",
                   "method": "logistic probe",
-                  "regularisation": "L2",
+                  "regularization": "L2",
                   "selection_criterion": "validation AUC",
                   "training_data": "labeled transcripts, declination vs compliance"
                 },

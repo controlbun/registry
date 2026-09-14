@@ -31,7 +31,7 @@ NOTE = "SYNTHETIC FIXTURE. Not a real direction. Not derived from any model."
 def canonicalize(path: Path) -> None:
     """Rewrite a safetensors header with sorted keys.
 
-    safetensors is Rust-backed and serialises metadata out of a HashMap, whose
+    safetensors is Rust-backed and serializes metadata out of a HashMap, whose
     iteration order is randomly seeded per process. The tensor payload is stable
     but the header byte order is not, so an unmodified rebuild produces a
     different file every time. That makes the fixtures churn in version control
@@ -251,7 +251,7 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          json.dumps({
              "training_data": "labeled transcripts, declination vs compliance",
              "method": "logistic probe",
-             "regularisation": "L2",
+             "regularization": "L2",
              "layer_sweep": "blocks 8-16",
              "selection_criterion": "validation AUC",
          }),

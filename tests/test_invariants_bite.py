@@ -42,7 +42,7 @@ VIOLATIONS = {
         "const ALLOWED_KINDS = ['direction'];\n",
         "test_no_check_constraint_enumerates_strings",
     ),
-    "rejecting an unrecognised kind": (
+    "rejecting an unrecognized kind": (
         "astro/src/probe.ts",
         "if (!kinds.includes(kind)) throw new Error('bad');\n",
         "test_no_check_constraint_enumerates_strings",
