@@ -26,7 +26,7 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
 <!doctype html>
 <html lang="en">
   <head>
-    <Head title="Registry" />
+    <Head title="controlbun" />
   </head>
   <body>
     <SiteNav />
@@ -59,70 +59,40 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
           </div>
         )}
 
-        <h1>Registry</h1>
+        <h1>controlbun</h1>
 
         <p class="lede">
           A registry for activation-steering artifacts, in the spirit of GitHub or
           Hugging Face rather than a curated database.
         </p>
 
-        {/* The author's own words. Changed only where grammar required it:
-            "directing" to "direction", a "whether" so the clause parses, spelling
-            and capitalization. Nothing else, and no tidying into someone else's
-            voice, because this sentence is the whole argument and it is his. */}
-        <blockquote class="origin">
-          <p>
-            Idea came when I was thinking of criticizing whether my pro-human
-            direction actually represents that direction, and if I could reuse
-            someone else's better pro-human direction without the effort.
-          </p>
-        </blockquote>
+        {/* Short on purpose. The long argument moved to /about/ on 2026-09-13,
+            split by first visit rather than by topic: someone arriving cold needs
+            the next paragraph or they read every page after it as a leaderboard,
+            and by the fifth visit an essay on the home page is furniture.
 
-        <p>
-          That is the problem in one sentence. The direction in question is heavily
-          audited: orthogonalized against length, sentiment and action-vs-inaction,
-          held-out separation, control-pair transfer, a causal test against
-          norm-matched random directions. More evidence than most published
-          directions carry. And it is still not enough, because none of it is
-          reusable and none of it can be checked against anyone else's take on the
-          same construct. The gap is comparison and reuse, not rigor.
-        </p>
+            The plurality claim stays here because misreading it is the one failure
+            that makes the rest of the site unreadable. Everything else is a
+            deliberate read, once, and lives on /about/.
 
-        <h2>A vector is not portable, but a recipe is</h2>
-        <p>
-          A steering vector is a tensor in one model's residual basis at one layer,
-          so a <span class="mono">kindness</span> vector for one model does nothing
-          for another. What travels is the extraction recipe: the contrast data, the
-          author's definition of the trait, the layer sweep, the evaluation.
-        </p>
-
-        <h2>Plurality is the product</h2>
+            PROSE STILL PLACEHOLDER, lifted from BRIEF.md. It is true and it is in
+            the author's words, but it was written for a design brief and not for
+            someone landing here cold. */}
         <p>
           Ten people will extract <span class="mono">kindness</span> with different
           contrast data, different theories of what kindness is, and different ideas
-          about what could be confounding it. The registry holds all ten side by
-          side and makes the disagreement legible. It does not pick a winner,
-          mandate a definition, or impose a single evaluation.
+          about what could be confounding it. This holds all ten side by side and
+          makes the disagreement legible. It does not pick a winner, mandate a
+          definition, or impose a single evaluation.
         </p>
 
-        <p class="pull">
+        <p>
           The primary object is a submission: one author's complete take,
           self-contained, comparable to others after the fact rather than conformant
-          to them in advance.
+          to them in advance. <a href="/about/">What this is and where it came
+          from</a>.
         </p>
 
-        <h2>What you will see on a page</h2>
-        <p>
-          A trait score always appears with a coherence measure beside it, or it
-          appears as uninterpretable rather than as a number. Anything an author did
-          not measure reads as not measured, never as zero. Angle similarity between
-          two artifacts is shown as geometry, never as evidence that two authors
-          disagree. Nothing is ranked by a measured result.
-        </p>
-
-        <p class="note">
-          Copy on this page is placeholder, drawn from BRIEF.md.
-        </p>
       </main>
 
       <aside class="rail">

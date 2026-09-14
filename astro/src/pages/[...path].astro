@@ -78,7 +78,7 @@ const { view, model, block, claimant, owner } = Astro.props;
 // Built once, sliced per view, so a segment can never link somewhere its text
 // does not describe.
 const crumbs = {
-  registry: { text: "Registry", href: "/" },
+  registry: { text: "controlbun", href: "/" },
   models: { text: "Models", href: "/models/" },
   owners: { text: "Owners", href: "/owners/" },
   model: model ? { text: model.model_id, href: `/models/${model.model_id}/` } : null,

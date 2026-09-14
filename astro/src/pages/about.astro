@@ -1,0 +1,90 @@
+---
+import Base from "../layouts/Base.astro";
+
+// The long argument, moved off the home page.
+//
+// Split by first visit versus fifth, not by topic. Someone arriving cold needs to
+// know in three sentences that this does not pick a winner, or they read every
+// page after it as a leaderboard. Someone deciding whether to take the project
+// seriously reads this once, deliberately, and it can be as long as it needs to be.
+//
+// The prose here is the author's, moved rather than rewritten.
+---
+
+<Base title="About controlbun" trail={[{ text: "controlbun", href: "/" }]}>
+  <h1 slot="heading">About</h1>
+
+  <p class="lede">
+    A registry for activation-steering artifacts, in the spirit of GitHub or
+    Hugging Face rather than a curated database.
+  </p>
+
+  <h2>Where it came from</h2>
+
+  {/* The author's own words. Changed only where grammar required it:
+      "directing" to "direction", a "whether" so the clause parses, spelling
+      and capitalization. Nothing else, and no tidying into someone else's
+      voice, because this sentence is the whole argument and it is his. */}
+  <blockquote class="origin">
+    <p>
+      Idea came when I was thinking of criticizing whether my pro-human
+      direction actually represents that direction, and if I could reuse
+      someone else's better pro-human direction without the effort.
+    </p>
+  </blockquote>
+
+  <p>
+    That is the problem in one sentence. The direction in question is heavily
+    audited: orthogonalized against length, sentiment and action-vs-inaction,
+    held-out separation, control-pair transfer, a causal test against
+    norm-matched random directions. More evidence than most published
+    directions carry. And it is still not enough, because none of it is
+    reusable and none of it can be checked against anyone else's take on the
+    same construct. The gap is comparison and reuse, not rigor.
+  </p>
+
+  <h2>A vector is not portable, but a recipe is</h2>
+  <p>
+    A steering vector is a tensor in one model's residual basis at one layer,
+    so a <span class="mono">kindness</span> vector for one model does nothing
+    for another. What travels is the extraction recipe: the contrast data, the
+    author's definition of the trait, the layer sweep, the evaluation.
+  </p>
+
+  <h2>Plurality is the product</h2>
+  <p>
+    Ten people will extract <span class="mono">kindness</span> with different
+    contrast data, different theories of what kindness is, and different ideas
+    about what could be confounding it. The registry holds all ten side by
+    side and makes the disagreement legible. It does not pick a winner,
+    mandate a definition, or impose a single evaluation.
+  </p>
+
+  <p class="pull">
+    The primary object is a submission: one author's complete take,
+    self-contained, comparable to others after the fact rather than conformant
+    to them in advance.
+  </p>
+
+  <h2>What you will see on a page</h2>
+  <p>
+    A trait score always appears with a coherence measure beside it, or it appears
+    as uninterpretable rather than as a number. Anything an author did not measure
+    reads as not measured, never as zero. Angle similarity between two artifacts is
+    shown as geometry, never as evidence that two authors disagree. Nothing is
+    ranked by a measured result.
+  </p>
+  <p class="note">
+    Every page enforces these itself rather than deferring to this one. What is
+    here is the promise; what is there is the behavior, and a build that breaks the
+    promise fails before it ships.
+  </p>
+
+  <h2>Why controlbun</h2>
+  <p class="note absent-block">
+    Not written yet. The name refers to the control problem, and the section that
+    explains it is the one place worth being explicit that controlling a model and
+    controlling the record of who claimed what about it are different things, and
+    that this does the second.
+  </p>
+</Base>
