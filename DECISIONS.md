@@ -476,3 +476,80 @@ them in the reader's zone, so west of Greenwich `2026-09-12T00:00:00Z` printed a
 formatters, every date on the site, and a released-on date that is a day out is the
 kind of error a reader acts on without ever suspecting it. A registry about
 reproducibility does not get to display a different day than the one it recorded.
+
+## 2026-09-13 Upload preferred, pointer available; SAEs are pointer only
+**Decided:** Every artifact records where its author published it, as
+`artifact_repo` plus `artifact_commit` plus a path, resolved by commit SHA because
+a tag is movable by the repo owner and immutability is what pins depend on. That
+pointer is never replaced.
+
+On top of that, the registry serves its own copy where it can. Upload is the
+preferred state and a pointer alone is the fallback, not the other way round.
+
+Two things gate serving a copy:
+
+- **Rights.** `license_status` is an open string and the author asserts it. We
+  serve only on an explicit affirmative. Silence, `unresolved`, or anything we do
+  not recognize means pointer only, and the page says rights are unresolved and
+  that is why there is no copy. We are not deciding whether a license permits
+  redistribution; we are declining to serve where nobody has said it does. Every
+  fixture today reads `unresolved`, so nothing would be served right now anyway.
+- **Size, by class rather than by bytes.** SAEs are pinned, never served. A
+  direction is about 16KB and a probe is about the same, so sixty thousand of them
+  fit in a gigabyte and they will never be the problem. One SAE is about 2GB and is
+  the whole informal budget by itself.
+
+**Why a size rule by class and not a threshold.** A per-file cap does not bound
+what actually binds. A hundred 400MB adapters each pass a 500MB check and total
+40GB. Hugging Face gives a free organization "best-effort" public storage with "the
+first few gigabytes" as the informal line, and a 500GB hard limit per single file,
+so any per-file number we picked would be three orders of magnitude below what the
+platform cares about while failing to constrain the account total. An arbitrary
+threshold is also a number that will be wrong in a year with nobody remembering why
+it was chosen.
+
+**What is still open:** LoRA and other adapters, tens to hundreds of megabytes
+each. They are the only class where a budget rule would earn its keep, and if one
+is written it should be a total with a stated policy rather than a per-file cap.
+
+**What this makes impossible:** guaranteeing that an artifact we do not serve stays
+fetchable. If an author deletes their repo, `author/label@version` still resolves to
+a submission with full provenance and no bytes. Mirroring everything would fix that
+and would make this registry the chokepoint the plurality premise exists to avoid,
+so the failure stays visible instead.
+
+**It also makes us a distributor rather than an index**, for anything we do serve.
+"We only pointed at it" stops being available as an answer. That is what moves the
+dual-use policy from a theoretical launch blocker to a load-bearing one: the first
+artifact whose `license_status` is not unresolved is the artifact that needs the
+policy to already exist.
+
+**Supersedes:** nothing. Extends "SAEs get cards and evidence; the registry still
+does not hold them" from SAEs to every kind, and keeps the SAE half of it unchanged.
+
+## 2026-09-13 The artifact kinds are not a list, and the code does not read them
+**Decided:** `kind` stays an open string. There is no canonical set of artifact
+kinds and the registry does not publish one.
+
+**Why this is not just principle:** the code already works this way. `comparison.py`
+decides whether an angle between two artifacts is even defined by looking at the
+tensor's `shape`, not at what the artifact is called. `kind` is used in exactly one
+place, to write the note saying what is being compared when two kinds differ. So a
+kind nobody has thought of yet costs zero lines of code, and invariant 7 plus
+`test_no_check_constraint_enumerates_strings` keep it that way.
+
+The fixtures carry three, `direction`, `probe` and `sae-latent`, and the similarity
+tests add `lora` and `reft` to prove the angle refuses on a matrix. That is five out
+of a field that is much larger and still growing: function vectors, task vectors,
+transcoder and crosscoder latents, attention-head interventions, rank-one weight
+edits, soft prompts, bias offsets, concept vectors, projection and ablation
+directions.
+
+**Citations for that list are not checked and must be before any of it appears in a
+public document.** It is written here as a reminder of the field's shape, not as a
+claim about specific papers.
+
+**What this makes impossible:** telling a contributor what kind of artifact they are
+allowed to publish, and any interface that needs the full set of kinds in advance.
+Faceted browsing over kinds has to be built from what the corpus actually contains
+rather than from a declared list.
