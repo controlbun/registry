@@ -26,6 +26,10 @@ __pycache__/
 # generated database, rebuild with fixtures/build.py
 registry.db
 
+# fetched artifacts, keyed by commit so they never go stale and never
+# need clearing. Rebuilt on demand from the Hub.
+.cache/
+
 # astro build output and dependencies
 astro/node_modules/
 astro/dist/

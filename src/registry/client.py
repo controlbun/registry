@@ -31,9 +31,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
-from safetensors.numpy import load_file
+# Aliased: this module exposes its own public `load(ref)`, and importing
+# safetensors' `load` shadowed it, so every call went to the parser and got a
+# ref where it wanted bytes. Same shadowing that renamed compare.py.
+from safetensors.numpy import load as load_bytes
 
-from . import db
+from . import db, fetch
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = ROOT / "registry.db"
@@ -41,6 +44,15 @@ DEFAULT_DB = ROOT / "registry.db"
 
 class BareLabelError(LookupError):
     """Raised when a bare label is handed to `load`."""
+
+
+class MismatchedArtifact(RuntimeError):
+    """The bytes that arrived are not what the submission says they are.
+
+    Raised rather than warned. A tensor whose shape disagrees with the record is
+    not a degraded version of the artifact, it is a different artifact, and
+    handing it back would make every number on the page describe something else.
+    """
 
 
 class NotFound(LookupError):
@@ -102,17 +114,69 @@ class Submission:
     verifications: list[dict]
     is_synthetic: bool
     _artifact_path: str | None = None
+    # Where the author published it, and where we serve a copy from, kept apart
+    # on purpose. See 004_served_copy.sql: one pair of columns cannot express a
+    # mirror that has drifted from its origin.
+    _artifact_repo: str | None = None
+    _artifact_commit: str | None = None
+    _served_repo: str | None = None
+    _served_commit: str | None = None
 
     @property
     def ref(self) -> str:
         return f"{self.author}/{self.label}@{self.version}"
 
     def vector(self) -> np.ndarray:
-        """The tensor itself, as numpy."""
-        if not self._artifact_path:
+        """The tensor itself, as numpy.
+
+        Fetched from wherever it lives, then checked against what this submission
+        says it is. The check is not ceremony: the bytes may have come off a CDN
+        at a commit we pinned months ago, and a shape or dtype that disagrees with
+        the record means the two have come apart. Loading it anyway would hand
+        back a tensor that silently is not the one the page describes.
+        """
+        if not any((self._artifact_path, self._artifact_repo, self._served_repo)):
             raise NotFound(f"{self.ref} has no artifact attached")
-        tensors = load_file(str(ROOT / self._artifact_path))
-        return next(iter(tensors.values()))
+
+        blob = fetch.resolve(
+            artifact_path=self._artifact_path,
+            served_repo=self._served_repo,
+            served_commit=self._served_commit,
+            artifact_repo=self._artifact_repo,
+            artifact_commit=self._artifact_commit,
+        )
+        tensors = load_bytes(blob)
+        if len(tensors) != 1:
+            raise MismatchedArtifact(
+                f"{self.ref} resolved to a file holding {len(tensors)} tensors "
+                f"({sorted(tensors)}). A submission is one artifact."
+            )
+        tensor = next(iter(tensors.values()))
+        self._check(tensor)
+        return tensor
+
+    def _check(self, tensor: np.ndarray) -> None:
+        """What arrived against what was recorded.
+
+        Shape and dtype only. The L2 norm is deliberately not checked here: it is
+        a float that went through a text column and back, and the falsifier already
+        re-derives it with the tolerance that comparison needs. Repeating it here
+        with a stricter rule would reject good artifacts on a rounding difference.
+        """
+        want_shape = self.contract.shape
+        got_shape = str(list(tensor.shape))
+        if want_shape and got_shape != want_shape:
+            raise MismatchedArtifact(
+                f"{self.ref} is recorded as shape {want_shape} and the bytes that "
+                f"arrived are {got_shape}. The artifact and the record have come "
+                "apart; nothing here is safe to use until that is explained."
+            )
+        want_dtype = self.contract.dtype
+        if want_dtype and str(tensor.dtype) != want_dtype:
+            raise MismatchedArtifact(
+                f"{self.ref} is recorded as {want_dtype} and the bytes that "
+                f"arrived are {tensor.dtype}."
+            )
 
     def torch(self):
         """The same tensor as a torch tensor. Imported lazily so torch stays
@@ -186,7 +250,11 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
 
     view = views.claimant_view(conn, row)
     iv = conn.execute(
-        "SELECT artifact_path FROM intervention"
+        # Named rather than `*`, so adding a column to the schema does not
+        # silently start travelling through the client. Widened in 004 to carry
+        # both where the author published it and where we serve a copy from.
+        "SELECT artifact_path, artifact_repo, artifact_commit,"
+        " served_repo, served_commit FROM intervention"
         " WHERE author=? AND label=? AND version=?",
         (row["author"], row["label"], row["version"]),
     ).fetchone()
@@ -225,6 +293,10 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
         verifications=view["verifications"],
         is_synthetic=view["is_synthetic"],
         _artifact_path=iv["artifact_path"] if iv else None,
+        _artifact_repo=iv["artifact_repo"] if iv else None,
+        _artifact_commit=iv["artifact_commit"] if iv else None,
+        _served_repo=iv["served_repo"] if iv else None,
+        _served_commit=iv["served_commit"] if iv else None,
     )
 
 
