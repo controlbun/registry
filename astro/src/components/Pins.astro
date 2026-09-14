@@ -25,9 +25,7 @@ const when = (iso) =>
 
 {pins.length === 0 ? (
   <p class="note absent-block">
-    Nobody has pinned this. Being unpinned is not a mark against it, and being
-    pinned is not an endorsement: a pin says one consumer froze this for one
-    purpose, not that it is the right answer for anyone else.
+    Nobody has pinned this.
   </p>
 ) : (
   pins.map((p) => (
@@ -55,9 +53,4 @@ const when = (iso) =>
   ))
 )}
 
-<p class="note">
-  Pinning is not the registry choosing. It is a consumer freezing one submission
-  so its own measurements stay comparable, the same way it would pin a model
-  revision or a judge model. {subject} is not thereby the answer for
-  anyone else, and the alternatives above are listed so the choice stays arguable.
-</p>
+

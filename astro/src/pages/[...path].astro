@@ -139,11 +139,6 @@ const released = (iso) =>
         </tbody>
       </table>
 
-      <p class="note">
-        A label is a claim anyone can make, not a slot anyone owns. Several
-        claimants on one label is the normal case, and the disagreement between
-        them is the content rather than a duplication to clean up.
-      </p>
     </div>
   </Base>
 )}
@@ -251,14 +246,7 @@ const released = (iso) =>
       <div data-panel="comments" class="hidden">
         <p class="note absent-block">
           No comments, and no way to leave one. Comments need a write path and an
-          account behind it, and this build has neither: it takes no uploads and
-          serves nothing publicly. An empty comment box would imply otherwise.
-        </p>
-        <p class="note">
-          Worth deciding before it gets built: a comment attached to one artifact
-          argues with one author, while the disagreement this registry is about
-          happens between claimants of the same label. Where comments belong is a
-          design question, not a widget.
+          account behind it, and this build has neither.
         </p>
       </div>
     </div>
@@ -301,10 +289,8 @@ const released = (iso) =>
       <h2>Submissions</h2>
       {owner.submissions.length === 0 && (
         <p class="note absent-block">
-          {owner.owner} has not published an artifact. That is a fact about what
-          they have done here, not a gap in the record and not a lesser kind of
-          participation: the work below is somebody checking other people's claims,
-          which is the part this registry is short of.
+          {owner.owner} has not published an artifact. What is below is their work
+          on other people's.
         </p>
       )}
       {owner.submissions.length > 0 && (
@@ -347,14 +333,6 @@ const released = (iso) =>
       </table>
       )}
 
-      {owner.submissions.length > 0 && (
-        <p class="note">
-          {owner.attacks_received > 0
-            ? "Attacks received is a count of scrutiny, not of failure. Work that has been attacked carries more evidence than work nobody has looked at."
-            : "Nothing here has been attacked yet, which is not evidence that any of it is sound. The strongest evidence available is the kind an author does not choose."}
-          {" "}None of these numbers order anybody.
-        </p>
-      )}
 
       <h2>Work on other people's submissions</h2>
 
@@ -393,10 +371,8 @@ const released = (iso) =>
                 </tbody>
               </table>
               <p class="note">
-                An attack is displayed with both dispositions on the artifact's own
-                page, where the author answers it. What is here is only that the
-                attack was made, because the registry does not adjudicate and a
-                tally of attacks made is not a score for the attacker.
+                Both dispositions are shown on the artifact's own page, where the
+                author answers it. What is here is only that the attack was made.
               </p>
             </>
           )}
@@ -425,8 +401,7 @@ const released = (iso) =>
               </table>
               <p class="note">
                 Somebody other than the author ran their own suite against this
-                work. The scores live on the artifact's page beside the author's
-                own, never reconciled against them.
+                work. The scores are on the artifact's page.
               </p>
             </>
           )}

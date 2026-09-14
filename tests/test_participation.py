@@ -97,10 +97,32 @@ def test_the_owners_index_lists_them():
 
 
 def test_an_attack_count_is_not_presented_as_the_attackers_score():
-    """Attacking a lot is not an achievement the page ranks anyone by."""
-    body = text_of(page("carol"))
-    assert "does not adjudicate" in body
-    assert "not a score for the attacker" in body
+    """Attacking a lot is not an achievement the page ranks anyone by.
+
+    Two earlier versions of this were wrong in opposite ways. The first asserted a
+    disclaimer sentence was present, which is the weak shape: a page can carry the
+    sentence and rank anyway, and the test broke when the sentence was cut for
+    being the site arguing with its reader rather than when the page changed.
+
+    The second scanned the prose for words like "score" and failed on the synthetic
+    banner, which says "Scores are repeated-digit decimals". Scanning prose for
+    single words finds the word, not the meaning.
+
+    So this checks the only thing that would actually rank an attacker: a column
+    holding a tally. Each attack is listed as its own event, against what, by what
+    method, and when. There is no number aggregating them.
+    """
+    raw = page("carol")
+    headers = [
+        re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", h)).strip().lower()
+        for h in re.findall(r"<th[^>]*>(.*?)</th>", raw, re.S)
+    ]
+    assert headers, "no table on the page, so this proves nothing"
+    for h in headers:
+        assert not any(w in h for w in ("count", "score", "rank", "total")), (
+            f"a column headed {h!r} would read as a tally of the attacker rather "
+            "than as one more thing they did"
+        )
 
 
 def test_the_ordering_bar_is_absent_where_there_is_nothing_to_order():

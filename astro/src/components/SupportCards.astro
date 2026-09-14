@@ -33,10 +33,7 @@ const when = (iso) =>
 
 {support.length === 0 ? (
   <p class="note absent-block">
-    No support cards. Nobody has reported using this artifact in their own work,
-    so there is no evidence about it outside the conditions its author chose, and
-    none at all about whether the published layer, hook point, template and
-    coefficient range are sufficient to apply it.
+    No support cards. Nobody has reported using this artifact in their own work.
   </p>
 ) : (
   support.map((s) => (
@@ -82,13 +79,10 @@ const when = (iso) =>
   ))
 )}
 
-{support.length > 0 && (
+{support.some((s) => s.deviations) && (
   <p class="note">
-    A support card reports applied use, not approval. It leads with what the
-    contract predicted and what actually happened, because how an artifact feels
-    in use favors the one that moves several things at once over the one that
-    moves only what it claims. A card flagged as a contract deviation is a defect
-    report about the metadata published here, not about the author's work.
+    A contract deviation is a defect report about the metadata published here,
+    not about the author's work.
   </p>
 )}
 

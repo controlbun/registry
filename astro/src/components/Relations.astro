@@ -19,8 +19,7 @@ const { relations, label } = Astro.props;
 {relations.length === 0 ? (
   <p class="note absent-block">
     Nobody claiming <strong>{label}</strong> has said how their reading relates to
-    anyone else's. The claims sit side by side without any author addressing the
-    others, so a reader has to infer the disagreement from the definitions.
+    anyone else's.
   </p>
 ) : (
   relations.map((r) => (
@@ -36,11 +35,3 @@ const { relations, label } = Astro.props;
   ))
 )}
 
-{relations.length > 0 && (
-  <p class="note">
-    These are claims, not categories. Nobody is filed under anything here: an
-    author states how they read their own label against someone else's, and the
-    other author is free to disagree in the same way. The registry records both and
-    settles neither.
-  </p>
-)}
