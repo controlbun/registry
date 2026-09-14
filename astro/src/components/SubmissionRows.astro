@@ -49,7 +49,9 @@ const released = (iso) =>
   <label for="ref">Similarity against</label>
   <select id="ref">
     <optgroup label="One submission">
-      {rows.map((r) => <option value={`one:${r.ref}`}>{r.author}</option>)}
+      {rows.map((r) => (
+        <option value={`one:${r.ref}`}>{r.author}@{r.version}</option>
+      ))}
     </optgroup>
     <optgroup label="Averaged across the top few">
       {[2, 3, 5, 10].filter((k) => k <= rows.length).map((k) => (
@@ -131,7 +133,8 @@ const released = (iso) =>
 
     if (mode === "one") {
       head.textContent = "Similarity";
-      why.textContent = `angle against ${arg.split("/")[0]}`;
+      const [who, rest] = arg.split("/");
+      why.textContent = `angle against ${who}@${rest.split("@")[1]}`;
       note.textContent =
         "Geometry against one submission you chose. A low number is not evidence " +
         "that two authors reached different conclusions: vectors that behave " +
