@@ -242,6 +242,7 @@
           "a": "alice/kindness@v1",
           "angle_comparable": true,
           "angle_similarity": 0.5882353782653809,
+          "angle_why": null,
           "axes_both_checked": [],
           "axes_only_a_checked": [
             "sentiment",
@@ -451,6 +452,7 @@
           "a": "dana/refusal@v1",
           "angle_comparable": true,
           "angle_similarity": 0.8519977331161499,
+          "angle_why": null,
           "axes_both_checked": [
             "topic"
           ],
@@ -469,6 +471,7 @@
           "a": "dana/refusal@v1",
           "angle_comparable": true,
           "angle_similarity": 0.78631591796875,
+          "angle_why": null,
           "axes_both_checked": [],
           "axes_only_a_checked": [
             "topic",
@@ -486,6 +489,7 @@
           "a": "erik/refusal@v1",
           "angle_comparable": true,
           "angle_similarity": 0.8169825077056885,
+          "angle_why": null,
           "axes_both_checked": [],
           "axes_only_a_checked": [
             "topic"
@@ -766,6 +770,7 @@
           "a": "soham/pro-human@lda",
           "angle_comparable": true,
           "angle_similarity": 0.8317705392837524,
+          "angle_why": null,
           "axes_both_checked": [
             "approach",
             "approach_probe",
@@ -785,6 +790,7 @@
           "a": "soham/pro-human@lda",
           "angle_comparable": true,
           "angle_similarity": 0.42612743377685547,
+          "angle_why": null,
           "axes_both_checked": [
             "approach",
             "approach_probe",
@@ -804,6 +810,7 @@
           "a": "soham/pro-human@logistic",
           "angle_comparable": true,
           "angle_similarity": 0.6965014338493347,
+          "angle_why": null,
           "axes_both_checked": [
             "approach",
             "approach_probe",
@@ -1107,6 +1114,7 @@
               "a": "alice/kindness@v1",
               "angle_comparable": true,
               "angle_similarity": 0.5882353782653809,
+              "angle_why": null,
               "axes_both_checked": [],
               "axes_only_a_checked": [
                 "sentiment",
@@ -1334,6 +1342,7 @@
               "a": "dana/refusal@v1",
               "angle_comparable": true,
               "angle_similarity": 0.8519977331161499,
+              "angle_why": null,
               "axes_both_checked": [
                 "topic"
               ],
@@ -1352,6 +1361,7 @@
               "a": "dana/refusal@v1",
               "angle_comparable": true,
               "angle_similarity": 0.78631591796875,
+              "angle_why": null,
               "axes_both_checked": [],
               "axes_only_a_checked": [
                 "topic",
@@ -1369,6 +1379,7 @@
               "a": "erik/refusal@v1",
               "angle_comparable": true,
               "angle_similarity": 0.8169825077056885,
+              "angle_why": null,
               "axes_both_checked": [],
               "axes_only_a_checked": [
                 "topic"
@@ -1647,6 +1658,7 @@
               "a": "soham/pro-human@lda",
               "angle_comparable": true,
               "angle_similarity": 0.8317705392837524,
+              "angle_why": null,
               "axes_both_checked": [
                 "approach",
                 "approach_probe",
@@ -1666,6 +1678,7 @@
               "a": "soham/pro-human@lda",
               "angle_comparable": true,
               "angle_similarity": 0.42612743377685547,
+              "angle_why": null,
               "axes_both_checked": [
                 "approach",
                 "approach_probe",
@@ -1685,6 +1698,7 @@
               "a": "soham/pro-human@logistic",
               "angle_comparable": true,
               "angle_similarity": 0.6965014338493347,
+              "angle_why": null,
               "axes_both_checked": [
                 "approach",
                 "approach_probe",

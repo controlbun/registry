@@ -44,6 +44,9 @@ from functools import lru_cache
 
 from safetensors.numpy import load_file
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from registry.artifact import UnsafeArtifactPath, local_path  # noqa: E402
+
 
 @lru_cache(maxsize=None)
 def _vector(path: str):
@@ -92,7 +95,13 @@ def check_artifacts_match_their_metadata(conn: sqlite3.Connection) -> None:
     for row in rows:
         if not row["artifact_path"]:
             continue
-        path = ROOT / row["artifact_path"]
+        # Refuses a path that escapes the repository rather than reading
+        # whatever is there. Report, never raise, like every other check here.
+        try:
+            path = local_path(row["artifact_path"], root=ROOT)
+        except UnsafeArtifactPath as exc:
+            fail("artifacts", f"{row['id']}: {exc}")
+            continue
         if not path.exists():
             fail("artifacts", f"{row['id']}: {row['artifact_path']} is missing")
             continue
@@ -146,8 +155,10 @@ def check_angles_recompute(payload: dict) -> None:
             # a falsifier that crashes is indistinguishable in CI from one that is
             # broken; neither tells you which number stopped reconciling.
             try:
-                va, vb = _vector(str(ROOT / a)), _vector(str(ROOT / b))
-            except (OSError, FileNotFoundError, ValueError) as exc:
+                va = _vector(str(local_path(a, root=ROOT)))
+                vb = _vector(str(local_path(b, root=ROOT)))
+            except (OSError, FileNotFoundError, ValueError,
+                    UnsafeArtifactPath) as exc:
                 fail("angles", f"{pair['a']} vs {pair['b']}: cannot read a raw "
                                f"artifact to recheck the published angle ({exc})")
                 continue

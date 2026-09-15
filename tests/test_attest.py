@@ -42,6 +42,7 @@ REQUIRED_MANIFESTS = [
     "MANIFEST_FINAL_2026-09-11_2317.sha256",
     "MANIFEST_FINAL_2026-09-12_0013.sha256",
     "MANIFEST_FINAL_2026-09-12_0020.sha256",
+    "MANIFEST_TREE_2026-09-13_2145.sha256",
 ]
 
 # Confirmed in the Bitcoin blockchain. These must never revert to pending, which
@@ -56,7 +57,47 @@ ANCHORED = [
     "MANIFEST_FINAL_2026-09-11_2317.sha256",
     "MANIFEST_FINAL_2026-09-12_0013.sha256",
     "MANIFEST_FINAL_2026-09-12_0020.sha256",
+    "MANIFEST_TREE_2026-09-13_2145.sha256",
 ]
+
+# The inventories above are three lists that have to be kept in step by hand, and
+# on 2026-09-13 they were not: the tree stamp was made, anchored in block 966895,
+# and added to none of them. It stayed unprotected for two days while the suite
+# reported green, which is the failure this file exists to prevent, one level up.
+#
+# So the lists no longer decide what is protected. Every manifest on disk has to
+# appear in all three, and the test below fails when one does not. Adding a stamp
+# still means editing this file; forgetting to is now the thing that goes red.
+def manifests_on_disk() -> list[str]:
+    return sorted(p.name for p in ATTEST.glob("MANIFEST*.sha256"))
+
+
+def test_every_manifest_on_disk_is_in_the_inventory():
+    """A stamp nobody listed is a stamp nobody is protecting."""
+    on_disk = set(manifests_on_disk())
+    unlisted = {
+        "REQUIRED_MANIFESTS": on_disk - set(REQUIRED_MANIFESTS),
+        "ANCHORED": on_disk - set(ANCHORED),
+        "FROZEN_ATTEST": {n for n in on_disk if n not in FROZEN_ATTEST},
+    }
+    gaps = {k: sorted(v) for k, v in unlisted.items() if v}
+    assert not gaps, (
+        "manifests exist that the append-only tripwire does not cover, so they "
+        "can be deleted or edited with the suite staying green:\n  "
+        + "\n  ".join(f"{k}: {', '.join(v)}" for k, v in sorted(gaps.items()))
+    )
+
+
+def test_every_proof_and_backup_is_frozen():
+    """`.ots` and `.ots.bak` carry the anchor; unpinning either loses the date."""
+    missing = [
+        p.name for p in sorted(ATTEST.iterdir())
+        if p.suffix in {".ots", ".bak"} and p.name not in FROZEN_ATTEST
+    ]
+    assert not missing, (
+        "proof files are not pinned by content, so an edit to one would not be "
+        "noticed:\n  " + "\n  ".join(missing)
+    )
 
 
 def attested_digest(proof: Path) -> str:
@@ -175,6 +216,12 @@ FROZEN_ATTEST = {
         "d1d5ac245b0c40b1a8dd1455233d1b07d6d59f5562df20892aea505b236f0c2c",
     "MANIFEST_FINAL_2026-09-12_0020.sha256.ots.bak":
         "6838123815f699ce8f9313c8cfd994522f2a617bfee5b43b765901ad04daa3d6",
+    "MANIFEST_TREE_2026-09-13_2145.sha256":
+        "0a9c7cfde3a8c4cfd006f1ad2d144276b3b8d00dc3098b2e1e2bafe14f592917",
+    "MANIFEST_TREE_2026-09-13_2145.sha256.ots":
+        "4a76c6c5d0682252bf7b2476e12efd530187715286feeec6e79ee30eb8cb0d8a",
+    "MANIFEST_TREE_2026-09-13_2145.sha256.ots.bak":
+        "5a018cc53caee7f10acc208ad5eb26abccfc15ea4d9302d381ea388664dd088a",
 }
 
 # Deletion-protected, but freely editable. These are the documents the whole

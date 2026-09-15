@@ -59,6 +59,17 @@ class NotFound(LookupError):
     """Raised when a reference names something the registry does not hold."""
 
 
+class Ambiguous(LookupError):
+    """One author has several current versions and the reference names none.
+
+    A sibling of `BareLabelError`, one level down. That one refuses to turn a bare
+    label into an artifact because several authors claim it; this refuses to turn
+    a bare `author/label` into an artifact because that author published several
+    takes and none supersedes the others. Both are the registry declining to pick,
+    and in both cases the caller's own reference is the fix.
+    """
+
+
 @dataclass(frozen=True)
 class Contract:
     """Everything needed to apply the artifact correctly.
@@ -303,25 +314,50 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
 def load(ref: str, *, database: str | Path | None = None) -> Submission:
     """Load one submission by `author/label` or `author/label@version`.
 
-    Without a version you get that author's newest, which is their own revision
-    history and not the registry choosing between authors. Pin the version when
-    the number needs to stay comparable later; a pinned reference resolves to the
-    same frozen submission permanently.
+    Without a version this resolves the head of that author's revision chain: the
+    version nothing supersedes. That is the author's own history, not the registry
+    choosing between authors. Pin the version when the number needs to stay
+    comparable later; a pinned reference resolves to the same frozen submission
+    permanently.
+
+    **An author with several current versions gets an error, not a pick.** This
+    used to be `max(version_strings)`, which reads a revision order off text that
+    does not carry one. On the corpus today it returns `meandiff` for
+    `soham/pro-human`, the oldest of three, because `m` sorts last; and `v9` beats
+    `v10` for anyone numbering past nine. Worse than wrong: the three are parallel
+    takes by one author with no ordering between them at all, so any answer here
+    is the registry designating one, which is the thing it does not do.
+    `superseded_by` is the field that records a revision chain, so that is what
+    gets read.
     """
     owner, label, version = _parse(ref)
     conn = _connect(database)
 
     if version is None:
-        found = [
-            r["version"]
-            for r in conn.execute(
-                "SELECT version FROM submission WHERE author=? AND label=?",
-                (owner, label),
-            )
-        ]
-        if not found:
+        rows = list(conn.execute(
+            "SELECT version, superseded_by FROM submission"
+            " WHERE author=? AND label=?",
+            (owner, label),
+        ))
+        if not rows:
             raise NotFound(f"{ref!r} is not in this registry")
-        version = max(found)
+
+        heads = [r["version"] for r in rows if not r["superseded_by"]]
+        if len(heads) == 1:
+            version = heads[0]
+        elif not heads:
+            raise Ambiguous(
+                f"every version of {owner}/{label} is superseded by another, so "
+                "the revision chain is a cycle and there is no head. Pin one: "
+                + ", ".join(f"{owner}/{label}@{r['version']}" for r in rows)
+            )
+        else:
+            raise Ambiguous(
+                f"{owner}/{label} has {len(heads)} current versions and nothing "
+                "orders them, so picking one would be this registry choosing on "
+                "your behalf. Pin the one you mean: "
+                + ", ".join(f"{owner}/{label}@{v}" for v in sorted(heads))
+            )
 
     row = conn.execute(
         "SELECT * FROM submission WHERE author=? AND label=? AND version=?",

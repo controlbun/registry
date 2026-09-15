@@ -804,3 +804,102 @@ somewhere new. Excluding a directory is now an edit to `NOT_SCANNED` with a reas
 next to it, and doing that to anything in `MUST_REACH` fails the build.
 
 **Supersedes:** nothing.
+
+## 2026-09-15 A bare `author/label` refuses when the author has several current versions
+**Decided:** `client.load("author/label")` resolves the head of that author's
+revision chain, the version nothing supersedes. Several heads raises `Ambiguous`
+and names them. It no longer picks.
+
+**Why:** it was `max(version_strings)`, which reads a revision order off text that
+does not carry one. On the corpus as it stands that returns `meandiff` for
+`soham/pro-human`, the oldest of the three, because `m` sorts last. It also
+returns `v9` over `v10` for anyone numbering past nine.
+
+The string bug is the smaller half. `artifacts/seed.py` says those three are
+parallel takes with no ordering between them, so any answer is the registry
+designating one, which is the thing it does not do. `superseded_by` is the field
+that records a revision chain, so that is the field that gets read.
+
+`Ambiguous` is a sibling of `BareLabelError` one level down: that one refuses to
+turn a bare label into an artifact because several authors claim it, this one
+refuses because one author published several takes. Both name the alternatives,
+because an error that does not is a dead end.
+
+**What this makes impossible:** getting an artifact out of this client without
+naming a version, whenever the author has published more than one current take.
+That is intended. Convenience here is designation wearing a different hat.
+
+**Supersedes:** nothing.
+
+## 2026-09-15 One comparability rule, not two
+**Decided:** `pairwise` and `similarity_matrix` share `_angle_between`. The pair
+row gains `angle_why`, so a page can say which condition failed.
+
+**Why:** they were separate implementations of one question and they disagreed.
+`pairwise` gated on model, revision, layer and hook point; `_angle_between` gated
+on those plus rank and shape. A LoRA beside a direction at the same layer was
+correctly refused by the matrix and reached `np.dot` in `pairwise`. With shape
+`[1, n]` against `[n]` the dot yields a size-1 array, `float()` succeeds, and a
+number ships for a LoRA, which is the exact failure
+`tests/test_similarity_refuses.py` was written to prevent, live the whole time in
+the other code path.
+
+**What this makes impossible:** the two views disagreeing about whether an angle
+exists. A future comparability rule is added once or not at all.
+
+**Supersedes:** nothing.
+
+## 2026-09-15 An artifact path is repo-relative, and leaving the repo is refused
+**Decided:** `registry.artifact.local_path` resolves a database `artifact_path`
+against the repository root and raises `UnsafeArtifactPath` if the result escapes.
+Used by `fetch.resolve`, `comparison.load_vector` and both falsifier sites. Each
+passes its own module `ROOT`, because three test harnesses redirect the code at a
+copied tree by rebinding that name.
+
+**Why:** `ROOT / value` is not containment. pathlib drops the left operand when
+the right is absolute, so `artifact_path = "/etc/passwd"` resolves to
+`/etc/passwd`, and `..` is not normalized away. Four callers did that. Nothing
+hostile is in the database today because nothing but this repository writes rows,
+and that stops being true the moment there is an upload path, which is exactly
+when a check added afterwards is added too late.
+
+Refuses rather than clamps: a path that escapes is not a typo, it is a row
+claiming the registry holds something it does not.
+
+**Supersedes:** nothing.
+
+## 2026-09-15 The license audit runs in the gate, and refuses an empty scan
+**Decided:** `licenses` is in the `verify` chain, after `site`. The script uses
+`fileURLToPath` rather than `.pathname`, and exits non-zero when it finds no
+packages.
+
+**Why:** two separate failures in one check. It was never called, so the copyleft
+check CLAUDE.md requires did not run. And a file URL percent-encodes, so on a
+checkout under a directory whose name contains a space the path contained `%20`,
+the scan found nothing, and the script printed "all permissive, nothing to review"
+and exited 0. An audit that reports clean when it cannot see anything is worse
+than no audit, so an empty scan is now an error on its own.
+
+**Supersedes:** nothing.
+
+## 2026-09-15 Every manifest on disk has to be in all three inventories
+**Decided:** `tests/test_attest.py` gains
+`test_every_manifest_on_disk_is_in_the_inventory` and
+`test_every_proof_and_backup_is_frozen`. The lists no longer decide what is
+protected; they are asserted against what exists.
+
+**Why:** the tree stamp made on 2026-09-13 and anchored in block 966895 was added
+to none of `REQUIRED_MANIFESTS`, `ANCHORED` or `FROZEN_ATTEST`, despite the file's
+own docstring saying to. It sat unprotected for two days while the suite reported
+green: deleting or editing all three of its files broke nothing. It is also the
+broadest stamp in the set, covering the whole tracked tree including every earlier
+proof.
+
+Three hand-maintained lists that must be kept in step is the same shape as the
+`SOURCE_DIRS` list that let `artifacts/` go unscanned. Same fix: stop letting the
+list decide, and fail when it falls behind what is on disk.
+
+**What this makes impossible:** stamping something and forgetting to protect it.
+Adding a stamp still means editing this file; forgetting to is now what goes red.
+
+**Supersedes:** nothing.

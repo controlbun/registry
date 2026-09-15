@@ -130,7 +130,13 @@ def build(conn: sqlite3.Connection) -> dict:
                 }
                 for b in blocks for c in b["claimants"]
             ],
-            "revisions": sorted(m["revisions"]),
+            # Recorded revisions first, then the unrecorded ones. Not filtered:
+            # the page distinguishes "nobody recorded a revision for this model"
+            # from "one claimant recorded one and another did not", and dropping
+            # the None loses the second reading. Sorting the raw set raised
+            # TypeError the moment a model held both, which is the state
+            # migration 005 exists to allow.
+            "revisions": sorted(m["revisions"], key=lambda r: (r is None, r or "")),
             "kinds": sorted(m["kinds"]),
             "hook_points": sorted(m["hook_points"]),
             "layers": sorted(m["layers"]),

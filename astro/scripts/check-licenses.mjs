@@ -7,8 +7,15 @@
 
 import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = new URL("../node_modules", import.meta.url).pathname;
+// fileURLToPath, not .pathname. A file URL percent-encodes, so on a checkout
+// under a directory with a space in its name .pathname yields a path containing
+// %20, existsSync is false, the scan finds nothing, and the script reports
+// "scanned 0 installed packages ... all permissive" and exits 0. A GPL
+// dependency would come back clean. An audit that passes when it cannot see
+// anything is worse than no audit.
+const ROOT = fileURLToPath(new URL("../node_modules", import.meta.url));
 
 // Fails the build. Redistributing a derived work under these terms is a decision
 // nobody should make by accident.
@@ -72,6 +79,18 @@ const show = (title, rows) => {
   console.log(`\n${title} (${rows.length}):`);
   for (const r of rows.sort()) console.log(`  ${r}`);
 };
+
+// Scanning nothing is a broken audit, not a clean one. Belt and braces with the
+// fileURLToPath fix above: whatever makes the tree unreadable, the answer is an
+// error rather than a reassuring summary.
+if (total === 0) {
+  console.error(
+    `no packages found under ${ROOT}\n` +
+    "Either dependencies are not installed, or the path did not resolve. " +
+    "Refusing to report a clean audit over an empty scan."
+  );
+  process.exit(1);
+}
 
 console.log(`scanned ${total} installed packages`);
 show("STRONG COPYLEFT, build fails", strong);

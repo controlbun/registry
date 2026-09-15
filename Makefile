@@ -9,7 +9,12 @@ PY := .venv/bin/python
 # tests read `astro/dist`, so building later meant they checked the previous
 # build: a frontend that fails to build, or a page carrying a number that traces
 # to nothing, used to pass this gate untouched.
-verify: invariants site test links falsifier manifests
+#
+# `licenses` runs after `site`, because `site` is what installs node_modules and
+# there is nothing to audit before it. It was written, documented in CLAUDE.md as
+# a requirement, and left out of this chain, so the copyleft check was a target
+# nobody called.
+verify: invariants site licenses test links falsifier manifests
 
 falsifier:
 	$(PY) falsifier/verify.py

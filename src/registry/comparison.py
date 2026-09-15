@@ -25,6 +25,8 @@ from pathlib import Path
 import numpy as np
 from safetensors.numpy import load_file
 
+from .artifact import local_path
+
 ROOT = Path(__file__).resolve().parents[2]
 
 # A trait score with no coherence measure beside it is not a small effect, it is a
@@ -43,7 +45,7 @@ def load_vector(artifact_path: str) -> np.ndarray:
     9,900 loads at n=100 where 100 would do. The cache is keyed on path and the
     artifacts are immutable, so a stale entry is not reachable.
     """
-    tensors = load_file(str(ROOT / artifact_path))
+    tensors = load_file(str(local_path(artifact_path, root=ROOT)))
     return next(iter(tensors.values()))
 
 
@@ -113,20 +115,23 @@ def pairwise(conn: sqlite3.Connection, label: str) -> list[dict]:
             iv_a = _intervention(conn, a["author"], a["label"], a["version"])
             iv_b = _intervention(conn, b["author"], b["label"], b["version"])
 
-            similarity = None
-            comparable = (
-                iv_a is not None
-                and iv_b is not None
-                and iv_a["model_id"] == iv_b["model_id"]
-                and iv_a["model_revision"] == iv_b["model_revision"]
-                and iv_a["layer"] == iv_b["layer"]
-                and iv_a["hook_point"] == iv_b["hook_point"]
+            # One comparability rule, shared with `similarity_matrix`. It used to
+            # be two: this loop checked model, revision, layer and hook point,
+            # `_angle_between` checked those plus rank and shape, and the site
+            # rendered both. A LoRA beside a direction at the same layer was
+            # correctly refused by the matrix and reached `np.dot` here, which is
+            # the failure `tests/test_similarity_refuses.py` exists to prevent,
+            # still live in the other code path.
+            cell = (
+                _angle_between(iv_a, iv_b)
+                if iv_a is not None and iv_b is not None
+                else {"v": None, "why": "no intervention attached", "note": None}
             )
-            if comparable and iv_a["artifact_path"] and iv_b["artifact_path"]:
-                similarity = angle_similarity(
-                    load_vector(iv_a["artifact_path"]),
-                    load_vector(iv_b["artifact_path"]),
-                )
+            similarity = cell["v"]
+            # Comparable means the geometry is defined, which is a narrower claim
+            # than "both are on the same model". A missing artifact is not a
+            # statement about the objects, so it stays out of this.
+            comparable = cell["why"] in (None, "no artifact attached")
 
             axes_a, axes_b = _axes(conn, a["author"]), _axes(conn, b["author"])
             rep_a = _report(conn, iv_a["id"]) if iv_a else None
@@ -136,9 +141,13 @@ def pairwise(conn: sqlite3.Connection, label: str) -> list[dict]:
                 "a": f"{a['author']}/{a['label']}@{a['version']}",
                 "b": f"{b['author']}/{b['label']}@{b['version']}",
                 # Geometry only, and meaningless unless both sit on the same model,
-                # revision, layer and hook point.
+                # revision, layer and hook point, and both are vectors of the same
+                # length. `angle_why` names which of those failed, because "not
+                # comparable" alone reads as missing data when it is usually a
+                # statement about what the two objects are.
                 "angle_similarity": similarity,
                 "angle_comparable": comparable,
+                "angle_why": cell["why"],
                 # The asymmetry is the informative cell: what one of them thought to
                 # check and the other did not.
                 "axes_both_checked": sorted(axes_a & axes_b),

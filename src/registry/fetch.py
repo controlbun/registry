@@ -30,6 +30,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from .artifact import local_path
+
 ROOT = Path(__file__).resolve().parents[2]
 
 # Overridable so tests can point at a local server instead of reaching the
@@ -125,7 +127,7 @@ def resolve(
     if artifact_repo and artifact_commit:
         return from_hub(artifact_repo, artifact_commit, artifact_path or "")
     if artifact_path:
-        local = ROOT / artifact_path
+        local = local_path(artifact_path, root=ROOT)
         if not local.exists():
             raise FetchError(
                 f"{artifact_path} is not on disk and no repo is recorded, so there "
