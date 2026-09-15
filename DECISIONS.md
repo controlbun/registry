@@ -903,3 +903,59 @@ list decide, and fail when it falls behind what is on disk.
 Adding a stamp still means editing this file; forgetting to is now what goes red.
 
 **Supersedes:** nothing.
+
+## 2026-09-15 v1 is the site going public, and it is scoped in `V1.md`
+**Decided:** Three answers taken on 2026-09-15, target Friday 2026-09-18,
+explicitly half baked.
+
+1. **The repo goes public and the site is served from GitHub Pages**, which is
+   the recorded plan rather than the dist-only fallback. Free, and it makes
+   `_attest/` independently verifiable, which is most of what the proofs are for.
+   The three obligations recorded on 2026-09-13 come due: the history audit at
+   the tip of the day, the `CLAUDE.md` repo-section amendment, and the dual-use
+   policy.
+2. **controlbun.com is registered and the name goes public on Friday.** That is
+   the trigger already recorded for npm, PyPI and the GitHub org, and the
+   intent-to-use deferral was measured from the name going public rather than
+   from the date it was deferred.
+3. **The dual-use policy is deferred.** See the next entry.
+
+**What v1 is not:** the indexed corpus. Seeding from the literature is settled
+and is weeks of content work. Friday ships the vessel, with the eight submissions
+that exist.
+
+**Supersedes:** nothing. Discharges the "when the repo goes public" branch of
+"The site is published on GitHub Pages, when the repo goes public".
+
+## 2026-09-15 The dual-use policy is deferred past launch, knowingly
+**Decided:** The site goes public without a dual-use policy. The 2026-09-13 entry
+records the policy as the launch blocker, in the words "the site going up is the
+launch". That blocker is overridden, not met.
+
+**Why it is being overridden:** the site serves no artifact bytes, takes no
+uploads, has no API and no bulk path, and holds eight submissions of which the
+three real ones are the author's own work under Apache-2.0. The misuse surface of
+a read-only metadata page over that corpus is small.
+
+**Why that reasoning is incomplete, recorded so it is not a surprise later.**
+Going public publishes `BRIEF.md` and `VALIDATION.md`, and both carry this
+project's own extended analysis of misuse surface, refusal-removal artifacts, and
+the tension between open contribution and misuse gating. A reader finds the
+analysis and finds nothing answering it. That is a worse position than a quiet
+site with no policy page, and it is caused by the combination rather than by
+either choice alone. The corpus also includes `refusal` as a fixture label, and
+Pagefind indexes label semantics across every page it builds.
+
+**What discharges it:** one page. What the registry will and will not hold, that
+it serves no weights today, and how to report something. Estimated at an hour.
+The deferral is a scheduling choice, not a judgment that the page is unnecessary.
+
+**What this makes impossible:** answering the first question a safety-adjacent
+reader asks, including anyone who arrives from the interpretability side, which
+is the audience. It also blocks the Hub indexer, which was already gated on this
+policy for a much stronger reason: roughly 95% of the crawlable Hub corpus by
+volume is refusal removal.
+
+**Supersedes:** nothing. Overrides, without amending, the launch-blocker clause
+in "The site is published on GitHub Pages, when the repo goes public". Revisit
+before the corpus grows or before anything is served as bytes.
