@@ -1032,3 +1032,43 @@ And the largest one, unchanged: nobody has established that anyone wants this.
 Building a contribution path before asking is the expensive order.
 
 **Supersedes:** nothing. Refines "SQLite for v0, not Postgres" as described above.
+
+## 2026-09-15 Indexing is deferred; the lane without it comes first
+**Decided:** Do not build the indexer and do not plan around it. The corpus stays
+at what is in it, and grows only by the author adding more of his own arena
+directions or by somebody submitting.
+
+**Status of the indexing decision:** deferred, not reversed. "The seed corpus is
+indexed, not submitted" (2026-09-14) stays on the books with its counts and its
+dual-use ordering intact. Nothing here contradicts it and nothing built in this
+lane may foreclose it.
+
+**Why the deferral has a cost worth writing down.** Starting empty and asking for
+contributions is the shape that did not work twice already: David Bau's open
+science attempt a year and a half ago, and Natalie Shapira asking "why would they
+do that, what would be their incentive" and getting no answer worth anything. The
+indexing decision existed to avoid exactly that, and taking this lane first walks
+back into it deliberately. It is a sequencing choice; it is not a solution to the
+cold start.
+
+**Two consequences, both recorded in the plans.**
+
+The plurality thesis stays demonstrated only by fixtures. All three real
+submissions are one author, one label, one model. Indexing was the answer to that
+and deferring it postpones the answer rather than providing one, which matters
+before showing the site to a skeptical reader as evidence of the premise.
+
+The package moves up. With no indexed corpus, somebody running
+`controlbun.load()` against the three real directions is the thinnest real path to
+a first user that exists, so it matters more in this lane rather than less.
+
+**One thing this lane does not simplify, despite appearances.** `author` still
+cannot become a verified account. The strongest argument for that was the indexed
+corpus, but two others survive: every row in the corpus today has an author with
+no account, since the three real ones were hand-entered and the five fixtures are
+synthetic; and attack cards, independent evaluations and support cards all name an
+author who is not the submitter. `V2.md` section 1 now gives all three, so the
+namespace-and-claim design holds on its own.
+
+**Supersedes:** nothing. Sequences "The seed corpus is indexed, not submitted"
+behind v1, the package, and v2 contribution.
