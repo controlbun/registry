@@ -635,3 +635,135 @@ v0 scope. Until then the payload carries it and `artifacts/REAL.md` says where t
 look.
 
 **Supersedes:** nothing.
+
+## 2026-09-14 The seed corpus is indexed, not submitted
+**Decided:** The corpus is populated by indexing artifacts that already exist,
+starting with the literature, and not by waiting for people to upload. Submissions
+remain the primary object and the upload path still gets built; it is no longer
+what the registry is bootstrapped from.
+
+**Why:** Rohit Gandikota's suggestion on 2026-09-14, and it is the answer to the
+two failures already on record. David Bau tried an open-science forum roughly a
+year and a half before this and it did not take. Natalie Shapira, asked to imagine
+using this, asked "why would they do that, what would be their incentive," and got
+no answer worth anything. Both are the same failure: a registry that starts empty
+and asks for contributions is asking for a favor before it has given anything.
+Google did not ask websites to submit themselves.
+
+**The premise as it was given to me was wrong, and the correction matters more
+than the suggestion.** The claim was that Hugging Face is full of wasteful
+artifacts sitting unused. Counted on 2026-09-14, off the Hub's own search index:
+
+    abliterated          8,011      sae (noisy substring)  4,591
+    uncensored           6,838      sparse autoencoder       108
+    steering (anything)    190      linear probe             104
+    reft                   111      gemma-scope               85
+    control vector          34      llama-scope               27
+    steering vector         22      refusal direction         11
+
+Full-text search inside repo files, for the case where an artifact hides in a repo
+named something else: `control_vector` 66 hits, `steering_vector` 96,
+`ControlVector` 98.
+
+There is no pool of unused steering vectors on the Hub. There are a few hundred
+artifacts, total. **The scarcity is the finding.** 34 control-vector repos against
+8,011 abliterated models, same field, same techniques, three orders of magnitude
+apart, because abliteration outputs a model and the Hub has a slot for models,
+while a direction outputs something with no slot: no layer field, no hook point,
+no indexing convention, no chat template hash, no coefficient range. It cannot be
+found and cannot be applied, so nobody publishes one.
+
+**Not yet decided, and load-bearing:** whether the missing schema causes the
+missing supply, or whether the supply is missing because the demand is. The counts
+above fit both readings exactly as well. Nothing here resolves that, and the
+project should stop acting as though it does. What resolves it is asking people
+who have extracted a direction how long validating it took and whether they would
+have used someone else's.
+
+**So the crawl target is the literature, not the Hub.** CAA, RepE, ITI, Function
+Vectors, Arditi's refusal direction, ELM, Concept Sliders and the community sliders
+on SliderFactory and Civitai, Gemma Scope, Llama Scope, the sae-lens ecosystem.
+Scattered across GitHub, project pages and OSF, each attached to a paper that
+states the layer, the hook point and the contrast data, which is the metadata that
+makes an index entry worth having. Hand-entered first. A crawler is an optimization
+of something that already works, and building one before the schema has met fifty
+of other people's artifacts would automate a schema that is not finished.
+
+**This is the lowest-risk shape of the product, not the highest.** An index points;
+it does not host. `004_served_copy.sql` already separates `artifact_repo`, where the
+author put it, from `served_repo`, where we serve a copy, NULL everywhere. An
+indexer only ever writes the first pair, so there is no redistribution, no
+model-license question, and "we only pointed at it" stays available as an answer.
+
+**Hard ordering, and it is a blocker rather than a caveat.** Roughly 95% of the
+crawlable Hub corpus by volume is refusal removal. `CLAUDE.md` requires flagging
+anything that makes refusal-removal artifacts easier to find or fetch in bulk, and
+an automated Hub indexer is not adjacent to that, it is that. Worse, the useful
+version is the dangerous version in the same field of the same row: an index
+carrying independent measurements of how thoroughly refusal was removed would be
+genuinely predictive, because model-tampering success conservatively bounds
+held-out input-space attack success (Che et al., arXiv:2502.05209, on which
+Gandikota is a co-author; Bau is not). Predictive for the researcher and for everyone else. **The Hub indexer
+does not ship before the dual-use policy exists.** The literature index, hand-
+entered and pointing at papers, does not carry that weight and can proceed.
+
+**What this makes impossible:** treating an empty corpus as a neutral starting
+state. It also means the registry publishes entries about other people's work
+without asking, including entries that record what an author did not declare, and
+the posture on that has to be settled before the first one goes up rather than in
+the reply to the first complaint.
+
+**Two facts about Neuronpedia's scale, added to the 2026-09-12 entry rather than
+replacing it.** That entry already establishes the shape correctly, including the
+exact `NPVector.new()` field list and the finding that they document no list,
+search, plural claim on one label, or comparison. What it does not carry is how
+large the thing is: over 50 million latents and vectors across 40-plus models, and
+it is how DeepMind shipped Gemma Scope. That matters for this decision
+specifically, because an index bootstrapped from the literature will point at
+Neuronpedia constantly for anything SAE-derived, and pointing at a platform of that
+size is a different proposition from pointing at a peer. The split in `BRIEF.md`
+holds: they index what the model represents, this indexes competing claims about
+behavioral interventions.
+
+**Supersedes:** nothing.
+
+## 2026-09-14 The consumer surface is a package, and it is how this gets used
+**Decided:** The way a researcher touches this registry is
+`pip install controlbun` and a resolve call, not a website. The site is for
+deciding; the package is for using. `src/registry/client.py` and `fetch.py` are
+already that package under a different name and will be renamed and published
+rather than rewritten.
+
+    from controlbun import artifact
+    d = artifact.load("soham/pro-human@meandiff")
+
+**Why:** every failure mode this project exists to prevent happens at the moment of
+application, not at the moment of browsing. `BRIEF.md`'s third failure mode is
+silent misuse: a vector applied at the wrong layer, hook point or chat template
+does not fail loudly, it appears not to work. A webpage can only display the
+application contract. A package can refuse to hand over a tensor whose shape or
+dtype disagrees with what the submission recorded, which `client.py` already does
+by raising `MismatchedArtifact`, and can carry the layer, hook point and
+coefficient range into the call site where they are actually used.
+
+It is also the only thing that produces the evidence the registry runs on. A
+support card is somebody reporting that they pinned a version and used it, and
+nobody writes one after looking at a page. They write one after the thing worked
+or did not.
+
+**Namespacing follows the object graph, not convenience.** `artifact` resolves and
+verifies bytes. Anything named for a schema object keeps that object's meaning, so
+a `pin` in the package records who pinned it, when, and what the alternatives were,
+exactly as `pin` does in the schema, or it is not called that.
+
+**Not yet decided:** whether resolution ever fetches from anywhere but a pinned
+commit, what the npm surface is, and whether there is a CLI. The name registrations
+on PyPI, npm and GitHub happen in the same sitting as the name going public, along
+with the intent-to-use filing, and none of that has happened.
+
+**What this makes impossible:** a website-only product. Anything the site can say
+about how to apply an artifact now has to be expressible as something the package
+can enforce or refuse, and a field that only renders is a field that will be got
+wrong at the call site.
+
+**Supersedes:** nothing.
