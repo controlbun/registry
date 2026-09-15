@@ -959,3 +959,76 @@ volume is refusal removal.
 **Supersedes:** nothing. Overrides, without amending, the launch-blocker clause
 in "The site is published on GitHub Pages, when the repo goes public". Revisit
 before the corpus grows or before anything is served as bytes.
+
+## 2026-09-15 OPEN: contribution goes through Supabase, not through the site or HF
+**Not decided.** Recorded because it is expensive to reconstruct and because two
+wrong turns were taken getting here. The plan that follows if it is taken is in
+`V2.md`. Gated on v1 shipping and on the dual-use policy existing.
+
+**The shape.** Supabase holds identity, submission writes and the pending state.
+Git holds the published snapshot, which is what the site builds from and what the
+falsifier checks. HF holds artifact bytes, which is already settled.
+
+**The property being defended is not "no backend".** It is that the published
+corpus is a file anyone can rebuild, diff and re-derive. Where writes happen is
+orthogonal to that.
+
+### Two corrections, recorded because both were argued out loud
+
+**Submission by pull request was proposed and is wrong.** A PR is public from the
+moment it opens, so a submission containing a refusal direction is visible to
+everyone before anyone reviews it. It was proposed specifically as the natural home
+for the dual-use gate, and it is the one mechanism that cannot gate the thing the
+policy exists for. Supabase's pending state is private by default, which is the
+property a review queue needs.
+
+**HF as the whole backend is wrong for one reason and it is not technical.** If
+identity, storage and metadata all live on HF, this is an HF feature, and the
+company most likely to ship a steering-artifact registry owns the user
+relationship. GitHub will never ship one. That asymmetry does not apply to bytes,
+because bytes are not a relationship, which is why HF stays the store. Neuronpedia
+already holds the "atlas on top of HF" position with 50M latents.
+
+### A refinement to "SQLite for v0, not Postgres"
+That entry says Postgres or Supabase later is a driver swap behind `db.py`. In this
+shape it is not a swap. SQLite stays as the build-time read store and Supabase is
+added alongside as the write store, so `db.py` gains no Postgres driver. Cheaper
+than that entry anticipated.
+
+### The design problem nobody had noticed
+`author` cannot become "a verified account". The seeding decision populates the
+corpus by indexing the literature, so most entries have an author who never signed
+up. Requiring an account makes the indexed corpus unrepresentable, which kills the
+plan that makes the registry worth existing.
+
+So `author` stays a namespace string and **claiming is a separate object.** A
+namespace starts unclaimed, indexed entries live there, and a claim binds an
+account to it on evidence. That is also the honest answer to squatting: the
+namespace is not the claim.
+
+### The erosion risk, which is worse here than in the alternative
+A submission queue is the most comfortable place in this system for quality review
+to grow, more comfortable than a diff, because a queue has a reviewer and a
+reviewer has opinions. Review checks schema validity, which `make verify` already
+automates, and dual-use, which is policy. **Never quality.** A submission that
+passes both gets published even if the reviewer thinks it is weak, because the
+reviewer thinking so is an attack card they can publish like anyone else.
+
+**Decline reasons should be a closed, published set, and this is the one
+legitimate closed enum in this schema.** Every other one constrains contributors;
+this one constrains the registry. Enumerating what we may refuse for is the
+inverse of the usual failure. The trip-wire list in `CLAUDE.md` needs to say so, or
+someone deletes it on principle.
+
+### Blocking unknowns
+HF is not one of Supabase's built-in OAuth providers, so this depends on its
+custom OIDC provider accepting HF. Unverified, and a no rewrites the identity
+section. Free plan checked 2026-09-15: 500 MB database, 1 GB storage, 50,000
+monthly active users, 5 GB egress, two active projects, paused after one week
+idle; Pro is $25/month and never pauses. The pause is an argument for the split,
+since it takes down submissions and leaves the site untouched.
+
+And the largest one, unchanged: nobody has established that anyone wants this.
+Building a contribution path before asking is the expensive order.
+
+**Supersedes:** nothing. Refines "SQLite for v0, not Postgres" as described above.
