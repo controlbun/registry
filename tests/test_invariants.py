@@ -18,11 +18,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = sorted((ROOT / "schema" / "migrations").glob("*.sql"))
-# Every directory holding code that can render or order a multi-submission view.
-# Adding a frontend without adding it here makes four of the nine invariants go
-# silently inert, which is worse than not having them: the suite stays green
-# while checking nothing.
-SOURCE_DIRS = [ROOT / "src", ROOT / "astro" / "src"]
+# Code is discovered, not listed. This used to be a list of two directories, and
+# the list is what failed: `artifacts/` was added on 2026-09-14 carrying the only
+# code in the repo that writes real submission and intervention rows, and no
+# invariant looked at it for a day. The guard beside it could not notice, because
+# it only asked whether each *listed* directory was readable and had no way to ask
+# whether every code directory was listed.
+#
+# So the default is inverted. Anything holding a scanned suffix is scanned unless
+# it is named below with a reason. A new directory is covered the moment it
+# exists, and the failure mode of getting this wrong is a false positive, which is
+# loud, rather than an inert scanner, which is silent and has now bitten three
+# times.
+NOT_SCANNED = {
+    # Tests write the forbidden spellings on purpose, to prove the scanners bite.
+    "tests",
+    # Not authored here: dependencies, build output, caches, local tooling.
+    ".venv", "node_modules", "dist", ".astro", ".git", ".claude", ".cache",
+    "__pycache__", ".pytest_cache", ".ruff_cache", "_local",
+    # Notarized manifests and brand assets. No code, and `_attest` is append-only.
+    "_attest", "brand",
+}
 
 SCANNED_SUFFIXES = {
     ".py", ".sql",                      # backend
@@ -47,11 +63,20 @@ def strip_sql_comments(sql: str) -> str:
     return "\n".join(line.split("--")[0] for line in sql.splitlines())
 
 
+def source_dirs() -> list[Path]:
+    """Every directory under ROOT holding a scanned file, minus NOT_SCANNED."""
+    found = {p.parent for p in source_files()}
+    return sorted(found)
+
+
 def source_files() -> list[Path]:
     out: list[Path] = []
-    for d in SOURCE_DIRS:
-        if d.exists():
-            out += [p for p in d.rglob("*") if p.suffix in SCANNED_SUFFIXES]
+    for p in ROOT.rglob("*"):
+        if p.suffix not in SCANNED_SUFFIXES or not p.is_file():
+            continue
+        if NOT_SCANNED & set(p.relative_to(ROOT).parts):
+            continue
+        out.append(p)
     return out
 
 
@@ -72,24 +97,71 @@ def scan(pattern: str) -> list[str]:
 # 0. The scanner actually reaches the code it claims to check.
 
 
-def test_scanner_covers_every_source_directory_that_exists():
-    """A frontend that the scanner cannot read is a frontend with no invariants.
+# The directories that must be reached, named so the scan cannot quietly stop
+# reaching one. This is the opposite of the old SOURCE_DIRS list: that one decided
+# what got scanned, so forgetting an entry made a scanner inert. This one only
+# asserts, so forgetting an entry costs an assertion and never coverage.
+MUST_REACH = {
+    "src/registry":  "the library",
+    "astro/src":     "the view layer, where a default sort would appear",
+    "fixtures":      "writes the synthetic corpus",
+    "artifacts":     "writes the real corpus",
+    "falsifier":     "re-derives every published number",
+}
 
-    This is the failure mode that bit already: a regex that matched nothing while
-    reporting success. Silence from a scan is only meaningful if the scan looked.
+
+def test_scanner_reaches_every_place_rows_and_views_are_made():
+    """Silence from a scan means nothing unless the scan looked.
+
+    Three times now a scanner here has been green while checking nothing:
+    `\\bbest\\b` never matched `best_submission`, the cosine scan kept looking for
+    `cosine_sim` after the field became `angle_similarity`, and `artifacts/` was
+    added carrying the only code that writes real rows while `SOURCE_DIRS` still
+    named two directories.
     """
-    unread = []
-    for d in SOURCE_DIRS:
-        if not d.exists():
-            continue
-        files = [p for p in d.rglob("*") if p.is_file()]
-        if not files:
-            continue  # an empty directory is scaffolding, not a blind spot
-        if not any(p.suffix in SCANNED_SUFFIXES for p in files):
-            unread.append(d.name)
-    assert not unread, (
-        "a source directory exists but nothing in it has a scanned suffix:\n  "
-        + "\n  ".join(unread)
+    reached = {str(d.relative_to(ROOT)) for d in source_dirs()}
+    missing = {
+        name: why for name, why in MUST_REACH.items()
+        if (ROOT / name).exists()
+        and not any(r == name or r.startswith(name + "/") for r in reached)
+    }
+    assert not missing, (
+        "the scanner does not reach code it has to read:\n  "
+        + "\n  ".join(f"{k}: {v}" for k, v in sorted(missing.items()))
+    )
+
+
+# Suffixes that mean somebody wrote code, deliberately wider than
+# SCANNED_SUFFIXES. The delta between the two sets is the blind spot, and the test
+# below asserts it is empty. Discovery keys on suffix, so a directory holding a
+# file type nobody added here is found by neither the scan nor the guard above:
+# that is the one hole inverting the default did not close, and it is the exact
+# hole named when the view layer moved to Astro.
+CODE_SUFFIXES = SCANNED_SUFFIXES | {
+    ".cjs", ".mts", ".cts",                          # other JS module flavors
+    ".svelte", ".vue",                               # other component formats
+    ".jinja", ".jinja2", ".j2", ".hbs", ".ejs",      # template languages
+    ".erb", ".twig", ".liquid", ".njk",
+    ".rs", ".go", ".rb", ".php", ".java", ".kt",     # other backends
+}
+
+
+def test_no_code_file_type_escapes_the_scanner():
+    """Adding a view in a file type nobody listed makes the scanners inert.
+
+    Not hypothetical. The Jinja frontend was retired for Astro, and if `.astro`
+    had not been added to the scanned set at the same time, four invariants would
+    have gone quiet on the one layer where a default sort or a bare trait score
+    appears. The suite would have stayed green.
+    """
+    outside = sorted({
+        p.suffix for p in ROOT.rglob("*")
+        if p.is_file() and p.suffix in CODE_SUFFIXES
+        and not (NOT_SCANNED & set(p.relative_to(ROOT).parts))
+    } - SCANNED_SUFFIXES)
+    assert not outside, (
+        "source files exist in types the scanner ignores, so every invariant "
+        f"below is blind to them: {outside}"
     )
 
 

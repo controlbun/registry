@@ -92,6 +92,30 @@ VIOLATIONS = {
         "disagreement = angle_similarity(a, b)\n",
         "test_cosine_is_never_evidence_of_disagreement",
     ),
+
+    # The directory that carried the only code writing real rows and that no
+    # invariant read for a day. These probe it specifically: a scanner that bites
+    # in `src/` and not here is the bug, not the fix.
+    "ordering on an eval result where real rows are written": (
+        "artifacts/probe.py",
+        'rows = ex("SELECT * FROM submission ORDER BY necessity_score DESC")\n',
+        "test_no_ordering_is_derived_from_an_eval_result",
+    ),
+    "closed enum where real rows are written": (
+        "artifacts/probe.py",
+        "PERMITTED_KINDS = ['direction', 'probe']\n",
+        "test_no_check_constraint_enumerates_strings",
+    ),
+    "absent eval coerced to zero in the falsifier": (
+        "falsifier/probe.py",
+        "value = row.transfer_score or 0\n",
+        "test_absent_eval_is_not_an_error",
+    ),
+    "label resolved to one artifact in the fixture builder": (
+        "fixtures/probe.py",
+        "def only(conn, label):\n    return _submissions(conn, label)[0]\n",
+        "test_nothing_resolves_a_label_to_one_artifact",
+    ),
 }
 
 
@@ -105,7 +129,11 @@ def _load_invariants(root: Path):
 
     module.ROOT = root
     module.MIGRATIONS = sorted((root / "schema" / "migrations").glob("*.sql"))
-    module.SOURCE_DIRS = [root / "src", root / "astro" / "src"]
+    # Nothing else to rebase. This used to restate the directory list, which meant
+    # widening the real scan would have left every probe below aimed at the old
+    # one: the bite tests would have kept passing while testing a scanner the
+    # repository no longer used. Discovery reads from ROOT, so moving ROOT is the
+    # whole rebase.
     return module
 
 
@@ -113,8 +141,9 @@ def _load_invariants(root: Path):
 def tree(tmp_path_factory):
     dest = tmp_path_factory.mktemp("probe") / "repo"
     dest.mkdir()
-    for part in ("schema", "src", "tests"):
-        shutil.copytree(ROOT / part, dest / part)
+    for part in ("schema", "src", "tests", "fixtures", "artifacts", "falsifier"):
+        shutil.copytree(ROOT / part, dest / part,
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     (dest / "astro").mkdir()
     shutil.copytree(ROOT / "astro" / "src", dest / "astro" / "src")
     return dest

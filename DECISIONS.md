@@ -767,3 +767,40 @@ can enforce or refuse, and a field that only renders is a field that will be got
 wrong at the call site.
 
 **Supersedes:** nothing.
+
+## 2026-09-14 Scanned code is discovered, not listed
+**Decided:** `tests/test_invariants.py` no longer holds a list of directories to
+scan. It walks the tree and scans everything with a source suffix except the names
+in `NOT_SCANNED`, each of which carries a reason.
+
+**Why:** the list is what failed. `artifacts/` was added carrying the only code in
+the repo that writes real `submission`, `intervention`, `recipe` and `eval_report`
+rows, and no invariant read it for a day. The guard beside it could not notice:
+it asked whether each *listed* directory was readable, which cannot detect a
+directory nobody listed.
+
+This is the third time a scanner here has been green while checking nothing, after
+`\bbest\b` never matching `best_submission` and the cosine scan still looking for
+`cosine_sim` after the field became `angle_similarity`. All three are the same
+shape. Inverting the default changes the failure mode from an inert scanner, which
+is silent, to a false positive, which is loud.
+
+**Two guards, because discovery keys on suffix and so has its own hole.**
+`test_scanner_reaches_every_place_rows_and_views_are_made` names the directories
+that must be reached and fails if one stops being scanned or gets excused.
+`test_no_code_file_type_escapes_the_scanner` compares `CODE_SUFFIXES` against
+`SCANNED_SUFFIXES` and fails on a view written in a type nobody listed, which is
+the hole named when the Jinja frontend moved to Astro.
+
+`tests/test_scan_gap_bite.py` narrows the scan back to `src` and `astro/src`,
+injects the same four violations into `artifacts/`, `fixtures/` and `falsifier/`,
+and asserts each one goes unnoticed, so the probes are proven to test the widening
+rather than to pass alongside it. It asserts `0 < narrow < wide` first, because a
+narrow scan reading nothing would make every probe pass vacuously from the other
+direction.
+
+**What this makes impossible:** keeping code out of the invariants by putting it
+somewhere new. Excluding a directory is now an edit to `NOT_SCANNED` with a reason
+next to it, and doing that to anything in `MUST_REACH` fails the build.
+
+**Supersedes:** nothing.
