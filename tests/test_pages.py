@@ -202,3 +202,31 @@ def test_a_rendered_date_matches_its_own_datetime_attribute():
                 assert int(m.group(3)) == stamp.year
 
     assert seen, "no dates rendered anywhere, so this proves nothing"
+
+
+def test_the_navigation_offers_nothing_it_cannot_deliver():
+    """A greyed-out link is worse than no link.
+
+    The home page carried an Account section (Profile, Submissions, Settings) and
+    a Resources section (Getting started, Documentation, Publishing a submission),
+    all marked "not in v0". A stranger reading the site cold ranked that the single
+    most costly thing on it: the site named their three needs by name and marked
+    all three unavailable, leaving nowhere to go but data it had already declared
+    fabricated.
+
+    Checked against the built page rather than the source, because what matters is
+    what a reader is offered.
+    """
+    home = DIST / "index.html"
+    if not home.exists():
+        pytest.skip("site not built; run `make site`")
+    html = home.read_text()
+
+    assert "not in v0" not in html, "the navigation still advertises what it lacks"
+    for promised in ("Getting started", "Publishing a submission", "Settings"):
+        assert promised not in html, f"{promised!r} is offered and does not exist"
+
+    # Every remaining destination resolves. `falsifier/links.py` proves this for
+    # the whole site; this keeps the home page honest on its own.
+    for real in ('href="/models/"', 'href="/owners/"', 'href="/about/"'):
+        assert real in html, f"{real} is missing from the navigation"

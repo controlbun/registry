@@ -53,7 +53,11 @@ def broken_links(dist: Path = DIST) -> dict[str, set[str]]:
     pages = built_pages(dist)
     broken: dict[str, set[str]] = {}
 
-    for p in sorted(dist.rglob("index.html")):
+    # Every .html, not every index.html. Clean URLs mean almost every page is an
+    # index.html, and scanning only those made a page that is not one invisible:
+    # 404.html shipped with six links nothing checked. Same shape as the invariant
+    # scanner that enumerated two directories and missed the third.
+    for p in sorted(dist.rglob("*.html")):
         rel = p.relative_to(dist).as_posix()
         source = "/" + rel[: -len("index.html")] if rel.endswith("index.html") else "/" + rel
         for href in HREF.findall(p.read_text()):
@@ -85,7 +89,7 @@ def main() -> int:
         )
         return 1
 
-    pages = len(list(DIST.rglob("index.html")))
+    pages = len(list(DIST.rglob("*.html")))
     print(f"links: every internal link resolves, across {pages} pages")
     return 0
 

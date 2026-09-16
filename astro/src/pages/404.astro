@@ -1,0 +1,77 @@
+---
+import Base from "../layouts/Base.astro";
+import data from "../data/registry.json";
+
+// A styled 404, because the default one threw the site away.
+//
+// Astro's built-in is a dark monospace framework page with no header, no
+// navigation and no way home, against a light serif site. A stranger reading the
+// site cold hit it twice: once on a nonsense URL, and once by trimming
+// /<owner>/<model>/<label>/<version>/ back to reach the label view, which is the
+// guess a GitHub-shaped URL trains you to make. Being lost is the one moment the
+// header matters most and it was the one moment it disappeared.
+//
+// The trimming case is worth answering rather than just surviving, so the shapes
+// are listed. They are the routes `[...path].astro` actually builds, and a reader
+// who guessed wrong can see which segment they dropped.
+//
+// `synthetic="none"` because this page publishes no figure at all, so the
+// corpus marker would be describing nothing.
+
+const models = data.model_index.map((m) => m.model_id).sort();
+---
+
+<Base title="Not found" trail={[{ text: "controlbun", href: "/" }]} synthetic="none">
+  <h1 slot="heading">Not found</h1>
+
+  <p class="lede">
+    There is nothing at this address. That is a fact about the URL rather than
+    about the registry: nothing here has been moved or withdrawn.
+  </p>
+
+  <h2>The shapes that exist</h2>
+
+  <dl class="spec">
+    <dt class="mono">/models/</dt>
+    <dd>Every model anything has been published against.</dd>
+
+    <dt class="mono">/models/&lt;model&gt;/</dt>
+    <dd>Our index entry for one model. The model itself lives elsewhere.</dd>
+
+    <dt class="mono">/models/&lt;model&gt;/&lt;label&gt;/</dt>
+    <dd>Everyone claiming that label against that model, side by side.</dd>
+
+    <dt class="mono">/&lt;owner&gt;/&lt;model&gt;/&lt;label&gt;/&lt;version&gt;/</dt>
+    <dd>
+      One submission. The version is part of the address because
+      <span class="mono">author/label@version</span> is the identity here and
+      nothing above it resolves to a single artifact.
+    </dd>
+
+    <dt class="mono">/owners/</dt>
+    <dd>Everyone who has taken part, whether or not they published an artifact.</dd>
+
+    <dt class="mono">/&lt;owner&gt;/</dt>
+    <dd>One person, and what they actually did.</dd>
+  </dl>
+
+  <p class="note">
+    A label has no page of its own. Claimants of the same word on different models
+    are not comparable, so there is nowhere sensible to put them together.
+  </p>
+
+  <h2>Models in the registry</h2>
+
+  <ul class="plain">
+    {models.map((id) => (
+      <li><a class="mono" href={`/models/${id}/`}>{id}</a></li>
+    ))}
+  </ul>
+
+  <p><a href="/">Back to the registry</a></p>
+</Base>
+
+<style>
+  .plain { list-style: none; padding: 0; }
+  .plain li { padding: .15rem 0; }
+</style>

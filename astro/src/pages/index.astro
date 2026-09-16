@@ -42,21 +42,24 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
     <SiteNav />
 
     <div class="home">
+      {/* Only destinations that exist.
+
+          This carried an Account section, Profile, Submissions and Settings, and
+          a Resources section, Getting started, Documentation and Publishing a
+          submission, all greyed out as coming soon. A stranger reading the site
+          cold ranked it the single most costly thing here: the site named their
+          three needs by name and marked all three unavailable, leaving nowhere to
+          go but sample data it had already declared fabricated.
+
+          Advertising the absence is worse than the absence. And the Account items
+          were advertising a specific account model that the v2 work now makes
+          unlikely, so they were promising the wrong thing as well as promising
+          nothing. */}
       <nav class="sidenav">
         <h3>Browse</h3>
         <a href="/models/">Models</a>
         <a href="/owners/">Owners</a>
-
-        <h3>Account</h3>
-        <span class="soon">Profile</span>
-        <span class="soon">Submissions</span>
-        <span class="soon">Settings</span>
-
-        <h3>Resources</h3>
-        <span class="soon">Getting started</span>
-        <span class="soon">Documentation</span>
-        <span class="soon">Publishing a submission</span>
-
+        <a href="/about/">About</a>
       </nav>
 
       <main class="intro">
