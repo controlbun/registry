@@ -256,17 +256,40 @@ ots upgrade <manifest>.sha256.ots   # network, pending proofs only
 
 ## Repo
 
-Private. Assume it may go public or gain collaborators later, so write nothing that
-would need a history rewrite to remove. This includes personal, financial and
-immigration details: keep them out of the repo entirely. Secrets in `.env` from the
-first commit, `.env` gitignored before the first file exists.
+`github.com/controlbun/registry`. Public, and the site is served from it.
+
+This section used to read "Private ... no Actions, no public push, no `gh`
+workflows", which was right for an off-site backup and incoherent for a repo that
+publishes a website. Amended deliberately rather than discovered mid-build, per
+the obligation recorded in `DECISIONS.md` 2026-09-13. Most of it survived; what
+changed is marked.
+
+**Write nothing that would need a history rewrite to remove.** This was a
+precaution and is now a fact: every commit is readable by anyone. Personal,
+financial and immigration details stay out of the repo entirely. Secrets live in
+`.env`, gitignored before the first file existed. The audit that checks this runs
+against the tip rather than the working tree, because publishing exposes every
+commit and not just the last one, and **its result is dated rather than
+permanent**: re-run it before any change in visibility and record the date. The
+most recent one is in `minor_updates.md`.
 
 Private working material goes in `_local/`, which is gitignored and never
-committed. Do not copy anything out of it into a tracked file.
+committed. Do not copy anything out of it into a tracked file. This matters more
+now, not less.
 
-A private GitHub repo exists as an off-site backup and is fine as such. Not
-*hosted* there in any other sense: no Actions, no public push, no `gh`
-workflows. The falsifier and the invariant tests are enforced by a local gate
-instead: a `make verify` target and a pre-push hook, both tracked so a
-collaborator inherits them. This is settled; do not re-raise the remote as a
-finding.
+**No Actions, and nothing on GitHub builds anything.** The prohibition on a public
+push is gone; the prohibition on a hosted build is not, and the reason it existed
+is unchanged. The falsifier and the invariant tests run in a local gate, `make
+verify` plus a pre-push hook, both tracked so a collaborator inherits them.
+
+Pages deploys from a branch carrying a locally built `astro/dist`. So what is
+served is the artifact that passed `make verify` on a machine, rather than
+whatever a runner produced from the same source. That equivalence is the whole
+point, and an Actions-based build would break it quietly: the falsifier would be
+checking one build and readers would be reading another.
+
+**Publishing also makes `_attest/` checkable by anyone**, rather than by anyone
+who is handed the files, which is most of what the proofs are for.
+
+Do not re-raise CI, Actions or a hosted build as a finding. Settled twice, once
+as a backup and once as a published site.
