@@ -1072,3 +1072,89 @@ namespace-and-claim design holds on its own.
 
 **Supersedes:** nothing. Sequences "The seed corpus is indexed, not submitted"
 behind v1, the package, and v2 contribution.
+
+## 2026-09-16 Recipes are namespaced, anyone publishes, and there is no list
+**Decided:** A recipe is identified by its namespaced versioned `profile`, exactly
+as `001_init.sql` already declares. Anyone publishes one without asking.
+controlbun publishes recipes under its own namespace like any other author and
+holds no privileged position. **There is no page listing available recipes and
+there is no set of them.**
+
+`controlbun.extract(artifact, model)` resolves a profile and runs it **on the
+caller's hardware**. The registry never runs a model, has no compute, and has no
+queue. Locally for anyone with weights, NDIF for anyone without, which is free
+for researchers and is what the arena already used.
+
+**Why the no-list clause is the load-bearing half.** `supported methods` is on the
+trip-wire list in `CLAUDE.md`, verbatim. If the registry ships the recipes then
+the registry decides which methods exist, and that is designation at the method
+layer, which is the one layer nobody had looked at. It arrives disguised as
+convenience: a "browse available recipes" view is obviously useful and is the whole
+failure.
+
+**The test, and it has to stay structural rather than editorial.** Can a stranger
+publish a working profile without asking, and does `extract()` find it. The moment
+there is a curated list of the recipes controlbun provides, it is a
+supported-methods list regardless of what the copy says.
+
+**Recipes stay declarative.** `profile` plus `payload_json`, parameters and not
+scripts. `soham/arena-contrast-v1` carries `estimator`, `token_masking`,
+`contrast_source`, `confounds_orthogonalized`: there is no code in it. Shipping
+other people's scripts is arbitrary code execution by design, and this project
+already refused `numpy.load(allow_pickle=True)` for exactly that reason, in
+`artifacts/ingest_arena.py`: "a registry that hands out other people's array files
+cannot be in the business of asking readers to trust a flag default." A profile
+that genuinely needs to be executable declares a `container_digest`, which is
+already in the table.
+
+**Consequence worth stating.** `extract()` output cannot be verified against a
+committed hash. Same recipe, same model, different GPU and kernels gives a
+different tensor. That is already covered: `Reproduction` "reports its delta
+rather than a pass", and cosine is a displayed fact rather than evidence of
+disagreement.
+
+**What this makes impossible:** a recipes index, a methods browser, any interface
+needing the full set of profiles in advance, and a curation role over methods. The
+division of labour is users bring the dataset and the compute, anyone brings the
+recipe, and we are one of the anyones.
+
+**Supersedes:** nothing. Makes explicit what `001_init.sql` and `CLAUDE.md`
+already implied about profiles, and adds the prohibition that was missing.
+
+## 2026-09-16 Attacks can be attacked
+**Decided:** An attack targets an intervention **or** another attack, exactly one.
+`author_disposition` and `author_response` become target-side fields, because the
+party under attack is not always an author.
+
+**Not built.** Needs a migration; `attack.intervention_id` is currently
+`NOT NULL REFERENCES intervention`, which is the thing in the way.
+
+**Why this is required rather than nice.** Count what the current table gives each
+side. The attacker gets `method`, `result_json` and `run_id`: structured evidence
+with provenance. The party under attack gets `author_response`, a prose field. So
+an attack is the last *evidenced* word, and an unrebuttable attack is an
+authoritative attack. That is designation moved down one layer, from the artifact
+to the evidence about it, and it is harder to catch there because it looks like
+rigor.
+
+An attack is itself an empirical claim and can be wrong. carol's is
+`alternative-confound-axis` with a measured sentiment number; her confound
+direction could itself be confounded and her probe set could be bad. There is
+currently no way to say so with evidence, only in prose owned by the person she
+attacked.
+
+The field rename is the tell that the generality was always there. Those fields
+were never about authorship, they were about being the party under attack.
+
+**Regress does not terminate, and that is consistent.** Nothing settles a chain of
+attacks, the same way nothing settles ten claimants on one label. The registry's
+answer in both cases is to make the disagreement legible and resolve none of it.
+
+**Still open, and not decided here: the render rule.** A depth-five tree on an
+artifact page is a forum, which is already rejected: "a comment attached to one
+artifact argues with one author, while the disagreement this registry is about
+happens between claimants of the same label." Probably attacks on the artifact,
+each showing whether it has been contested, the contest one level in, deeper on
+its own page. That is a rendering decision and it is unmade.
+
+**Supersedes:** nothing.
