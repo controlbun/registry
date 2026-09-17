@@ -49,6 +49,7 @@ from functools import lru_cache
 from safetensors.numpy import load_file
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from registry import artifact  # noqa: E402
 from registry.artifact import UnsafeArtifactPath, local_path  # noqa: E402
 
 
@@ -89,7 +90,18 @@ def text_of(page: Path) -> str:
 
 
 def check_artifacts_match_their_metadata(conn: sqlite3.Connection) -> None:
-    """Shape, dtype and L2 norm recomputed from the tensor on disk."""
+    """Shape, dtype and L2 norm recomputed from the tensor on disk.
+
+    The comparison itself is `registry.artifact.disagreements`, which is also
+    what the client applies to bytes it fetched and what both seed scripts apply
+    before they write a row. Three callers, one rule, one tolerance on the norm:
+    this used to hold its own copy, and a gate that disagrees with the write
+    path about what counts as a mismatch either passes rows it should stop or
+    stops rows it should have let through.
+
+    What stays here is everything only a falsifier does: report instead of
+    raising, skip a row with no bytes in this repository, and name the row.
+    """
     rows = conn.execute(
         "SELECT id, artifact_path, shape, dtype, l2_norm FROM intervention"
     ).fetchall()
@@ -117,18 +129,15 @@ def check_artifacts_match_their_metadata(conn: sqlite3.Connection) -> None:
                               f"({exc})")
             continue
 
-        if f"[{vector.shape[0]}]" != row["shape"]:
-            fail("artifacts", f"{row['id']}: shape on disk {list(vector.shape)} "
-                              f"but stored {row['shape']}")
-        if str(vector.dtype) != row["dtype"]:
-            fail("artifacts", f"{row['id']}: dtype on disk {vector.dtype} "
-                              f"but stored {row['dtype']}")
-
-        if row["l2_norm"] is not None:
-            actual = float(np.linalg.norm(vector))
-            if abs(actual - row["l2_norm"]) > 1e-4:
-                fail("artifacts", f"{row['id']}: L2 norm recomputes to {actual:.6f} "
-                                  f"but stored {row['l2_norm']}")
+        # A stored NULL arrives as a `None` on the claim and is skipped there,
+        # so the three `is not None` branches this used to carry are one rule in
+        # one place now: absence is not a mismatch.
+        for line in artifact.disagreements(
+            artifact.Claim(shape=row["shape"], dtype=row["dtype"],
+                           l2_norm=row["l2_norm"]),
+            artifact.facts_of(vector),
+        ):
+            fail("artifacts", f"{row['id']}: {line}")
 
 
 def check_artifact_digests_match_the_record(conn: sqlite3.Connection) -> None:
@@ -182,11 +191,17 @@ def check_artifact_digests_match_the_record(conn: sqlite3.Connection) -> None:
                             "the recorded digest describes bytes nobody has")
             continue
 
-        actual = hashlib.sha256(path.read_bytes()).hexdigest()
-        if actual != row["artifact_sha256"]:
-            fail("digests", f"{row['id']}: {row['artifact_path']} hashes to "
-                            f"{actual} but the row records "
-                            f"{row['artifact_sha256']}")
+        # Hashed without parsing, so the derived facts are a digest and a byte
+        # count and nothing else. `disagreements` compares only what both sides
+        # hold, which is what lets the same function serve this check and the
+        # one above without either of them growing a mode.
+        blob = path.read_bytes()
+        for line in artifact.disagreements(
+            artifact.Claim(sha256=row["artifact_sha256"]),
+            artifact.Facts(sha256=hashlib.sha256(blob).hexdigest(),
+                           size=len(blob)),
+        ):
+            fail("digests", f"{row['id']}: {row['artifact_path']} is {line}")
         checked += 1
 
     if checked == 0:

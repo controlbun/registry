@@ -1333,3 +1333,103 @@ proves nothing at all. `tests/test_picker_bites.py` reintroduces ten specific
 failures and asserts each check goes red.
 
 **Supersedes:** nothing.
+
+## 2026-09-17 A writer states what it claims about an artifact and the bytes confirm it
+**Decided:** `registry.artifact` gains `Claim`, `Facts`, `disagreements` and
+`confirmed`. A caller hands over artifact bytes plus whatever it claims about
+them and gets back the facts to record, or a refusal naming both sides of every
+field that does not match. Shape, dtype, L2 norm and sha256 are compared.
+`fixtures/build.py` and `artifacts/seed.py` both go through it and neither types
+a tensor fact into an `INSERT` any more. `client.Submission._check` and both
+falsifier checks call the same comparison, so there is one of it rather than
+three.
+
+**The claim is checked, not replaced, and getting that backwards is the whole
+failure.** A function that recomputed and overwrote would be shorter and would
+throw away the thing worth having. `artifacts/seed.py` records `[5120]`,
+`float32` and a unit norm because those are cited: 5120 is the residual width of
+the model the arena ran, the ingest refuses anything but a 1-D float32 array,
+and `artifacts/REAL.md` states the shipped directions are unit-norm. The value
+of that row is that the citation and the bytes agree. Recompute over it and the
+column holds a number that agrees with the bytes by construction, which is the
+same nothing `fixtures/build.py` already says its own digest is worth. So a
+claim that survives is what gets recorded, and a caller with nothing to claim
+gets the derived value.
+
+**Why:** `S1` made `artifact_sha256` derived from the bytes and left the three
+fields beside it in the same statement as literals somebody had typed. The
+values were right. The mechanism was that somebody had been careful, and it has
+no failure mode short of being wrong and staying wrong, because every later
+check reads the row. Downstream does not save it: the client and the falsifier
+compare arriving bytes *against* the record, so a record that is wrong is not
+corrected by them, it is enforced by them. A mistyped shape makes the client
+refuse the author's own artifact and name their bytes as the substituted ones,
+which is the harm `006` already named for a mistyped digest.
+
+**The tolerance question, answered once.** A digest identifies a file and has no
+tolerance. A norm is derived at both ends and the two ends can derive it
+differently: `d_olmo3_v1.safetensors` norms to exactly 1.0 read as float32 and
+to 1.0000000000683045 promoted to float64. `artifact.L2_TOLERANCE` is 1e-4,
+which is the number `falsifier/verify.py` already applied, and the two are now
+one constant on purpose. A write-time rule stricter than the gate that rechecks
+the row later refuses rows that would have reconciled; a looser one admits rows
+that gate rejects after they are published. Equal is the only setting at which
+the two agree. The value is bounded by a test to the band `.toFixed(4)` implies:
+at least half of the last rendered digit, because a citation read off a page is
+only knowable to that, and no more than one whole rendered digit, because
+anything larger records a norm as agreeing while it renders as a different
+number.
+
+**The read path claims three of the four, deliberately.** `_check` claims shape,
+dtype and digest and does not claim the norm. Its old reason, that repeating the
+norm here with a stricter rule would reject good artifacts on a rounding
+difference, is void now that there is one tolerance. The real reason is that a
+tolerance-bearing claim is worth enforcing where it is authored, because that is
+the moment it can still be corrected. Enforcing it again at read time, against a
+row that is frozen and immutable, makes a published artifact permanently
+unfetchable over a descriptive float no application reads: coefficients scale
+against `activation_norm`, not this one. An identifying claim is enforced
+everywhere and a descriptive one where it is written.
+
+**What this makes impossible to express:** a row that describes an artifact
+differently from how the artifact reads. That sounds like nothing lost and is
+not quite. An author who records the norm their extraction script printed, in
+float64, against a float32 file that reads slightly differently, is now refused
+at write time on a difference that is real and uninteresting; the tolerance is
+what keeps that from biting and the tolerance is a judgment. An author whose
+tensor is genuinely two-dimensional, or whose file holds two tensors because the
+second is a bias, cannot be written at all. Those are not hypothetical
+plurality: `kind` is an open string and an SAE latent or a ReFT edit may not be
+one 1-D tensor. What this does not do is make any field required. Claiming
+nothing is a state and returns the derived value, and no column became
+`NOT NULL`.
+
+**Safety:** a refusal, not a route. No new distribution capability, nothing
+fetched in bulk, and no upload path. The write path this prepares is v2 and is
+still gated on the dual-use policy.
+
+**Where the guard lives.** `tests/test_write_claim_bite.py`. Twelve mutations of
+the implementation were applied and each one was confirmed to turn a check red,
+including two that were green the first time and had to be closed: a writer that
+checks the bytes and then types the value next to the result, and a tolerance
+widened until every probe stated as a multiple of it slides through. The probe
+that matters is the pointer-only row, where a wrong shape reaches the database,
+the falsifier cannot see it because it is offline by design, and the client then
+refuses the author's correct bytes. Not added to the invariant list in
+`CLAUDE.md`, on the same reading as `006`: that list is the plurality premise
+made executable, and this is correctness in the writers and the client. Raise it
+if that reading is wrong.
+
+**Three incidental findings.** The falsifier was the third implementation of the
+same comparison rather than a bystander, and it held its own copy of the
+tolerance. Its shape derivation was `f"[{vector.shape[0]}]"`, correct for every
+1-D tensor in the corpus and silently wrong for the first artifact that is not
+one; it reads `str(list(tensor.shape))` now, which is what the client and both
+writers use. And the two writers were making different kinds of claim under one
+appearance: `artifacts/seed.py` cites, while `fixtures/build.py` restates what
+`write_vector` promises twelve lines above it. Both are checkable and only the
+first is provenance.
+
+**Supersedes:** nothing. Pays off item 4 of `V2.md`'s order list, and finishes
+what "Fetched bytes are checked against a recorded digest" (2026-09-16) started
+on the read path.

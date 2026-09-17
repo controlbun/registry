@@ -12,18 +12,19 @@ Every measurement below is cited to a file in steering-arena at the pinned commi
 None is computed here and none is rounded: where a value has three decimals in the
 source, it has three here. `artifacts/REAL.md` says which file each came from.
 
-One value is computed rather than cited, and it is not a measurement.
-`artifact_sha256` is read off the vendored file and refused unless it matches what
-`ingest_arena.py` recorded, because a digest that was typed in is a digest that
-can be typed in wrong. See `digest` below.
+Four values are checked against the bytes rather than trusted, and none of them
+is a measurement: the shape, the dtype, the L2 norm and `artifact_sha256`. Three
+are cited, one is computed, and every one of them is refused unless the vendored
+file agrees. A fact about a tensor that was typed in is a fact that can be typed
+in wrong, and the row is what every later check reads. See `confirmed_facts`.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -31,7 +32,7 @@ ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(HERE))
 
-from registry import db  # noqa: E402
+from registry import artifact, db  # noqa: E402
 from registry.artifact import local_path  # noqa: E402
 from source import COMMIT, DIRECTIONS, REPO  # noqa: E402
 
@@ -64,11 +65,30 @@ INGESTED = {
 }
 
 
-def digest(rel: str) -> str:
-    """sha256 of one vendored artifact, computed from disk and cross-checked.
+# Cited, not derived here, and checked against the bytes by `confirmed_facts`.
+#
+#   shape    5120 is the residual width of allenai/Olmo-3-1125-32B, which is what
+#            Season 3 runs. `CONTEXT.md`.
+#   dtype    `ingest_arena.py` refuses anything that is not a 1-D float32 array
+#            before it converts, so this is the conversion's own contract.
+#   l2_norm  the shipped directions are unit-norm; `artifacts/REAL.md` states it
+#            and the `mean_train_gap` identity recorded in the recipe depends on
+#            it. 1.0 is the cited value, not a rounding of a measurement made
+#            here: read as float64 the file norms to 1.0000000000683045, and
+#            which of those two the column should hold is exactly the question
+#            `registry.artifact.L2_TOLERANCE` answers.
+#
+# Kept as a claim rather than replaced by a recomputation, because a citation
+# that the bytes agree with is worth more than a number derived from the bytes
+# it is being compared to. See `_keep_the_claim`.
+CITED = artifact.Claim(shape="[5120]", dtype="float32", l2_norm=1.0)
+
+
+def confirmed_facts(rel: str) -> artifact.Facts:
+    """One vendored artifact's facts, every one of them checked against its bytes.
 
     **The cross-check against `source.py` is deliberate, and the reason is that
-    computing a number is not the same as verifying one.** Without it this
+    computing a number is not the same as checking one.** Without it this
     function reads whatever happens to be in `artifacts/soham/` and writes it
     into the database as the digest that artifact is published with. Every later
     check then passes by construction: the client would refuse bytes that
@@ -76,27 +96,36 @@ def digest(rel: str) -> str:
     transcription problem inverted rather than solved.
 
     `source.py` carries an independent record. Its value was recorded when
-    `ingest_arena.py` converted a `.npz` it had already verified against a
-    sha256 at a pinned GitHub commit, so the two agreeing means the file here is
-    the file that conversion produced from bytes the author published.
+    `ingest_arena.py` converted a `.npz` it had already checked against a sha256
+    at a pinned GitHub commit, so the two agreeing means the file here is the
+    file that conversion produced from bytes the author published.
 
     `make site` runs `ingest_arena.py --check`, which compares the same pair. It
     runs after this script, and it is a separate step somebody can drop from the
     chain. Checking at the moment the claim is written is the point: a seeder
     that will write a provenance claim about bytes it has not identified is the
     defect, whatever runs afterwards.
+
+    **The same argument reaches three fields further than it used to.** Shape,
+    dtype and norm went into the same `INSERT` as typed literals while the
+    digest beside them was cross-checked, so one field of four was derived from
+    the artifact and three were transcriptions sitting next to it. They are all
+    claims now and all four are compared.
     """
     path = local_path(rel, root=ROOT)
-    got = hashlib.sha256(path.read_bytes()).hexdigest()
-    recorded = INGESTED[path.name]
-    if got != recorded:
+    # The three cited fields plus the one this repository recorded itself.
+    # `replace` rather than a fresh `Claim`, so a fifth field on `Claim` is
+    # carried here without anybody remembering to add it.
+    claim = replace(CITED, sha256=INGESTED[path.name])
+    try:
+        return artifact.confirmed(path.read_bytes(), claim, subject=rel)
+    except artifact.MismatchedArtifact as mismatch:
         raise SystemExit(
-            f"{rel}: sha256 {got} does not match the {recorded} recorded at "
-            "ingest. Refusing to seed: writing this row would publish a digest "
-            "for bytes that are not the ones this repository converted. Rerun "
-            "artifacts/ingest_arena.py and find out which of the two moved."
-        )
-    return got
+            f"{mismatch}\n\nRefusing to seed: writing this row would publish a "
+            "claim about bytes that are not the ones this repository converted "
+            "at ingest. Rerun artifacts/ingest_arena.py and find out which of "
+            "the two moved."
+        ) from mismatch
 
 
 # The author's own version string inside each `.npz`, kept because it is what the
@@ -166,6 +195,7 @@ def seed(conn) -> None:
 
     for version in ("meandiff", "logistic", "lda"):
         rel = f"artifacts/soham/{FILES[version]}"
+        facts = confirmed_facts(rel)
 
         ex(
             "INSERT INTO submission (author,label,version,definition,created_at,"
@@ -186,8 +216,10 @@ def seed(conn) -> None:
                 # serving and the script captured an empty model_build. See
                 # schema/migrations/005.
                 None,
-                LAYER, "block-0indexed", "resid_post", "[5120]", "float32",
-                1.0,
+                # Cited above, checked against the file, written as cited. See
+                # CITED and `confirmed_facts`.
+                LAYER, "block-0indexed", "resid_post", facts.shape, facts.dtype,
+                facts.l2_norm,
                 # Not recorded, and not the same as unknown: the residual norm at
                 # layer 32 is measured (50.97, in the layer sweep) but the
                 # bake-off did not scale by it. Recording it here would say the
@@ -205,7 +237,7 @@ def seed(conn) -> None:
                 # Recorded, unlike the two above. These three are the only rows
                 # in the corpus whose bytes this repository did not write, so
                 # they are the case the column exists for.
-                digest(rel),
+                facts.sha256,
             ),
         )
 

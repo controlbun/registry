@@ -10,7 +10,6 @@ fixture leaking into anything real is obvious on sight rather than plausible.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -21,7 +20,7 @@ from safetensors.numpy import save_file
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import db  # noqa: E402
+from registry import artifact, db  # noqa: E402
 from registry.artifact import sort_header  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -43,23 +42,38 @@ def write_vector(name: str, values: np.ndarray, meta: dict[str, str]) -> Path:
     return path
 
 
-def digest(path: Path) -> str:
-    """sha256 of the file on disk, computed rather than transcribed.
+def confirmed_facts(path: Path) -> artifact.Facts:
+    """Everything the row records about the tensor, checked against the tensor.
 
-    Honest about what this buys and what it does not. For a file this same script
-    wrote four lines earlier, the digest cannot disagree with the bytes, so
-    nothing here is verified by recording it. The value is downstream: the client
-    compares bytes that arrived from somewhere else against this, the falsifier
-    recomputes it from the committed file on every run, and both of those can
-    fail. `artifacts/seed.py` records the same column with a real cross-check,
-    because there the bytes came from somebody else and a second record of them
-    exists.
+    This used to be `digest()`, returning one sha256 while the three tensor
+    facts beside it in the same `INSERT` were typed out as `f"[{DIM}]"`,
+    `"float32"` and `1.0`. They were right. The mechanism was that they were
+    typed by somebody who knew, and that mechanism has no failure mode short of
+    being wrong and staying wrong, because every later check reads the row.
 
-    Not a fabricated number and not exempt from the rule against them: it is
-    derived from the fixture bytes, so it changes when they do, which is the
-    whole of what a digest claims.
+    **What the claim is here, since nobody cited it from anywhere.** It is what
+    `write_vector` twelve lines up promises: a float32 array of length `DIM`,
+    divided by its own norm. Claiming it and checking it turns that promise into
+    something that can fail, so a `write_vector` that stopped normalizing, or a
+    `DIM` that stopped matching the ramp, is a build that refuses rather than a
+    corpus that quietly describes itself wrong.
+
+    **The digest half stays as honest as it was.** For a file this same script
+    wrote four lines earlier the digest cannot disagree with the bytes, so
+    nothing is established by recording it. Its value is downstream: the client
+    compares bytes that arrived from somewhere else against it and the falsifier
+    recomputes it from the committed file every run. `artifacts/seed.py` records
+    the same column against a second, independent record of the same bytes,
+    which is the version that can fail.
+
+    None of these is a fabricated number. Each is derived from, or checked
+    against, the fixture bytes, so all of them change when those do.
     """
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return artifact.confirmed(
+        path.read_bytes(),
+        artifact.Claim(shape=f"[{DIM}]", dtype="float32", l2_norm=1.0),
+        subject=str(path.relative_to(ROOT)),
+    )
 
 
 MODEL_A = ("placeholder/does-not-resolve-1b", "0" * 40, 4, "resid_post")
@@ -164,6 +178,13 @@ def seed(conn, vectors: dict[str, Path]) -> None:
     }
     for author, path in vectors.items():
         label, kind, (mid, rev, layer, hook) = spec[author]
+        # Four tensor facts out of one call, all four checked against the bytes
+        # the row points at. `activation_norm` and the coefficient range are not
+        # in there and cannot be: they are synthetic repeated-digit stand-ins for
+        # something a model would have to be run to measure, and there is nothing
+        # in the file to check them against. The line between the two is whether
+        # the artifact itself can answer.
+        facts = confirmed_facts(path)
         ex(
             "INSERT INTO intervention (id,author,label,version,kind,model_id,"
             "model_revision,layer,layer_convention,hook_point,shape,dtype,"
@@ -172,10 +193,10 @@ def seed(conn, vectors: dict[str, Path]) -> None:
             "is_synthetic)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
             (f"iv_{author}", author, label, "v1", kind, mid, rev, layer,
-             "block-0indexed", hook, f"[{DIM}]", "float32",
-             1.0, 11.1111, 0.5, 1.5, "all-positions",
+             "block-0indexed", hook, facts.shape, facts.dtype,
+             facts.l2_norm, 11.1111, 0.5, 1.5, "all-positions",
              "unresolved", "sha256:" + "e" * 8, f"fixtures/{path.name}",
-             digest(path)),
+             facts.sha256),
         )
 
     # The same kind as dana's, with the provenance dana's lacks. A latent is only

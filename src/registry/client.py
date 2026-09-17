@@ -25,19 +25,14 @@ the adapter is a small function to write once the target library is pinned.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
-# Aliased: this module exposes its own public `load(ref)`, and importing
-# safetensors' `load` shadowed it, so every call went to the parser and got a
-# ref where it wanted bytes. Same shadowing that renamed compare.py.
-from safetensors.numpy import load as load_bytes
 
-from . import db, fetch
+from . import artifact, db, fetch
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = ROOT / "registry.db"
@@ -47,13 +42,12 @@ class BareLabelError(LookupError):
     """Raised when a bare label is handed to `load`."""
 
 
-class MismatchedArtifact(RuntimeError):
-    """The bytes that arrived are not what the submission says they are.
-
-    Raised rather than warned. A tensor whose shape disagrees with the record is
-    not a degraded version of the artifact, it is a different artifact, and
-    handing it back would make every number on the page describe something else.
-    """
+# The bytes that arrived are not what the submission says they are. Defined in
+# `artifact`, next to the comparison that raises it, and re-exported here
+# unchanged: it was this module's name first, `registry/__init__.py` publishes
+# it, and the tests catch `client.MismatchedArtifact`. One class, two spellings
+# of the same import, so `except` and `isinstance` keep working either way.
+MismatchedArtifact = artifact.MismatchedArtifact
 
 
 class NotFound(LookupError):
@@ -168,69 +162,44 @@ class Submission:
     def _check(self, blob: bytes) -> np.ndarray:
         """What arrived against what was recorded, then the tensor it holds.
 
-        Takes bytes rather than a tensor so the digest is compared before a parser
-        sees the file. `artifacts/ingest_arena.py` already works that way and is
-        the model: it verifies a sha256 before `np.load` touches a `.npz`. The
-        arbitrary-code argument that motivated it there does not carry here,
-        because safetensors cannot express an object array, which is why the
-        registry normalizes to it on ingest. What remains is that the parser is
-        the first code to touch bytes that a server we do not run just sent us,
-        and one hash of a 20KB buffer is a cheap thing to do first.
+        One line of work now, because the comparison moved to
+        `registry.artifact` where the write path can reach it too. It used to be
+        written out here, and a second copy of it appeared on the write path the
+        moment there was one, which is how `pairwise` and the two `<head>`
+        blocks went. What this method still owns is the question only the reader
+        can answer: **which facts a fetch is entitled to insist on.**
 
-        **Three comparisons, and the digest is the one that can fail alone.**
-        Shape and dtype are two facts, and a great many tensors satisfy both: a
+        **Three of the four, and the digest is the one that can fail alone.**
+        Shape and dtype are two facts and a great many tensors satisfy both: a
         substituted float32 [5120] passes them and is a different artifact. The
         digest identifies the file. Shape and dtype stay because they are what
-        the record promises for an artifact whose digest nobody recorded.
+        the record promises for an artifact whose digest nobody recorded, and
+        because applying a wrong-shaped tensor does not fail loudly.
+
+        **The L2 norm is claimed at write time and not here, deliberately.** A
+        tolerance-bearing claim is worth enforcing where it is authored, because
+        that is the moment it can still be corrected. Enforcing it again at read
+        time, against a row that is frozen and immutable, makes a published
+        artifact permanently unfetchable over a descriptive float that no
+        application reads: coefficients scale against `activation_norm`, not
+        this. An identifying claim is enforced everywhere; a descriptive one is
+        enforced where it is written and re-derived by the falsifier after.
 
         **No recorded digest is a state, not a refusal.** Most artifacts are
-        pointed at rather than held and nobody hashed their bytes. Refusing those
-        would make the column a required field by the back door, which is the
-        shape every quality gate in this project arrives in.
-
-        The L2 norm is still deliberately not checked here: it is a float that
-        went through a text column and back, and the falsifier already re-derives
-        it with the tolerance that comparison needs. Repeating it here with a
-        stricter rule would reject good artifacts on a rounding difference. A
-        digest has no tolerance question, which is the other reason it belongs
-        here and the norm does not.
+        pointed at rather than held and nobody hashed their bytes. Refusing
+        those would make the column a required field by the back door, which is
+        the shape every quality gate in this project arrives in. `Claim` says
+        that with a `None` rather than with a branch.
         """
-        want_digest = self.contract.artifact_sha256
-        if want_digest:
-            got_digest = hashlib.sha256(blob).hexdigest()
-            if got_digest != want_digest:
-                raise MismatchedArtifact(
-                    f"{self.ref} is recorded as sha256 {want_digest} and the "
-                    f"{len(blob)} bytes that arrived hash to {got_digest}. These "
-                    "are not the bytes this submission was published with. A "
-                    "pinned reference resolves to one frozen artifact forever, so "
-                    "this is not a newer version; something between the author "
-                    "and here returned a different file."
-                )
-
-        tensors = load_bytes(blob)
-        if len(tensors) != 1:
-            raise MismatchedArtifact(
-                f"{self.ref} resolved to a file holding {len(tensors)} tensors "
-                f"({sorted(tensors)}). A submission is one artifact."
-            )
-        tensor = next(iter(tensors.values()))
-
-        want_shape = self.contract.shape
-        got_shape = str(list(tensor.shape))
-        if want_shape and got_shape != want_shape:
-            raise MismatchedArtifact(
-                f"{self.ref} is recorded as shape {want_shape} and the bytes that "
-                f"arrived are {got_shape}. The artifact and the record have come "
-                "apart; nothing here is safe to use until that is explained."
-            )
-        want_dtype = self.contract.dtype
-        if want_dtype and str(tensor.dtype) != want_dtype:
-            raise MismatchedArtifact(
-                f"{self.ref} is recorded as {want_dtype} and the bytes that "
-                f"arrived are {tensor.dtype}."
-            )
-        return tensor
+        return artifact.confirmed(
+            blob,
+            artifact.Claim(
+                shape=self.contract.shape,
+                dtype=self.contract.dtype,
+                sha256=self.contract.artifact_sha256,
+            ),
+            subject=self.ref,
+        ).tensor
 
     def torch(self):
         """The same tensor as a torch tensor. Imported lazily so torch stays
