@@ -65,6 +65,19 @@ test instead: is the registry asserting correctness, or is a consumer freezing a
 reference for its own measurement? The first is the failure. The second is fine as
 long as it is visible.
 
+**"Better" is not on the list and "the best" is, and that gap is deliberate.**
+There is always a better one for what somebody is doing. There is never a best
+one. Better is a comparative a consumer makes for one purpose, which is pinning,
+which is the product; best is a superlative the registry would be asserting for
+everyone, which is designation. The founding sentence on `/about/` is "if I could
+reuse someone else's **better** pro-human direction without the effort", so a
+rule that forbade the comparative would forbid the reason this exists.
+
+This is a trap for a word list rather than for a reader: banning the substring
+catches the sentence the project was started over. A test in
+`tests/test_situation_picker.py` did exactly that before it was corrected. Run
+the designate/pin test on the sentence, not a grep on the word.
+
 Some of these will survive scrutiny. None should pass without it.
 
 ### The inverse question, asked every time

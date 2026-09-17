@@ -95,19 +95,38 @@ def test_the_script_and_the_markup_have_not_drifted():
         )
 
 
-def test_no_option_asks_the_registry_to_pick():
-    """The reason 'make a better one' is not on the menu.
+def test_no_option_asks_the_registry_to_designate():
+    """Better is fine. Best is not, and the difference is the whole project.
 
-    Every option has to be answerable without the registry ranking anything. A
-    reader who wants to be told which artifact is good is the reader this
-    project is built to disappoint, and offering them that as a choice would
-    promise it.
+    **Better is a consumer's judgment, made for one purpose.** Somebody compares
+    two claimants and picks one for their own work; that is pinning, it is
+    ordinary experimental control, and informing it is what this registry is
+    for. The founding sentence on /about/ is "if I could reuse someone else's
+    better pro-human direction without the effort".
+
+    **Best is the registry's judgment, made for everyone.** A total ordering, one
+    answer, nobody's purpose in particular. That is designation and it is the
+    thing refused.
+
+    So this bans the superlative and the words that ask us to choose, and lets
+    the comparative through. The first version of this test banned the substring
+    "better" and would have forbidden the sentence the project started over,
+    which is what applying a word list instead of the designate-or-pin test in
+    CLAUDE.md gets you.
     """
     options = re.findall(r"<option value=\"([^\"]+)\"", home())
-    banned = ("better", "best", "top", "recommend", "which one")
+    assert options, "no options rendered"
+
+    # Superlatives, and phrasings that hand the choice to the registry.
+    designating = (
+        "best", "top ", "top-", "highest", "leading", "recommended",
+        "official", "approved", "verified", "which one should",
+    )
     for option in options:
         low = option.lower()
-        for word in banned:
+        for word in designating:
             assert word not in low, (
-                f"option {option!r} promises a judgment the registry does not make"
+                f"option {option!r} asks the registry to designate. A reader "
+                "comparing two claimants for their own purpose is the product; "
+                "being told which is the right one is not."
             )
