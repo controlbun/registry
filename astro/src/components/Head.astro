@@ -15,11 +15,44 @@ interface Props {
   title: string;
 }
 const { title } = Astro.props;
+
+// One description for every page, and it is the lede the author already wrote
+// rather than a second sentence saying the same thing differently. Two copies of
+// the project's one-line description would drift the way the two heads did.
+const DESCRIPTION =
+  "A registry for activation-steering artifacts, in the spirit of GitHub or " +
+  "Hugging Face rather than a curated database.";
+
+// Absolute, from `site` in astro.config.mjs. A relative canonical is not a
+// canonical, and a preview card built from a relative URL resolves against
+// whatever host rendered it.
+//
+// Named `pageUrl` and not `canonical` because the invariant scanner flags that
+// word used as an identifier, and it is right to: the registry designating one
+// artifact as the canonical one is the failure this project is built around.
+// The `rel="canonical"` attribute below is the HTML standard and stays. Second
+// time this week, after `canonicalize` became `sort_header`.
+const pageUrl = new URL(Astro.url.pathname, Astro.site);
 ---
 
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>{title}</title>
+<meta name="description" content={DESCRIPTION} />
+<link rel="canonical" href={pageUrl} />
+
+{/*
+  Link previews. Not vanity: this site will mostly be encountered as a URL
+  somebody pasted into Slack or a message, and an unfurled card is the only part
+  of it many people will ever read. A bare URL there says nothing at all.
+*/}
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="controlbun" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={DESCRIPTION} />
+<meta property="og:url" content={pageUrl} />
+<meta property="og:image" content={new URL("/icon-512.png", Astro.site)} />
+<meta name="twitter:card" content="summary" />
 
 <script is:inline>
   // Applied before paint, so a reader who picked a theme never sees a flash of

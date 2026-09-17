@@ -121,3 +121,56 @@ def test_every_page_has_a_title():
     for p in pages():
         m = re.search(r"<title>(.*?)</title>", p.read_text())
         assert m and m.group(1).strip(), f"{p.relative_to(DIST)} has no title"
+
+
+def test_the_cname_reaches_the_build():
+    """Pages reads this out of the published output to answer on the domain.
+
+    In `astro/public/` rather than a hosting dashboard, so the domain is in
+    version control and a rebuild cannot drop it silently.
+    """
+    if not DIST.exists():
+        pytest.skip("site not built; run `make site`")
+    cname = DIST / "CNAME"
+    assert cname.exists(), "no CNAME in the build; Pages would serve the default domain"
+    assert cname.read_text().strip() == "controlbun.com"
+
+
+def test_every_page_carries_an_absolute_canonical_matching_its_own_path():
+    """A relative canonical is not a canonical, and a wrong one is worse.
+
+    Checked per page rather than once, because the URL is derived from
+    `Astro.url.pathname` and a layout that built its own head would get a
+    different answer. Two heads drifting is what this component exists to stop.
+    """
+    for path in pages():
+        html = path.read_text()
+        m = re.search(r'<link rel="canonical" href="([^"]+)"', html)
+        assert m, f"{path.relative_to(DIST)} has no canonical"
+        href = m.group(1)
+        assert href.startswith("https://controlbun.com/"), (
+            f"{path.relative_to(DIST)} canonical is not absolute: {href}"
+        )
+        rel = path.relative_to(DIST).as_posix()
+        expected = "/" + rel[: -len("index.html")] if rel.endswith("index.html") else "/" + rel
+        assert href == "https://controlbun.com" + expected, (
+            f"{path.relative_to(DIST)} claims to be {href}"
+        )
+
+
+def test_link_previews_are_present_and_the_title_is_the_page_title():
+    """The unfurled card is the only part of this many people will read."""
+    home = (DIST / "index.html").read_text() if (DIST / "index.html").exists() \
+        else pytest.skip("home page not built")
+    for name in ("og:type", "og:site_name", "og:description", "og:url", "og:image"):
+        assert f'property="{name}"' in home, f"{name} missing"
+    assert 'name="twitter:card"' in home
+
+    # Per page, not site-wide, or every shared link says the same thing.
+    deep = DIST / "soham/allenai/Olmo-3-1125-32B/pro-human/meandiff/index.html"
+    if not deep.exists():
+        pytest.skip("submission page not built")
+    m = re.search(r'<meta property="og:title" content="([^"]+)"', deep.read_text())
+    assert m and "pro-human@meandiff" in m.group(1), (
+        "og:title is not the page's own title"
+    )
