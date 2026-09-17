@@ -56,6 +56,15 @@ const LABELS = [...new Set([...inCorpusLabels, ...ALL_LABELS])];
 const realCount = data.corpus.size - data.labels
   .flatMap((l) => l.claimants).filter((c) => c.is_synthetic).length;
 
+// How wide an open field is drawn, in characters. Defined once and shipped to
+// the script below rather than written out twice, because the client grows the
+// field as the reader types and two copies of the arithmetic would make the
+// sentence jump on the first keystroke. The floor keeps a short word from
+// collapsing the blank; the ceiling keeps a long paste from breaking the line.
+const FIELD_CHARS = { min: 6, max: 28 };
+const fieldSize = (v) =>
+  Math.min(Math.max(v.length, FIELD_CHARS.min), FIELD_CHARS.max);
+
 // Every answer has to be true today. Three of the four are "not yet", which is
 // the honest state and is also B2 landing where it is actually wanted: at the
 // moment somebody says what they came for, rather than as five refusals
@@ -129,25 +138,49 @@ const DEFAULT_NEED = "cannot tell whether to trust it";
 
         {/* Rendered with the default already chosen, so the page says something
             true before any JavaScript runs and a reader with none gets the
-            strongest honest answer rather than an empty box. */}
+            strongest honest answer rather than an empty box.
+
+            The two open fields ship as `<input list>` over a `<datalist>`, and
+            that pair is the entire control when no script runs: native
+            suggestions, and a field that still takes anything typed into it.
+            The script below reads its words back out of the same datalist and
+            draws its own popup over it, so the page carries one copy of the
+            list and serves both readers from it.
+
+            The spaces around the fields are written as `{" "}` rather than left
+            to the newlines. Astro strips whitespace-only text between a line of
+            prose and the element under it, and the built page read "I have
+            adirection forkindness" for as long as this was a sentence. */}
         <div class="situation">
           <p class="ask">
-            I have a
-            <input id="pick-kind" list="kinds" value={inCorpusKinds[0]}
-                   size="14" spellcheck="false"
-                   aria-label="kind of artifact, type anything" />
-            <datalist id="kinds">{KINDS.map((k) => <option value={k} />)}</datalist>
-            for
-            <input id="pick-label" list="labels" value={inCorpusLabels[0]}
-                   size="14" spellcheck="false"
-                   aria-label="what it is meant to capture, type anything" />
-            <datalist id="labels">{LABELS.map((l) => <option value={l} />)}</datalist>
-            and I
-            <select id="pick-need" aria-label="what you want to do">
-              {Object.keys(NEEDS).map((n) => <option value={n}>{n}</option>)}
-            </select>.
+            I have a{" "}
+            <span class="field" id="pick-kind-field">
+              <input id="pick-kind" list="kinds" value={inCorpusKinds[0]}
+                     size={fieldSize(inCorpusKinds[0])}
+                     spellcheck="false" autocomplete="off"
+                     aria-label="kind of artifact, type anything" />
+              <datalist id="kinds">{KINDS.map((k) => <option value={k} />)}</datalist>
+            </span>{" "}
+            for{" "}
+            <span class="field" id="pick-label-field">
+              <input id="pick-label" list="labels" value={inCorpusLabels[0]}
+                     size={fieldSize(inCorpusLabels[0])}
+                     spellcheck="false" autocomplete="off"
+                     aria-label="what it is meant to capture, type anything" />
+              <datalist id="labels">{LABELS.map((l) => <option value={l} />)}</datalist>
+            </span>{" "}
+            and I{" "}
+            <span class="choice">
+              <select id="pick-need" aria-label="what you want to do">
+                {Object.keys(NEEDS).map((n) => <option value={n}>{n}</option>)}
+              </select>
+            </span>.
           </p>
           <p class="answer" id="answer">{NEEDS[DEFAULT_NEED]}</p>
+          {/* A list appearing under a field is a visual event and nothing else,
+              so how many words came back is said out loud for a reader who
+              cannot watch it happen. Empty until something happens. */}
+          <p class="sr-only" id="pick-status" role="status"></p>
         </div>
 
         <p>
@@ -191,23 +224,27 @@ const DEFAULT_NEED = "cannot tell whether to trust it";
 
       </main>
 
-      <script define:vars={{ NEEDS, IN_CORPUS: [...inCorpusKinds, ...inCorpusLabels] }}>
+      <script define:vars={{ NEEDS, IN_CORPUS_KINDS: inCorpusKinds,
+                             IN_CORPUS_LABELS: inCorpusLabels, FIELD_CHARS }}>
         // The need drives the answer. Kind and label are there so the reader
-        // states their own case rather than reading ours, and because picking
-        // "something else" is the honest answer for most artifacts: three kinds
-        // and three labels is what this corpus happens to hold, not what the
-        // schema permits.
+        // states their own case rather than reading ours, and because typing
+        // something this corpus does not hold is the honest answer for most
+        // artifacts: three kinds and three labels is what this corpus happens
+        // to hold, not what the schema permits.
         const need = document.getElementById("pick-need");
         const kind = document.getElementById("pick-kind");
         const label = document.getElementById("pick-label");
         const answer = document.getElementById("answer");
+        const status = document.getElementById("pick-status");
 
         // Said only when the reader has actually typed something the corpus
         // does not hold, because that is the moment they would otherwise
         // assume the answer is no. Saying it unprompted would be the site
         // arguing with an objection nobody raised, which is the category cut
         // everywhere else on this site.
-        const HELD = new Set(IN_CORPUS.map((v) => v.toLowerCase()));
+        const HELD = new Set(
+          [...IN_CORPUS_KINDS, ...IN_CORPUS_LABELS].map((v) => v.toLowerCase()),
+        );
         const NOT_HELD =
           " Neither of those is a list you pick from. Both are open strings in " +
           "the schema, the suggestions are words people have used, and nothing " +
@@ -224,6 +261,256 @@ const DEFAULT_NEED = "cannot tell whether to trust it";
           el.addEventListener("change", render);
           el.addEventListener("input", render);
         }
+
+        // ------------------------------------------------------------ combobox
+        //
+        // The two open fields were `<input list>` and nothing else, which is
+        // right in every way except the one the reader sees: the browser draws
+        // the popup, it takes no styling at all, and it arrives looking like a
+        // fragment of somebody else's site dropped into the sentence.
+        //
+        // What follows replaces the popup and keeps the datalist, in that
+        // order. Enhancement reads the words out of the datalist that already
+        // shipped, drops the input's `list` attribute so the native popup does
+        // not open underneath this one, and builds a listbox in its place.
+        //
+        // Free text is the point here and not a nicety. `kind` and the label
+        // are open strings in the schema, so a control that only takes its own
+        // list would be declaring which concepts are legitimate, which is the
+        // closed-enum failure arriving through a widget instead of a CHECK.
+        // Nothing below can reject what is typed: there is no commit step, the
+        // input's own value is the answer at every moment, and the last row of
+        // the popup hands the typed text back verbatim.
+        function combobox(inputId, boxId, listId, inCorpus) {
+          const input = document.getElementById(inputId);
+          const box = document.getElementById(boxId);
+          const source = document.getElementById(listId);
+          if (!input || !box || !source) return;
+
+          const corpus = new Set(inCorpus.map((v) => v.toLowerCase()));
+          const words = Array.from(source.children).map((o) => o.getAttribute("value"));
+
+          // The datalist element stays in the page. It is the no-script layer,
+          // it is where these words were just read from, and a datalist nothing
+          // points at renders nothing.
+          input.removeAttribute("list");
+          input.setAttribute("role", "combobox");
+          input.setAttribute("aria-autocomplete", "list");
+          input.setAttribute("aria-expanded", "false");
+          input.setAttribute("aria-controls", listId + "-listbox");
+
+          const listbox = document.createElement("ul");
+          listbox.id = listId + "-listbox";
+          listbox.className = "options";
+          listbox.setAttribute("role", "listbox");
+          listbox.setAttribute("aria-label", input.getAttribute("aria-label"));
+          listbox.hidden = true;
+          box.appendChild(listbox);
+
+          let choices = [];
+          let active = -1;
+          let open = false;
+
+          function part(parent, text, cls) {
+            if (!text) return;
+            const el = document.createElement("span");
+            if (cls) el.className = cls;
+            el.textContent = text;
+            parent.appendChild(el);
+          }
+
+          // Every row reads the same way: the value on the left in the face this
+          // site sets stored identifiers in, and on the right, in the page's own
+          // serif, one fact about where the word came from. The reader's own text
+          // is the last row under that same grammar, which is how the field shows
+          // it takes anything without the page arguing the point in prose.
+          function row(value, at, len, note, cls) {
+            const li = document.createElement("li");
+            li.id = listbox.id + "-r" + choices.length;
+            li.setAttribute("role", "option");
+            li.setAttribute("aria-selected", "false");
+            if (cls) li.className = cls;
+
+            const val = document.createElement("span");
+            val.className = "val";
+            if (len > 0) {
+              // Split so CSS can hold the matched run at full strength and let
+              // the rest fall back. A substring hit has to explain itself:
+              // "form" landing in "output-format" is not obvious otherwise.
+              part(val, value.slice(0, at), "rest");
+              part(val, value.slice(at, at + len), "hit");
+              part(val, value.slice(at + len), "rest");
+            } else {
+              val.textContent = value;
+            }
+            li.appendChild(val);
+            part(li, note, "whence");
+
+            // Bound per row rather than delegated from the listbox. Rebuilding a
+            // hundred closures on a keystroke is nothing at this size, and
+            // delegation would need the popup to work out which row an event
+            // inside a nested span came from.
+            li.addEventListener("mousedown", (e) => e.preventDefault());
+            li.addEventListener("click", () => take(value));
+
+            choices.push(value);
+            return li;
+          }
+
+          // Corpus first, always. What this registry holds sorts above the words
+          // it merely suggests, and that is a claim about provenance rather than
+          // about quality: the ones at the top are the ones you can go and read.
+          // Within each of those two groups: exact, then prefix, then the start
+          // of a hyphenated part, then anywhere, then the order the page emitted.
+          function matches(query) {
+            const q = query.trim().toLowerCase();
+            const out = [];
+            for (let i = 0; i < words.length; i++) {
+              const word = words[i];
+              const low = word.toLowerCase();
+              const at = q ? low.indexOf(q) : 0;
+              if (at < 0) continue;
+              out.push({
+                word: word, at: at, len: q.length, n: i,
+                held: corpus.has(low) ? 0 : 1,
+                tier: !q ? 1 : low === q ? 0 : at === 0 ? 1
+                  : word.charAt(at - 1) === "-" ? 2 : 3,
+              });
+            }
+            out.sort((a, b) => a.held - b.held || a.tier - b.tier || a.n - b.n);
+            return out;
+          }
+
+          // The query and the field's contents are two different things, and
+          // conflating them is what makes a filled combobox answer a click with
+          // one row, its own. The filter runs on the query; the row that offers
+          // the reader's own text back always reflects what is in the field.
+          function draw(query) {
+            const typed = input.value.trim();
+            const hits = matches(query);
+            choices = [];
+            const rows = hits.map((h) =>
+              row(h.word, h.at, h.len,
+                  h.held === 0 ? "in the corpus" : "", ""));
+
+            // Offered whenever what is typed is not already one of the words,
+            // which is the only moment a reader needs telling that it counts
+            // anyway. CSS sticks it to the bottom edge of the popup, so it is
+            // reachable without scrolling and without taking the top row off
+            // the entries this registry actually holds.
+            if (typed && !words.some((w) => w.toLowerCase() === typed.toLowerCase())) {
+              rows.push(row(typed, 0, 0, "as typed", "literal"));
+            }
+
+            listbox.replaceChildren(...rows);
+            active = -1;
+            input.removeAttribute("aria-activedescendant");
+
+            if (status) {
+              status.textContent = hits.length === 0
+                ? "no suggestions; what you type is taken as it is"
+                : hits.length + (hits.length === 1 ? " suggestion" : " suggestions");
+            }
+          }
+
+          function show() {
+            if (!choices.length) { hide(); return; }
+            listbox.hidden = false;
+            input.setAttribute("aria-expanded", "true");
+            open = true;
+            // The sentence wraps, so a field can end up hard against the right
+            // edge on a phone. Measured rather than guessed, because which edge
+            // it is near depends on where the line happened to break.
+            listbox.className = "options";
+            if (listbox.getBoundingClientRect().right > window.innerWidth - 8) {
+              listbox.className = "options flip";
+            }
+          }
+
+          function hide() {
+            listbox.hidden = true;
+            input.setAttribute("aria-expanded", "false");
+            input.removeAttribute("aria-activedescendant");
+            if (status) status.textContent = "";
+            active = -1;
+            open = false;
+          }
+
+          function move(n) {
+            const rows = Array.from(listbox.children);
+            if (rows[active]) rows[active].setAttribute("aria-selected", "false");
+            active = n;
+            if (!rows[n]) { input.removeAttribute("aria-activedescendant"); return; }
+            rows[n].setAttribute("aria-selected", "true");
+            input.setAttribute("aria-activedescendant", rows[n].id);
+            rows[n].scrollIntoView({ block: "nearest" });
+          }
+
+          function fit() {
+            input.size = Math.min(
+              Math.max(input.value.length, FIELD_CHARS.min), FIELD_CHARS.max);
+          }
+
+          function take(value) {
+            input.value = value;
+            fit();
+            hide();
+            // Assigning .value from script raises no input event, so without
+            // this the paragraph below would keep describing the previous word.
+            render();
+          }
+
+          // Opening without typing shows the whole list and stands on whatever
+          // the field already holds, which is what somebody clicking a filled
+          // field is asking for.
+          function browse() {
+            draw("");
+            show();
+            const here = input.value.trim().toLowerCase();
+            const at = choices.findIndex((c) => c.toLowerCase() === here);
+            if (at >= 0) move(at);
+          }
+
+          input.addEventListener("input", () => { fit(); draw(input.value); show(); });
+
+          // Clicking an already-focused field opens it. Focus alone does not:
+          // arriving by Tab and being handed ninety-five rows is noise.
+          input.addEventListener("click", () => { if (!open) browse(); });
+
+          input.addEventListener("blur", hide);
+
+          input.addEventListener("keydown", (e) => {
+            const key = e.key;
+            if (key === "ArrowDown" || key === "ArrowUp") {
+              e.preventDefault();
+              // Opening lands on the current row rather than stepping past it,
+              // which is where a reader expects to start from.
+              if (!open) { browse(); return; }
+              if (!choices.length) return;
+              const step = key === "ArrowDown" ? 1 : -1;
+              move(active < 0
+                ? (step > 0 ? 0 : choices.length - 1)
+                : (active + step + choices.length) % choices.length);
+            } else if (key === "Enter") {
+              // Takes only a row the reader moved to. Enter over typed text with
+              // nothing highlighted closes the popup and leaves the text alone,
+              // which is the entire argument for this control over a menu.
+              if (open && active >= 0) { e.preventDefault(); take(choices[active]); }
+              else if (open) hide();
+            } else if (key === "Escape") {
+              if (open) { e.preventDefault(); hide(); }
+            } else if (key === "Tab") {
+              // Leaves with what is typed. Committing the highlighted row here
+              // is the behaviour that quietly overwrites somebody's own word.
+              hide();
+            }
+          });
+
+          fit();
+        }
+
+        combobox("pick-kind", "pick-kind-field", "kinds", IN_CORPUS_KINDS);
+        combobox("pick-label", "pick-label-field", "labels", IN_CORPUS_LABELS);
       </script>
 
       <aside class="rail">

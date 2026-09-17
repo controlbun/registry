@@ -1273,3 +1273,63 @@ list in `CLAUDE.md`: that list is the plurality premise made executable in
 falsifier. Raise it if that reading is wrong.
 
 **Supersedes:** nothing.
+
+## 2026-09-17 The picker's two open fields are a combobox built over the datalist, not instead of it
+**Decided:** The `kind` and label fields on the home page keep shipping as
+`<input list>` over a `<datalist>`. A script reads its words back out of that
+datalist, removes the `list` attribute so the browser does not draw its own
+popup underneath, and builds a `role="combobox"` over a `role="listbox"` in its
+place. Filtering is substring, and the order is: what the corpus holds, then
+exact, then prefix, then the start of a hyphenated part, then anywhere, then the
+order the page emitted. Whatever is typed is always offered back as the last row
+of the popup and is never rewritten on the way out, by Enter, Tab, Escape or
+blur.
+**Why:** The native popup is unstyleable and looks like a fragment of somebody
+else's site dropped into the middle of a serif sentence, which is what prompted
+this. Replacing it with a script-only control would have cost the no-script
+reader the ninety-five suggestions and left an `<input>` with nothing behind it,
+so the datalist stays and becomes the fallback rather than the casualty. One
+copy of the list in the page serves both readers.
+
+**Free text is the decision; the widget is not.** `kind` and the label are open
+strings in the schema, so a control that only takes its own list declares which
+concepts are legitimate: the closed-enum failure arriving through a widget
+instead of through a `CHECK`. Nothing in the control can reject what is typed.
+There is no commit step, the input's value is the answer at every moment, and
+the row that hands the typed text back is what makes that visible at the one
+moment it matters. Saying it in prose instead would be the site arguing with an
+objection nobody raised, which is the category cut everywhere else on this page.
+
+**Corpus first is about provenance, not quality.** The entries at the top are
+the ones a reader can go and read on this site. They are not better, and the
+annotation beside them says "in the corpus" rather than anything that could be
+read as an endorsement. The rule is load-bearing: on a query like `hum` the
+corpus entry `pro-human` matches after a hyphen while `humility` matches as a
+prefix, so the corpus is only at the top because the corpus is at the top. A
+bite test drops the clause from the comparator and checks the order changes.
+
+**What this makes impossible to express:** a suggestion list with any structure
+of its own. The nine groupings in `observed-labels.ts` are flattened before they
+reach the page and stay flattened, because a popup with headed sections is a
+taxonomy and publishing one says which concepts belong where. It also gives up
+anything a suggestion could carry beyond its own name: no counts, no recency, no
+"others also typed". Each of those is a ranking signal wearing a smaller hat,
+and the field would start recommending rather than completing.
+
+**Safety, named rather than resolved.** This makes concepts easier to find by
+typing, and some of the words in that list are refusal-adjacent. It adds no
+route to anything: v0 takes no uploads, serves no API, has no bulk fetch, and
+the picker resolves to no page. So the misuse surface is unchanged and the
+discoverability is slightly better, which is the open-contribution and
+misuse-gating tension in its mildest form. Worth knowing it is here before
+anything on this page is ever wired to a fetch.
+
+**Where the behaviour is checked.** `tests/combobox_harness.py` runs the real
+script out of the real built page in Node against a DOM only as large as the
+script uses, on the same argument as `ordering_harness.py`. A type-ahead is a
+worse case of the dead-control bug than a button is: a field whose script never
+ran looks exactly like a field nobody has clicked, so presence in the markup
+proves nothing at all. `tests/test_picker_bites.py` reintroduces ten specific
+failures and asserts each check goes red.
+
+**Supersedes:** nothing.

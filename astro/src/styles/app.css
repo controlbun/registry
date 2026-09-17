@@ -44,6 +44,20 @@
   /* Shapes. Rules, icons, the mark, chart fills, borders. */
   --accent-fill: #386BFE;
   --status-fill: #FF3100;
+
+  /* The type-ahead popup, the only surface on this site that floats over text.
+     Nothing else here casts a shadow, so it gets the smallest one that reads
+     plus a border a step darker than --line, which is how a hairline design
+     says "above" without borrowing a card kit's soft grey blur.
+     --pop-active is the text blue rather than the fill blue: the fill is
+     #386BFE, which puts white at 4.47:1 and misses AA by 0.03 when it is the
+     background instead of the mark. */
+  --pop: #fff;
+  --pop-line: #b3b3be;
+  --pop-shadow: 0 6px 16px -10px rgba(22, 22, 26, .5),
+                0 1px 2px rgba(22, 22, 26, .07);
+  --pop-active: #356AFF;
+  --pop-on-active: #fff;
 }
 
 * { box-sizing: border-box; }
@@ -253,6 +267,12 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
        nothing has to be darkened the way it does on white. */
     --accent: #95B1FF; --accent-fill: #95B1FF;
     --status: #FF3100; --status-fill: #FF3100;
+    /* On dark the lifted surface does the separating and the shadow only
+       anchors it, so the shadow is deeper and the surface is --wash rather
+       than the page. */
+    --pop: #16161a; --pop-line: #44444f;
+    --pop-shadow: 0 10px 26px -12px rgba(0, 0, 0, .85);
+    --pop-active: #95B1FF; --pop-on-active: #0d0d10;
   }
   :root:not([data-theme="light"]) body { background: #0d0d10; }
 }
@@ -262,6 +282,9 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
   --warn: #d8a548; --warn-bg: #2a2313; --warn-line: #4a3d1a;
   --accent: #95B1FF; --accent-fill: #95B1FF;
   --status: #FF3100; --status-fill: #FF3100;
+  --pop: #16161a; --pop-line: #44444f;
+  --pop-shadow: 0 10px 26px -12px rgba(0, 0, 0, .85);
+  --pop-active: #95B1FF; --pop-on-active: #0d0d10;
 }
 :root[data-theme="dark"] body { background: #0d0d10; }
 
@@ -427,19 +450,181 @@ td.sim { font-variant-numeric: tabular-nums; }
 
 /* The situation picker on the home page. A sentence the reader completes with
    their own artifact and their own reason, because the prose it replaced was an
-   abstraction and a researcher answered it as one. Selects sit inline in the
-   sentence rather than stacking as a form: it is a sentence, not a survey. */
+   abstraction and a researcher answered it as one. The controls sit inline in
+   the sentence rather than stacking as a form: it is a sentence, not a survey.
+
+   The sentence is set in the body serif and the two parts the reader supplies
+   are set in mono, because those two are `kind` and the label, string values
+   this registry stores, and every other page here already spells a stored
+   identifier in mono. That change of face is what says "this one is yours", so
+   the fields need no box drawn round them; they carry a dotted rule instead,
+   which is the same dotted underline the sortable table headers use to mean
+   "this is operable", read here as a blank to fill in.
+
+   The reason keeps the serif, because it is a fragment of the sentence rather
+   than a value anything stores. The two faces carry that difference rather than
+   decorating it. */
 .situation { margin: 1.4rem 0 1.6rem; }
-.situation .ask { font-size: 1.05rem; line-height: 2.1; max-width: none; }
+.situation .ask { font-size: 1.05rem; line-height: 2.3; max-width: none; }
+
+/* Positioning context for the popup, so a field and its list stay together
+   wherever the sentence happens to break. */
+.situation .field,
+.situation .choice { position: relative; display: inline-block; }
+
+.situation .field input,
 .situation select {
-  font: inherit; font-size: .95rem; color: var(--ink);
-  background: var(--wash); border: 1px solid var(--line);
-  border-radius: 4px; padding: .1rem .3rem; margin: 0 .15rem;
+  font: inherit; color: var(--ink);
+  /* The sentence runs at line-height 2.3 to leave the rules room. Inheriting
+     that into the control puts the control's own bottom border most of a line
+     below its text, where it reads as a stray rule instead of a filled blank. */
+  line-height: 1.4;
+  background: none;
+  border: 0;
+  border-bottom: 1px dotted var(--accent-fill);
+  border-radius: 0;
+  padding: .02rem .12rem;
+  margin: 0;
+  /* Each control as wide as what is in it, so the rule ends where the word
+     does. Chrome and Edge 123, Firefox 152, Safari 26.2 (caniuse
+     mdn-css_properties_field-sizing, read 2026-09-17), and the floors are
+     recent enough to need a fallback: an older engine ignores this line, the
+     inputs keep the `size` the script maintains, and the reason falls back to
+     the width of its longest option, which is what it does today. */
+  field-sizing: content;
+}
+.situation .field input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Mono runs large against a serif at the same nominal size. */
+  font-size: .82em;
+  min-width: 4ch;
+}
+.situation select {
+  font-size: .94em;
+  appearance: none; -webkit-appearance: none;
+  padding-right: .82rem;
   cursor: pointer;
 }
-.situation select:hover { border-color: var(--accent); }
-.situation select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The platform arrow goes with `appearance: none`, so one is drawn. A triangle
+   rather than a chevron: the only other disclosure marker on this site is the
+   one `<details>` draws beside the chart table views, and that is a triangle. */
+.situation .choice::after {
+  content: "";
+  position: absolute; right: .18rem; top: 50%; margin-top: -.1em;
+  border: .24em solid transparent; border-bottom: 0;
+  border-top-color: var(--dim);
+  pointer-events: none;
+}
+.situation .field input:hover,
+.situation select:hover { border-bottom-style: solid; }
+.situation .field input:focus-visible,
+.situation select:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px;
+}
+
+/* The popup. Rebuilt in the page rather than left to the browser, because
+   `<datalist>` takes no styling at all and arrives looking like a fragment of
+   somebody else's site dropped into the sentence. */
+.situation .options {
+  position: absolute; z-index: 30;
+  top: calc(100% + .5rem); left: 0;
+  margin: 0; padding: .25rem 0;
+  list-style: none;
+  min-width: max(100%, 13rem);
+  /* Never wider than the viewport it has to fit inside. The height cap is what
+     keeps ninety-five rows from becoming a full-screen wall of words. */
+  max-width: min(22rem, calc(100vw - 2rem));
+  max-height: min(19rem, 52vh);
+  overflow-y: auto; overscroll-behavior: contain;
+  background: var(--pop);
+  border: 1px solid var(--pop-line);
+  border-radius: 5px;
+  box-shadow: var(--pop-shadow);
+  text-align: left;
+  line-height: 1.45;
+}
+/* `hidden` has to beat the display the rule above implies. */
+.situation .options[hidden] { display: none; }
+/* Set by the script when the popup would otherwise run off the right edge,
+   which the sentence makes likely: the field it hangs from moves with the
+   line break. */
+.situation .options.flip { left: auto; right: 0; }
+
+.situation .options li {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 1.2rem;
+  padding: .28rem .7rem;
+  cursor: pointer;
+  color: var(--ink);
+}
+/* Mono for the value and serif for the annotation beside it, the same division
+   the sentence above makes: mono is the string, serif is the site talking. */
+.situation .options .val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .82rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* The matched run stays at full strength and the rest of the word steps back,
+   rather than the match being picked out in a color. The accent already carries
+   two meanings in this control, the blanks the reader fills and the row in
+   hand, and a third dilutes both. Weight alone was tried and is not legible
+   enough in mono at this size.
+
+   .6 is a floor rather than a taste: --ink faded over the popup surface reads
+   4.72:1 on light and 5.96:1 on dark, and .5 takes light to 3.42 and under AA.
+   The filled row is not faded at all, because white on #356AFF is 4.51:1 before
+   anything is done to it and any fade puts it under. It is also the one row
+   that does not need the emphasis. */
+.situation .options .rest { opacity: .6; }
+.situation .options li[aria-selected="true"] .rest { opacity: 1; }
+/* Named `whence` and not `note`, because a bare `.note` already exists
+   site-wide carrying a margin and a measure that would push this out of its
+   row. The word is also the job: it says where the value came from. */
+.situation .options .whence {
+  font-size: .72rem; color: var(--dim); white-space: nowrap; flex: none;
+}
+.situation .options li:hover { background: var(--wash); }
+/* The one loud thing on the page, and it is loud on purpose: the row a keyboard
+   is standing on has to be unmistakable from across a desk. */
+.situation .options li[aria-selected="true"] {
+  background: var(--pop-active); color: var(--pop-on-active);
+}
+.situation .options li[aria-selected="true"] .whence { color: inherit; }
+
+/* The reader's own text, always the last row and always in view. Sticky rather
+   than pinned outside the list, so it stays genuinely last in the sequence a
+   keyboard walks and the corpus keeps the top of the list. */
+.situation .options .literal {
+  position: sticky; bottom: -.25rem;
+  background: var(--pop);
+  border-top: 1px solid var(--pop-line);
+  margin-top: .25rem;
+  padding-top: .38rem; padding-bottom: .38rem;
+}
+.situation .options .literal[aria-selected="true"] { background: var(--pop-active); }
+
+/* A finger is not a mouse pointer. */
+@media (pointer: coarse) {
+  .situation .options li { padding-top: .55rem; padding-bottom: .55rem; }
+}
+
+/* One moment of motion on the page, and it answers something the reader did.
+   Nothing else here animates. */
+@media (prefers-reduced-motion: no-preference) {
+  .situation .options { animation: picker-open .09s ease-out; }
+}
+@keyframes picker-open { from { opacity: 0; transform: translateY(-2px); } }
+
 .situation .answer {
   margin-top: .7rem; padding-left: .9rem;
   border-left: 2px solid var(--accent); color: var(--ink);
+}
+
+/* Reaches a screen reader and nothing else. `display: none` and `visibility:
+   hidden` both take a node out of the accessibility tree, which is the exact
+   opposite of what a live region is for. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
 }
