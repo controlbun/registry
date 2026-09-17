@@ -3,6 +3,7 @@ import "../styles/app.css";
 import Head from "../components/Head.astro";
 import SiteNav from "../components/SiteNav.astro";
 import data from "../data/registry.json";
+import { ALL_LABELS, OBSERVED_KINDS } from "../data/observed-labels";
 
 // The home page: what this is in the middle, the ways in on the left, what
 // arrived recently on the right.
@@ -44,8 +45,14 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
 // an open string and a dropdown listing three of them declares that those are
 // the three. DECISIONS.md 2026-09-13: faceted browsing over kinds is built from
 // what the corpus contains rather than from a declared list.
-const KINDS = [...data.kinds, "something else"];
-const LABELS = [...new Set(data.labels.map((l) => l.label))].sort();
+// Corpus first, then everything else people label, deduplicated. What this
+// registry actually holds sorts to the top of the autocomplete; the rest are
+// suggestions from `observed-labels.ts`, which says at length why they are
+// suggestions and not a permitted set.
+const inCorpusKinds = data.kinds;
+const inCorpusLabels = [...new Set(data.labels.map((l) => l.label))].sort();
+const KINDS = [...new Set([...inCorpusKinds, ...OBSERVED_KINDS])];
+const LABELS = [...new Set([...inCorpusLabels, ...ALL_LABELS])];
 const realCount = data.corpus.size - data.labels
   .flatMap((l) => l.claimants).filter((c) => c.is_synthetic).length;
 
@@ -125,15 +132,16 @@ const DEFAULT_NEED = "cannot tell whether to trust it";
             strongest honest answer rather than an empty box. */}
         <div class="situation">
           <p class="ask">
-            I have
-            <select id="pick-kind" aria-label="kind of artifact">
-              {KINDS.map((k) => <option value={k}>{k === "something else" ? "something else" : `a ${k}`}</option>)}
-            </select>
+            I have a
+            <input id="pick-kind" list="kinds" value={inCorpusKinds[0]}
+                   size="14" spellcheck="false"
+                   aria-label="kind of artifact, type anything" />
+            <datalist id="kinds">{KINDS.map((k) => <option value={k} />)}</datalist>
             for
-            <select id="pick-label" aria-label="what it is meant to capture">
-              {LABELS.map((l) => <option value={l}>{l}</option>)}
-              <option value="something else">something else</option>
-            </select>
+            <input id="pick-label" list="labels" value={inCorpusLabels[0]}
+                   size="14" spellcheck="false"
+                   aria-label="what it is meant to capture, type anything" />
+            <datalist id="labels">{LABELS.map((l) => <option value={l} />)}</datalist>
             and I
             <select id="pick-need" aria-label="what you want to do">
               {Object.keys(NEEDS).map((n) => <option value={n}>{n}</option>)}
@@ -183,7 +191,7 @@ const DEFAULT_NEED = "cannot tell whether to trust it";
 
       </main>
 
-      <script define:vars={{ NEEDS, KINDS, LABELS }}>
+      <script define:vars={{ NEEDS, IN_CORPUS: [...inCorpusKinds, ...inCorpusLabels] }}>
         // The need drives the answer. Kind and label are there so the reader
         // states their own case rather than reading ours, and because picking
         // "something else" is the honest answer for most artifacts: three kinds
@@ -194,20 +202,28 @@ const DEFAULT_NEED = "cannot tell whether to trust it";
         const label = document.getElementById("pick-label");
         const answer = document.getElementById("answer");
 
-        const OPEN_FIELD =
-          " Neither `kind` nor the label is a list you have to choose from: " +
-          "both are open strings, and those dropdowns show what this corpus " +
-          "currently holds rather than what it accepts.";
+        // Said only when the reader has actually typed something the corpus
+        // does not hold, because that is the moment they would otherwise
+        // assume the answer is no. Saying it unprompted would be the site
+        // arguing with an objection nobody raised, which is the category cut
+        // everywhere else on this site.
+        const HELD = new Set(IN_CORPUS.map((v) => v.toLowerCase()));
+        const NOT_HELD =
+          " Neither of those is a list you pick from. Both are open strings in " +
+          "the schema, the suggestions are words people have used, and nothing " +
+          "you typed there has to be one of them.";
 
         function render() {
           let text = NEEDS[need.value] ?? "";
-          if (kind.value === "something else" || label.value === "something else") {
-            text += OPEN_FIELD;
-          }
+          const typed = [kind.value, label.value].map((v) => v.trim().toLowerCase());
+          if (typed.some((v) => v && !HELD.has(v))) text += NOT_HELD;
           answer.textContent = text;
         }
 
-        for (const el of [need, kind, label]) el.addEventListener("change", render);
+        for (const el of [need, kind, label]) {
+          el.addEventListener("change", render);
+          el.addEventListener("input", render);
+        }
       </script>
 
       <aside class="rail">

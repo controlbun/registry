@@ -60,12 +60,54 @@ def test_it_offers_every_kind_and_label_the_corpus_holds():
     for label in {entry["label"] for entry in payload["labels"]}:
         assert f'value="{label}"' in html, f"{label!r} is claimed and not offered"
 
+    # Corpus first, so what actually exists sorts to the top of autocomplete.
+    labels = re.search(r'<datalist id="labels">(.*?)</datalist>', html, re.S)
+    first = re.findall(r'value="([^"]+)"', labels.group(1))[: len(payload["labels"])]
+    assert set(first) == {entry["label"] for entry in payload["labels"]}, (
+        "suggestions from elsewhere outrank the labels this registry holds"
+    )
 
-def test_both_open_fields_have_a_way_out_of_the_list():
-    """Without an escape the control is a closed enum on an open field."""
-    assert home().count('value="something else"') >= 2, (
-        "kind and label are both open strings and each needs its own escape; "
-        "a picker with no way out declares that the list is the permitted set"
+
+def test_both_open_fields_accept_anything():
+    """They are text inputs with suggestions, not dropdowns with an escape.
+
+    `kind` and the label are open strings in the schema. A `<select>` listing a
+    hundred concepts grouped into categories is a taxonomy, and publishing one
+    declares which concepts are legitimate: `CLAUDE.md`'s closed-enum failure
+    arriving through a control rather than a `CHECK`. The instruction there is
+    document common values and enforce none, which is what a datalist behind a
+    free-text field is.
+
+    An earlier version used `<select>` with a "something else" option. That was
+    an escape hatch bolted onto a closed control; this removes the need for one.
+    """
+    html = home()
+    for field in ("pick-kind", "pick-label"):
+        assert f'<input id="{field}"' in html, f"{field} is not a text input"
+        assert f'<select id="{field}"' not in html, (
+            f"{field} is a dropdown, which makes its options the permitted set"
+        )
+        assert f'list="' in html, f"{field} offers no suggestions at all"
+
+
+def test_the_suggestions_go_well_past_what_the_corpus_holds():
+    """Otherwise a visitor concludes their concept does not belong here.
+
+    Three labels is what this corpus contains and is not what the schema takes.
+    A reader whose artifact is about sandbagging or evaluation-awareness should
+    see it recognised, which is the whole reason the picker exists.
+    """
+    payload = json.loads(EXPORT.read_text())
+    html = home()
+    suggestions = re.search(r'<datalist id="labels">(.*?)</datalist>', html, re.S)
+    assert suggestions, "no label suggestions"
+    values = re.findall(r'value="([^"]+)"', suggestions.group(1))
+
+    held = {entry["label"] for entry in payload["labels"]}
+    assert held <= set(values), "the corpus's own labels are not suggested"
+    assert len(values) > 5 * len(held), (
+        f"only {len(values)} suggestions against {len(held)} labels held; a "
+        "visitor whose concept is absent will read that as not belonging"
     )
 
 
