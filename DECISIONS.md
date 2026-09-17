@@ -1158,3 +1158,67 @@ each showing whether it has been contested, the contest one level in, deeper on
 its own page. That is a rendering decision and it is unmade.
 
 **Supersedes:** nothing.
+
+## 2026-09-16 IDEA: `controlbun.agentContext` ships the contract to whatever writes the code
+**Not decided, not built.** Logged because the risk in it is one nobody has looked
+at and is easy to walk into.
+
+**The idea.** `controlbun.agentContext()` returns a current document describing
+what this registry is, what its objects mean, and how to apply an artifact
+correctly. A coding agent helping somebody use a steering vector reads that
+instead of reconstructing it from training data that is stale, partial, or about
+a different library.
+
+**Why it fits this project more than it would fit most.** `BRIEF.md`'s third
+failure mode is silent misuse: a vector applied at the wrong layer, hook point or
+chat template does not fail loudly, it appears not to work. An agent writing
+steering code from memory gets the layer convention wrong, or the hook point, or
+treats the coefficient as a fraction of activation norm when it is a raw
+multiplier of a unit vector, and nothing complains. That is the exact failure this
+registry exists to prevent, arriving through the fastest-growing way code gets
+written.
+
+It is also the same argument as the package entry from 2026-09-14, one step out.
+The page **displays** the application contract, the package **enforces** it by
+refusing bytes that disagree with their record, and this **informs the thing
+authoring the call site**. Three surfaces, one contract.
+
+### The risk, which is the reason this is written down
+
+**An agent context document is the best place in this whole system to designate a
+winner, and the worst place to notice.** Asked for a kindness vector, an agent
+will produce one. If our own document makes picking easy, or names an example
+often enough that the example becomes the default, then controlbun is choosing,
+invisibly, at scale, through a surface nobody reviews.
+
+The trip-wire vocabulary in `CLAUDE.md` applies here verbatim and has not yet been
+applied to this surface at all. The document must teach an agent to **surface the
+plurality to its user** rather than resolve it: several claimants, their
+definitions, what each author checked and did not, and the fact that the choice is
+the user's. An agent that hands back one vector without saying who else claims the
+label has been taught wrong by us.
+
+Specific things it must not contain: a recommended artifact, a ranked list, a
+"most popular" or "most used", a single worked example that is always the same
+submission, or any phrasing that lets `load("kindness")` look reasonable.
+
+### Two design notes
+
+**It has to be generated, not written.** A hand-maintained agent document drifts
+from the schema, and this project has produced that failure repeatedly: a scanner
+that enumerated two directories, a link checker that globbed one filename, an
+attestation inventory kept by hand. Derive it from the same source the site is
+built from, and date it.
+
+**It should carry the corpus, not just the API.** The live labels, models and
+claimants are the part training data cannot have, and the part that makes the
+plurality concrete rather than abstract: an agent that can see four claimants on
+one label has something to show its user.
+
+### Open
+Whether the surface is a package call, a `llms.txt` at the domain, an MCP server,
+or more than one. Whether it embeds corpus state or tells the agent how to query
+it. None of this is v1.
+
+**Supersedes:** nothing. Extends "The consumer surface is a package" (2026-09-14)
+to a third surface, and extends the trip-wire list to cover it.
