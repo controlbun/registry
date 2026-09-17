@@ -230,3 +230,23 @@ def test_the_navigation_offers_nothing_it_cannot_deliver():
     # the whole site; this keeps the home page honest on its own.
     for real in ('href="/models/"', 'href="/owners/"', 'href="/about/"'):
         assert real in html, f"{real} is missing from the navigation"
+
+
+def test_the_ordering_bar_does_not_quote_an_uninterpretable_threshold():
+    """It read "under the 100 at which engagement starts to mean anything".
+
+    100 is a threshold somebody chose. `order.py` justifies it only as the point
+    below which "engagement data is too thin to mean anything", which is honest
+    about being a judgment and does not derive the number. Printing it gave the
+    reader a figure they could not interpret and a question with no answer, on
+    every list page. The corpus size is a fact and stays.
+    """
+    from registry import order
+
+    for path in every_page():
+        body = text_of(path.read_text())
+        if "Ordered by" not in body:
+            continue
+        assert f"the {order.CORPUS_THRESHOLD}" not in body, (
+            f"{path.relative_to(DIST)} quotes the threshold as if it were derived"
+        )

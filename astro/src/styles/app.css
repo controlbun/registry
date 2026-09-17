@@ -108,6 +108,10 @@ nav.crumbs a:hover { color: var(--accent); text-decoration: underline; }
 .ordering button[aria-pressed="true"] { background: var(--wash); border-color: var(--dim); }
 .ordering .why { flex-basis: 100%; color: var(--faint); }
 
+/* The About byline. Quiet: it answers "whose is it", which a reader wants once
+   and then stops caring about, so it should not compete with the lede above it. */
+.byline { color: var(--faint); font-size: .9rem; margin-top: -.4rem; }
+
 .facets { display: flex; gap: 1.6rem; align-items: flex-start; }
 .facets aside { flex: 0 0 14rem; font-size: .85rem; }
 .facets aside h3 {
