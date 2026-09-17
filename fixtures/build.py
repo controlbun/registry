@@ -10,6 +10,7 @@ fixture leaking into anything real is obvious on sight rather than plausible.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -40,6 +41,25 @@ def write_vector(name: str, values: np.ndarray, meta: dict[str, str]) -> Path:
     )
     sort_header(path)
     return path
+
+
+def digest(path: Path) -> str:
+    """sha256 of the file on disk, computed rather than transcribed.
+
+    Honest about what this buys and what it does not. For a file this same script
+    wrote four lines earlier, the digest cannot disagree with the bytes, so
+    nothing here is verified by recording it. The value is downstream: the client
+    compares bytes that arrived from somewhere else against this, the falsifier
+    recomputes it from the committed file on every run, and both of those can
+    fail. `artifacts/seed.py` records the same column with a real cross-check,
+    because there the bytes came from somebody else and a second record of them
+    exists.
+
+    Not a fabricated number and not exempt from the rule against them: it is
+    derived from the fixture bytes, so it changes when they do, which is the
+    whole of what a digest claims.
+    """
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 MODEL_A = ("placeholder/does-not-resolve-1b", "0" * 40, 4, "resid_post")
@@ -148,12 +168,14 @@ def seed(conn, vectors: dict[str, Path]) -> None:
             "INSERT INTO intervention (id,author,label,version,kind,model_id,"
             "model_revision,layer,layer_convention,hook_point,shape,dtype,"
             "l2_norm,activation_norm,coeff_low,coeff_high,steering_position,"
-            "license_status,chat_template_hash,artifact_path,is_synthetic)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
+            "license_status,chat_template_hash,artifact_path,artifact_sha256,"
+            "is_synthetic)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
             (f"iv_{author}", author, label, "v1", kind, mid, rev, layer,
              "block-0indexed", hook, f"[{DIM}]", "float32",
              1.0, 11.1111, 0.5, 1.5, "all-positions",
-             "unresolved", "sha256:" + "e" * 8, f"fixtures/{path.name}"),
+             "unresolved", "sha256:" + "e" * 8, f"fixtures/{path.name}",
+             digest(path)),
         )
 
     # The same kind as dana's, with the provenance dana's lacks. A latent is only

@@ -9,9 +9,12 @@ What this can and cannot do, stated plainly, because a falsifier that overclaims
 is worse than none:
 
 **Derived quantities are recomputed from the raw artifact.** Shape, dtype, L2
-norm and the angle between two interventions are recomputed from the safetensors
-files themselves and compared against what the database stores and what the built
-pages render. If a tensor changes and a stored norm does not, this fails.
+norm, the sha256 of the file and the angle between two interventions are
+recomputed from the safetensors files themselves and compared against what the
+database stores and what the built pages render. If a tensor changes and a stored
+norm does not, this fails. If the bytes change at all and the recorded digest does
+not, this fails, which is the case the other three miss: a substituted tensor of
+the same shape, dtype and norm satisfies every check that came before it.
 
 **Reported quantities are traced, not recomputed.** Trait score, coherence,
 transfer, the coefficient curve and the confound axes come from an evaluation this
@@ -32,6 +35,7 @@ Exits 0 when everything reconciles, 1 otherwise, with the failures named.
 
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import re
@@ -125,6 +129,69 @@ def check_artifacts_match_their_metadata(conn: sqlite3.Connection) -> None:
             if abs(actual - row["l2_norm"]) > 1e-4:
                 fail("artifacts", f"{row['id']}: L2 norm recomputes to {actual:.6f} "
                                   f"but stored {row['l2_norm']}")
+
+
+def check_artifact_digests_match_the_record(conn: sqlite3.Connection) -> None:
+    """The sha256 of the file on disk against the digest its row records.
+
+    Shape, dtype and norm are three facts about a tensor and a great many tensors
+    satisfy all three. The check above is what a substituted artifact passes; this
+    is the one it does not.
+
+    **What this cannot reach, said plainly.** Only rows whose bytes are in this
+    repository. A row that records a digest and points at someone else's repo is
+    exactly the row the column exists for, and nothing offline can fetch it. The
+    client checks that one at the moment it fetches, which is the only moment it
+    can be checked, and this gate stays runnable from a clean checkout with no
+    network.
+
+    **A row with no recorded digest is skipped rather than failed.** Most
+    artifacts are pointed at rather than held and nobody hashed their bytes;
+    absence is its own state here as everywhere. What is failed is a run in which
+    no digest was rechecked at all, because a check that looked at nothing is the
+    failure mode this repository has shipped six times.
+
+    **The synthetic rows are the weak half and say so.** `fixtures/build.py`
+    writes those files and hashes what it just wrote, in one run, so the two
+    cannot disagree by the time this reads them. The vendored rows are the real
+    test: `artifacts/soham/` is committed rather than regenerated, and its digest
+    reaches the database only by matching what `artifacts/source.py` recorded at
+    ingest.
+    """
+    rows = conn.execute(
+        "SELECT id, artifact_path, artifact_sha256 FROM intervention"
+    ).fetchall()
+
+    checked = 0
+    for row in rows:
+        if not row["artifact_sha256"]:
+            continue
+        if not row["artifact_path"]:
+            fail("digests", f"{row['id']}: a digest is recorded and no path is, "
+                            "so there is nothing here to check it against")
+            continue
+        # Report, never raise, and refuse a path that escapes the repository
+        # rather than hashing whatever is at the other end of it.
+        try:
+            path = local_path(row["artifact_path"], root=ROOT)
+        except UnsafeArtifactPath as exc:
+            fail("digests", f"{row['id']}: {exc}")
+            continue
+        if not path.exists():
+            fail("digests", f"{row['id']}: {row['artifact_path']} is missing, so "
+                            "the recorded digest describes bytes nobody has")
+            continue
+
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != row["artifact_sha256"]:
+            fail("digests", f"{row['id']}: {row['artifact_path']} hashes to "
+                            f"{actual} but the row records "
+                            f"{row['artifact_sha256']}")
+        checked += 1
+
+    if checked == 0:
+        fail("digests", "no recorded digest was rechecked against a file on "
+                        "disk; this check is inert")
 
 
 def check_angles_recompute(payload: dict) -> None:
@@ -327,6 +394,7 @@ def main() -> int:
     payload = json.loads(EXPORT.read_text())
 
     check_artifacts_match_their_metadata(conn)
+    check_artifact_digests_match_the_record(conn)
     check_angles_recompute(payload)
     check_export_matches_the_database(conn, payload)
     check_published_numbers_are_accounted_for(payload)

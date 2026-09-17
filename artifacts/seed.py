@@ -8,14 +8,20 @@ skimmed it.
     .venv/bin/python fixtures/build.py       # synthetic corpus, drops the db
     .venv/bin/python artifacts/seed.py       # real rows, added to it
 
-Every number below is cited to a file in steering-arena at the pinned commit. None
-is computed here and none is rounded: where a value has three decimals in the
+Every measurement below is cited to a file in steering-arena at the pinned commit.
+None is computed here and none is rounded: where a value has three decimals in the
 source, it has three here. `artifacts/REAL.md` says which file each came from.
+
+One value is computed rather than cited, and it is not a measurement.
+`artifact_sha256` is read off the vendored file and refused unless it matches what
+`ingest_arena.py` recorded, because a digest that was typed in is a digest that
+can be typed in wrong. See `digest` below.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -26,7 +32,8 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(HERE))
 
 from registry import db  # noqa: E402
-from source import COMMIT, REPO  # noqa: E402
+from registry.artifact import local_path  # noqa: E402
+from source import COMMIT, DIRECTIONS, REPO  # noqa: E402
 
 AUTHOR = "soham"
 LABEL = "pro-human"
@@ -47,6 +54,50 @@ FILES = {
     "logistic": "d_olmo3_logistic.safetensors",
     "lda":      "d_olmo3_lda.safetensors",
 }
+
+# What `ingest_arena.py` recorded for the file it wrote, keyed by that filename.
+# `source.py` holds it so two files cannot disagree about a sha256, which is the
+# same reason the commit lives there.
+INGESTED = {
+    npz.replace(".npz", ".safetensors"): safetensors_sha
+    for npz, _npz_sha, safetensors_sha in DIRECTIONS
+}
+
+
+def digest(rel: str) -> str:
+    """sha256 of one vendored artifact, computed from disk and cross-checked.
+
+    **The cross-check against `source.py` is deliberate, and the reason is that
+    computing a number is not the same as verifying one.** Without it this
+    function reads whatever happens to be in `artifacts/soham/` and writes it
+    into the database as the digest that artifact is published with. Every later
+    check then passes by construction: the client would refuse bytes that
+    disagree with a record derived from bytes nobody checked. That is the
+    transcription problem inverted rather than solved.
+
+    `source.py` carries an independent record. Its value was recorded when
+    `ingest_arena.py` converted a `.npz` it had already verified against a
+    sha256 at a pinned GitHub commit, so the two agreeing means the file here is
+    the file that conversion produced from bytes the author published.
+
+    `make site` runs `ingest_arena.py --check`, which compares the same pair. It
+    runs after this script, and it is a separate step somebody can drop from the
+    chain. Checking at the moment the claim is written is the point: a seeder
+    that will write a provenance claim about bytes it has not identified is the
+    defect, whatever runs afterwards.
+    """
+    path = local_path(rel, root=ROOT)
+    got = hashlib.sha256(path.read_bytes()).hexdigest()
+    recorded = INGESTED[path.name]
+    if got != recorded:
+        raise SystemExit(
+            f"{rel}: sha256 {got} does not match the {recorded} recorded at "
+            "ingest. Refusing to seed: writing this row would publish a digest "
+            "for bytes that are not the ones this repository converted. Rerun "
+            "artifacts/ingest_arena.py and find out which of the two moved."
+        )
+    return got
+
 
 # The author's own version string inside each `.npz`, kept because it is what the
 # arena's code will look for and because `v1` is a name this registry deliberately
@@ -114,6 +165,8 @@ def seed(conn) -> None:
     ex = conn.execute
 
     for version in ("meandiff", "logistic", "lda"):
+        rel = f"artifacts/soham/{FILES[version]}"
+
         ex(
             "INSERT INTO submission (author,label,version,definition,created_at,"
             "is_synthetic) VALUES (?,?,?,?,?,0)",
@@ -124,8 +177,9 @@ def seed(conn) -> None:
             "INSERT INTO intervention (id,author,label,version,kind,model_id,"
             "model_revision,layer,layer_convention,hook_point,shape,dtype,"
             "l2_norm,activation_norm,coeff_low,coeff_high,steering_position,"
-            "license_status,chat_template_hash,artifact_path,is_synthetic)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)",
+            "license_status,chat_template_hash,artifact_path,artifact_sha256,"
+            "is_synthetic)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)",
             (
                 f"iv_soham_{version}", AUTHOR, LABEL, version, "direction", MODEL,
                 # Not recorded. The extraction ran against whatever NDIF was
@@ -147,7 +201,11 @@ def seed(conn) -> None:
                 # concatenated text against a base checkpoint, which is a fact
                 # about the extraction rather than a hash anyone forgot.
                 None,
-                f"artifacts/soham/{FILES[version]}",
+                rel,
+                # Recorded, unlike the two above. These three are the only rows
+                # in the corpus whose bytes this repository did not write, so
+                # they are the case the column exists for.
+                digest(rel),
             ),
         )
 

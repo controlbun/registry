@@ -1196,3 +1196,80 @@ MCP server, or several. Not v1.
 
 **Supersedes:** nothing. Extends "The consumer surface is a package" (2026-09-14)
 to a third surface.
+
+## 2026-09-16 Fetched bytes are checked against a recorded digest, where there is one
+**Decided:** `schema/migrations/006` adds `artifact_sha256` to `intervention`,
+nullable. `client.Submission._check` now takes bytes rather than a tensor and
+refuses a file whose sha256 disagrees with that column, before the parser sees
+it. `falsifier/verify.py` gains `check_artifact_digests_match_the_record`, which
+recomputes it for every row whose bytes are in this repository and reports itself
+inert when there is nothing to recheck. Both seeds record the digest from the
+bytes on disk rather than transcribing one, and `artifacts/seed.py` refuses to
+seed at all when what it computes disagrees with what `artifacts/source.py`
+recorded at ingest.
+
+**Why:** nothing checked the bytes. `fetch.resolve` returns them from our served
+copy, from the author's repo, or from disk, and two of those are somebody else's
+server. `_check` compared shape and dtype and said in its own docstring that it
+was not going to check the norm. The falsifier recomputed shape, dtype and norm
+only for rows whose file is already here, which is every row today and none of
+the rows the fetch path exists for. So a re-pointed LFS object or a compromised
+CDN edge returns a different float32 [5120], it satisfies both recorded facts
+because a great many tensors do, `vector()` hands it over, and `_cache_path`
+writes it under a key whose comment reads "cached forever, because a SHA is
+forever".
+
+The ingest path in this repository already did this correctly.
+`artifacts/ingest_arena.py` verifies a sha256 before it parses and again after it
+writes. The client path was strictly weaker than the ingest path against a worse
+threat model: ingest runs once on the author's machine, the client runs on
+everybody else's. That asymmetry inside one repository is the finding.
+
+**Nullable, deliberately.** An artifact this registry points at rather than holds,
+whose bytes nobody here has fetched, has no digest anybody recorded.
+`artifact_path` is already nullable and the pointer-only case is the normal one
+under "Upload preferred, pointer available". NOT NULL would not produce a digest,
+it would produce a string, which is the argument 005 makes about `model_revision`
+and 001 makes about recipes. It is worse here than in either, because this value
+is load-bearing: a revision somebody typed in anyway misleads a reader, and a
+digest somebody typed in anyway makes the client refuse the author's own bytes
+permanently and name them as the forgery.
+
+**The erosion risk is the mixed corpus, and it is not hypothetical.** Once some
+rows carry a digest and some do not, the difference reads as a quality signal:
+verified against unverified, which is two words off the trip-wire list. Then it
+becomes a badge, then a filter, then a bar for publication. Absence renders as
+absence, as everywhere else. An artifact nobody hashed is checked on shape and
+dtype and handed over, and a client that refused it would have made the column
+mandatory without anybody deciding to.
+
+**What this makes impossible to express:** bytes that legitimately move under a
+published version. An author who re-encodes their file, or whose host migrates
+it, or whose safetensors writer orders the header differently, now gets a refusal
+naming their own artifact. That is a real cost and the answer is the one
+immutability already gives: publish a new version rather than edit a frozen one.
+It also cannot help the case it was written for, offline. The falsifier only
+reaches files that are here, and the row that records a digest and points at
+someone else's repo is checked at the moment the client fetches it or not at all.
+
+**Safety:** this reduces misuse surface rather than adding to it, and adds no
+distribution capability. It is a refusal, not a route.
+
+**Two incidental findings, recorded because they were not in the review.** The
+positive control in `tests/test_artifact_check.py` was built from a reconstructed
+`np.arange(8)` rather than from alice's file, so "the recorded artifact loads" was
+testing bytes that were never the recorded artifact; it reads the committed
+fixture now. And the synthetic half of the falsifier check is the weak half, since
+`fixtures/build.py` hashes files it wrote in the same run: the three vendored rows
+are the ones where the digest reaches the database only by matching an
+independent record, and both scripts say so where a reader will hit it.
+
+**Where the guard against tightening lives.** `tests/test_artifact_digest_bite.py`
+asserts nullability against `PRAGMA table_info` after every migration has run,
+rather than against the text of 006, so a later migration that rebuilt the table
+and added the constraint fails rather than reads clean. Not added to the invariant
+list in `CLAUDE.md`: that list is the plurality premise made executable in
+`tests/test_invariants.py`, and this is a correctness check in the client and the
+falsifier. Raise it if that reading is wrong.
+
+**Supersedes:** nothing.

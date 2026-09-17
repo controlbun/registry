@@ -25,6 +25,7 @@ the adapter is a small function to write once the target library is pinned.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from dataclasses import dataclass, field
@@ -92,6 +93,13 @@ class Contract:
     activation_norm: float | None
     dtype: str
     shape: str
+    # The digest of the file as published, header included. Here rather than
+    # beside the fetch fields because it is the third thing `_check` compares,
+    # next to shape and dtype, and because it is a published fact: anyone can
+    # fetch the author's repo themselves and check the bytes without this client.
+    # None when nobody recorded one, which is the normal state for an artifact
+    # this registry points at rather than holds. See schema/migrations/006.
+    artifact_sha256: str | None = None
 
 
 @dataclass(frozen=True)
@@ -142,20 +150,64 @@ class Submission:
 
         Fetched from wherever it lives, then checked against what this submission
         says it is. The check is not ceremony: the bytes may have come off a CDN
-        at a commit we pinned months ago, and a shape or dtype that disagrees with
-        the record means the two have come apart. Loading it anyway would hand
-        back a tensor that silently is not the one the page describes.
+        at a commit we pinned months ago, and a digest, shape or dtype that
+        disagrees with the record means the two have come apart. Loading it anyway
+        would hand back a tensor that silently is not the one the page describes.
         """
         if not any((self._artifact_path, self._artifact_repo, self._served_repo)):
             raise NotFound(f"{self.ref} has no artifact attached")
 
-        blob = fetch.resolve(
+        return self._check(fetch.resolve(
             artifact_path=self._artifact_path,
             served_repo=self._served_repo,
             served_commit=self._served_commit,
             artifact_repo=self._artifact_repo,
             artifact_commit=self._artifact_commit,
-        )
+        ))
+
+    def _check(self, blob: bytes) -> np.ndarray:
+        """What arrived against what was recorded, then the tensor it holds.
+
+        Takes bytes rather than a tensor so the digest is compared before a parser
+        sees the file. `artifacts/ingest_arena.py` already works that way and is
+        the model: it verifies a sha256 before `np.load` touches a `.npz`. The
+        arbitrary-code argument that motivated it there does not carry here,
+        because safetensors cannot express an object array, which is why the
+        registry normalizes to it on ingest. What remains is that the parser is
+        the first code to touch bytes that a server we do not run just sent us,
+        and one hash of a 20KB buffer is a cheap thing to do first.
+
+        **Three comparisons, and the digest is the one that can fail alone.**
+        Shape and dtype are two facts, and a great many tensors satisfy both: a
+        substituted float32 [5120] passes them and is a different artifact. The
+        digest identifies the file. Shape and dtype stay because they are what
+        the record promises for an artifact whose digest nobody recorded.
+
+        **No recorded digest is a state, not a refusal.** Most artifacts are
+        pointed at rather than held and nobody hashed their bytes. Refusing those
+        would make the column a required field by the back door, which is the
+        shape every quality gate in this project arrives in.
+
+        The L2 norm is still deliberately not checked here: it is a float that
+        went through a text column and back, and the falsifier already re-derives
+        it with the tolerance that comparison needs. Repeating it here with a
+        stricter rule would reject good artifacts on a rounding difference. A
+        digest has no tolerance question, which is the other reason it belongs
+        here and the norm does not.
+        """
+        want_digest = self.contract.artifact_sha256
+        if want_digest:
+            got_digest = hashlib.sha256(blob).hexdigest()
+            if got_digest != want_digest:
+                raise MismatchedArtifact(
+                    f"{self.ref} is recorded as sha256 {want_digest} and the "
+                    f"{len(blob)} bytes that arrived hash to {got_digest}. These "
+                    "are not the bytes this submission was published with. A "
+                    "pinned reference resolves to one frozen artifact forever, so "
+                    "this is not a newer version; something between the author "
+                    "and here returned a different file."
+                )
+
         tensors = load_bytes(blob)
         if len(tensors) != 1:
             raise MismatchedArtifact(
@@ -163,17 +215,7 @@ class Submission:
                 f"({sorted(tensors)}). A submission is one artifact."
             )
         tensor = next(iter(tensors.values()))
-        self._check(tensor)
-        return tensor
 
-    def _check(self, tensor: np.ndarray) -> None:
-        """What arrived against what was recorded.
-
-        Shape and dtype only. The L2 norm is deliberately not checked here: it is
-        a float that went through a text column and back, and the falsifier already
-        re-derives it with the tolerance that comparison needs. Repeating it here
-        with a stricter rule would reject good artifacts on a rounding difference.
-        """
         want_shape = self.contract.shape
         got_shape = str(list(tensor.shape))
         if want_shape and got_shape != want_shape:
@@ -188,6 +230,7 @@ class Submission:
                 f"{self.ref} is recorded as {want_dtype} and the bytes that "
                 f"arrived are {tensor.dtype}."
             )
+        return tensor
 
     def torch(self):
         """The same tensor as a torch tensor. Imported lazily so torch stays
@@ -263,9 +306,10 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
     iv = conn.execute(
         # Named rather than `*`, so adding a column to the schema does not
         # silently start travelling through the client. Widened in 004 to carry
-        # both where the author published it and where we serve a copy from.
+        # both where the author published it and where we serve a copy from, and
+        # in 006 to carry the digest those bytes are checked against.
         "SELECT artifact_path, artifact_repo, artifact_commit,"
-        " served_repo, served_commit FROM intervention"
+        " served_repo, served_commit, artifact_sha256 FROM intervention"
         " WHERE author=? AND label=? AND version=?",
         (row["author"], row["label"], row["version"]),
     ).fetchone()
@@ -289,6 +333,11 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
             activation_norm=view["activation_norm"],
             dtype=view["dtype"],
             shape=view["shape"],
+            # From the intervention row directly rather than through
+            # `claimant_view`: the view shapes what a page renders, and this is
+            # not rendered anywhere yet. It travels with the fetch fields it is
+            # used against.
+            artifact_sha256=iv["artifact_sha256"] if iv else None,
         ),
         evidence=Evidence(
             state=view["score_state"],

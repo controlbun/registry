@@ -1,0 +1,77 @@
+-- 006_artifact_digest.sql
+--
+-- `artifact_sha256`: the sha256 of the artifact file as published, so bytes that
+-- arrive can be checked against bytes that were recorded.
+--
+-- Until now there was nowhere in this schema to put that, and the consequence is
+-- a hole in the one path this project says is the product. `fetch.resolve` hands
+-- back bytes from three places, and two of them are somebody else's server: our
+-- served copy, the author's repo, then a local file. `client.Submission._check`
+-- compared shape and dtype and said in its own docstring that it was not going to
+-- check the L2 norm. `falsifier/verify.py` recomputes shape, dtype and norm, and
+-- only for the rows whose bytes are already in this repository, which is every
+-- row today and none of the rows the fetch path exists for.
+--
+-- So a repo owner re-points an LFS object, or a CDN edge is compromised, and a
+-- different float32 [5120] tensor comes back. It has the recorded shape and the
+-- recorded dtype, because those are two facts and there are a great many tensors
+-- that satisfy both. `vector()` returns it, nothing rechecks the published norm,
+-- and `fetch._cache_path` writes it under a key whose comment reads "cached
+-- forever, because a SHA is forever". The commit SHA is forever. It names the
+-- bytes that were in that commit, and nothing here was checking that the bytes
+-- that arrived are those.
+--
+-- The ingest path in this same repository already gets this right.
+-- `artifacts/ingest_arena.py` refuses to convert a `.npz` whose sha256 does not
+-- match the recorded one, before it parses it, and verifies the `.safetensors` it
+-- writes afterwards. The client path was strictly weaker than the ingest path,
+-- against a threat model that is worse: ingest runs once, on a machine the author
+-- controls, and the client runs on everyone else's.
+--
+-- **What the column holds.** The digest of the whole file, header included, not
+-- of the tensor payload. The file is what gets fetched, cached and handed to a
+-- parser, so the file is what has to be identified. `registry.artifact.sort_header`
+-- exists so that is a stable quantity: safetensors serializes its header out of a
+-- randomly seeded HashMap, and without the rewrite the same tensor written twice
+-- produces two digests.
+--
+-- **Nullable, and that is the load-bearing half.** An artifact this registry only
+-- points at, whose bytes nobody here has ever fetched, has no digest anybody
+-- recorded. `artifact_path` is already nullable for the same reason, and the
+-- pointer-only case is the normal one under the 2026-09-13 decision: upload is
+-- preferred, a pointer alone is the fallback, and the seed corpus indexes what
+-- already exists elsewhere.
+--
+-- NOT NULL would not produce a digest. It would produce a string, which is the
+-- argument 005 makes about `model_revision` and 001 makes about recipes:
+-- requiring one "would exclude exactly the historical artifacts worth comparing
+-- against". It is worse here than in either of those, because a digest is
+-- load-bearing rather than informational. A revision nobody recorded, typed in
+-- anyway, misleads a reader. A digest nobody recorded, typed in anyway, makes the
+-- client refuse the artifact permanently and name the author's own bytes as the
+-- forgery.
+--
+-- This is not a measurement, so it carries no eval-result marker and invariant 1
+-- would permit NOT NULL, exactly as 004 says of the served-copy columns. It is
+-- nullable for the other reason.
+--
+-- **Absence is its own state and reads as one.** A row with no recorded digest is
+-- checked on shape and dtype as before and is not refused. Refusing there would
+-- turn this into a required field by the back door, which is how a quality gate
+-- gets built one reasonable step at a time.
+--
+-- **What a recorded digest is and is not.** It is a claim by whoever wrote the
+-- row, like every other value here, and it does not establish that the artifact
+-- is what its label says. What it buys is that the claim is checkable and frozen:
+-- `author/label@version` already promises one set of bytes forever, and this is
+-- the first column that lets anything verify that promise rather than assert it.
+-- Substitution stops being silent and becomes a refusal naming both digests.
+--
+-- No CHECK on the format. A constraint listing what a digest may look like is a
+-- smaller version of the same mistake, and whoever records a blake3 or a
+-- multihash should be able to say so rather than be rejected by the column.
+-- Common value: 64 lowercase hex characters, sha256 of the file.
+--
+-- Nullable columns add in place, so no table rebuild here, unlike 005.
+
+ALTER TABLE intervention ADD COLUMN artifact_sha256 TEXT;

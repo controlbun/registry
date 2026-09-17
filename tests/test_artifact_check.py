@@ -9,10 +9,15 @@ The temptation is to warn and carry on, because refusing feels drastic for what 
 usually a typo. It is the wrong call here specifically: the whole product is that
 published numbers re-derive from raw artifacts, and quietly handing back the wrong
 tensor breaks that in the one place nobody looks.
+
+Shape, dtype and the one-artifact rule live here. The content hash lives in
+`tests/test_artifact_digest_bite.py`, because it is the check that fires first and
+would otherwise stand in front of every case below.
 """
 
 from __future__ import annotations
 
+import hashlib
 import subprocess
 import sys
 from pathlib import Path
@@ -38,7 +43,19 @@ def conn(tmp_path):
 
 
 def _submission(conn, monkeypatch, blob: bytes):
-    """alice's submission, with whatever bytes we hand it standing in as the file."""
+    """alice's submission, with whatever bytes we hand it standing in as the file.
+
+    **The recorded digest is cleared first, deliberately.** Every blob below is
+    crafted here rather than read off disk, so none of them is the file alice
+    published and all of them would be refused on the digest alone, which would
+    shadow the checks these cases are about. Clearing it puts each test in the
+    state it is actually describing: an artifact this registry points at and
+    nobody hashed, where shape and dtype are the whole of the record and have to
+    bite on their own. The digest itself is proven in
+    `tests/test_artifact_digest_bite.py`.
+    """
+    conn.execute("UPDATE intervention SET artifact_sha256 = NULL WHERE id='iv_alice'")
+    conn.commit()
     monkeypatch.setattr(fetch, "resolve", lambda **k: blob)
     row = conn.execute(
         "SELECT * FROM submission WHERE author='alice' AND label='kindness'"
@@ -47,9 +64,27 @@ def _submission(conn, monkeypatch, blob: bytes):
 
 
 def test_the_recorded_artifact_loads(conn, monkeypatch):
-    """The check must not be so strict that the real fixture fails it."""
-    good = save({"direction": np.arange(8, dtype=np.float32)})
-    assert _submission(conn, monkeypatch, good).vector().shape == (8,)
+    """The check must not be so strict that the real fixture fails it.
+
+    The real fixture, with everything the record holds against it, including the
+    digest. This used to hand over a reconstructed `np.arange(8)`, which is not
+    the tensor alice published, and it passed because shape and dtype were the
+    only things compared. A positive control built from something other than the
+    artifact cannot tell you the artifact loads.
+    """
+    good = (ROOT / "fixtures" / "alice_kindness_v1.safetensors").read_bytes()
+    recorded = conn.execute(
+        "SELECT artifact_sha256 FROM intervention WHERE id='iv_alice'"
+    ).fetchone()[0]
+    assert hashlib.sha256(good).hexdigest() == recorded, (
+        "the committed fixture is not the file the database was seeded from"
+    )
+
+    monkeypatch.setattr(fetch, "resolve", lambda **k: good)
+    row = conn.execute(
+        "SELECT * FROM submission WHERE author='alice' AND label='kindness'"
+    ).fetchone()
+    assert client._build(conn, row).vector().shape == (8,)
 
 
 def test_a_different_shape_is_refused(conn, monkeypatch):
