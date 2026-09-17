@@ -424,3 +424,22 @@ td.sim { font-variant-numeric: tabular-nums; }
   border-radius: 999px; padding: 0 .45rem; color: var(--dim);
 }
 .tag.warn { color: var(--warn); border-color: var(--warn-line); }
+
+/* The situation picker on the home page. A sentence the reader completes with
+   their own artifact and their own reason, because the prose it replaced was an
+   abstraction and a researcher answered it as one. Selects sit inline in the
+   sentence rather than stacking as a form: it is a sentence, not a survey. */
+.situation { margin: 1.4rem 0 1.6rem; }
+.situation .ask { font-size: 1.05rem; line-height: 2.1; max-width: none; }
+.situation select {
+  font: inherit; font-size: .95rem; color: var(--ink);
+  background: var(--wash); border: 1px solid var(--line);
+  border-radius: 4px; padding: .1rem .3rem; margin: 0 .15rem;
+  cursor: pointer;
+}
+.situation select:hover { border-color: var(--accent); }
+.situation select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.situation .answer {
+  margin-top: .7rem; padding-left: .9rem;
+  border-left: 2px solid var(--accent); color: var(--ink);
+}

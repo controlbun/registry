@@ -31,6 +31,35 @@ const released = (iso) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
 const belowThreshold = data.corpus.size < data.corpus.threshold;
+
+// The situation picker.
+//
+// A researcher read the old opening aloud and finished with "I didn't
+// understand the task". The prose was abstract and she answered it as one:
+// "ten people will extract kindness" got "Who are the 10 people? Why 10". A
+// sentence she completes with her own artifact and her own reason makes the
+// abstraction concrete without the page having to guess which case she is in.
+//
+// Kinds and labels come from the corpus and carry an escape, because `kind` is
+// an open string and a dropdown listing three of them declares that those are
+// the three. DECISIONS.md 2026-09-13: faceted browsing over kinds is built from
+// what the corpus contains rather than from a declared list.
+const KINDS = [...data.kinds, "something else"];
+const LABELS = [...new Set(data.labels.map((l) => l.label))].sort();
+const realCount = data.corpus.size - data.labels
+  .flatMap((l) => l.claimants).filter((c) => c.is_synthetic).length;
+
+// Every answer has to be true today. Three of the four are "not yet", which is
+// the honest state and is also B2 landing where it is actually wanted: at the
+// moment somebody says what they came for, rather than as five refusals
+// scattered across five pages.
+const NEEDS = {
+  "cannot tell whether to trust it": `Then what you want is not our opinion, it is somebody else's check. A submission here shows what its author measured, what they did not, and anything a third party found afterwards. Nothing is scored and nothing is ranked. The three pro-human directions on this site come from one dataset at one layer and differ only in the estimator, every check their author ran says all three are fine, and nothing distinguishes them. That is the problem stated exactly.`,
+  "want to publish it": `Not yet. This takes no uploads and has no accounts. What exists is the schema, the pages and a Python client, so you can see precisely what a submission would have to record before deciding whether recording it is worth your time.`,
+  "would rather use someone else's": `That is the point of it, and today it is mostly unbuilt: ${data.corpus.size} submissions, ${realCount} of them real. Browse what is here to judge the shape, not the contents.`,
+  "want to know if somebody already tried": `Nothing here yet, and that is the gap this aims at. Negative results have nowhere to live, so everybody spends the same weeks finding out the same thing separately.`,
+};
+const DEFAULT_NEED = "cannot tell whether to trust it";
 ---
 
 <!doctype html>
@@ -62,51 +91,124 @@ const belowThreshold = data.corpus.size < data.corpus.threshold;
         <a href="/about/">About</a>
       </nav>
 
-      <main class="intro">
-        {data.any_synthetic && (
-          <div class="banner">
-            <strong>Synthetic corpus{exception ? `, except ${exception}` : ""}.</strong>{" "}
-            {exception
-              ? `Every submission listed here is fabricated to exercise the interface apart from ${exception}, which is a real direction with real measurements. Fabricated scores are repeated-digit decimals, fabricated vectors are integer ramps, and the models those name do not resolve.`
-              : "Every submission listed here is fabricated to exercise the interface. Scores are repeated-digit decimals, vectors are integer ramps, and the models named do not resolve. Nothing on this site is a measurement."}
-          </div>
-        )}
+      {/* Rewritten 2026-09-17, because a researcher read this page aloud in a
+          meeting and finished with "I didn't understand the task".
 
+          What she tripped on, in the order she hit it: the name, which means
+          nothing until /about/; the synthetic banner, which is a caveat about
+          data before she knew what the data was for; and "ten people will
+          extract kindness", which she answered with "Who are the 10 people?
+          Like any researcher? Why 10" because it is a hypothetical rather than
+          a use.
+
+          An earlier blind crawl reported the opposite, that the old lede landed
+          in one sentence. That reader was a language model, which pattern-matches
+          "a registry for activation-steering artifacts, in the spirit of GitHub"
+          to a category it already holds. It is a good proxy for structure and a
+          poor one for comprehension, and it was trusted as one.
+
+          So: the pain first and concrete, then what the thing is, then what
+          stage it is at. The banner moves below, next to the data it is about.
+          Sentences are the author's, from the pitch he gave at the end of that
+          same meeting, which is the part she said sounded reasonable. */}
+      <main class="intro">
         <h1>controlbun</h1>
 
         <p class="lede">
-          A registry for activation-steering artifacts, in the spirit of GitHub or
-          Hugging Face rather than a curated database.
+          Extracting a steering direction takes about a day. Deciding whether to
+          trust it takes weeks, and none of that work carries over to anybody
+          else.
         </p>
 
-        {/* Short on purpose. The long argument moved to /about/ on 2026-09-13,
-            split by first visit rather than by topic: someone arriving cold needs
-            the next paragraph or they read every page after it as a leaderboard,
-            and by the fifth visit an essay on the home page is furniture.
+        {/* Rendered with the default already chosen, so the page says something
+            true before any JavaScript runs and a reader with none gets the
+            strongest honest answer rather than an empty box. */}
+        <div class="situation">
+          <p class="ask">
+            I have
+            <select id="pick-kind" aria-label="kind of artifact">
+              {KINDS.map((k) => <option value={k}>{k === "something else" ? "something else" : `a ${k}`}</option>)}
+            </select>
+            for
+            <select id="pick-label" aria-label="what it is meant to capture">
+              {LABELS.map((l) => <option value={l}>{l}</option>)}
+              <option value="something else">something else</option>
+            </select>
+            and I
+            <select id="pick-need" aria-label="what you want to do">
+              {Object.keys(NEEDS).map((n) => <option value={n}>{n}</option>)}
+            </select>.
+          </p>
+          <p class="answer" id="answer">{NEEDS[DEFAULT_NEED]}</p>
+        </div>
 
-            The plurality claim stays here because misreading it is the one failure
-            that makes the rest of the site unreadable. Everything else is a
-            deliberate read, once, and lives on /about/.
-
-            PROSE STILL PLACEHOLDER, lifted from BRIEF.md. It is true and it is in
-            the author's words, but it was written for a design brief and not for
-            someone landing here cold. */}
         <p>
-          Ten people will extract <span class="mono">kindness</span> with different
-          contrast data, different theories of what kindness is, and different ideas
-          about what could be confounding it. This holds all ten side by side and
-          makes the disagreement legible. It does not pick a winner, mandate a
-          definition, or impose a single evaluation.
+          So the next person starts from nothing. And somebody who tries an
+          existing artifact, gets nothing out of it, and gives up has nowhere to
+          say so, which means the person after them spends the same weeks finding
+          out the same thing.
         </p>
 
         <p>
-          The primary object is a submission: one author's complete take,
-          self-contained, comparable to others after the fact rather than conformant
-          to them in advance. <a href="/about/">What this is and where it came
-          from</a>.
+          This is a record of what people extracted, from which model, how, and
+          what happened when they or anyone else checked it. Failures included,
+          because those are the ones that save somebody a month.
         </p>
+
+        <p>
+          Several people will mean different things by the same word and build
+          different vectors for it. Those sit here side by side. Nothing picks one,
+          and nothing is ranked by a score.{" "}
+          <a href="/about/">What this is and where it came from</a>.
+        </p>
+
+        {/* The caveat goes here rather than at the top. It is a statement about
+            the data, so it belongs beside the data and not in front of the
+            explanation of what the site is for. Still on the page, which is what
+            the falsifier checks. */}
+        {data.any_synthetic && (
+          <div class="banner">
+            <strong>A working demonstration, not a running service.</strong>{" "}
+            {data.corpus.size} submissions and no uploads yet.{" "}
+            {/* "Synthetic corpus" is kept verbatim. It is the phrase the
+                falsifier looks for and the phrase every other page uses, and a
+                home page that says the same thing differently is the two-copies
+                drift this project keeps producing. The stage sentence goes in
+                front of it rather than instead of it. */}
+            {exception
+              ? `Synthetic corpus, except ${exception}: everything listed is fabricated to exercise the interface apart from those, which are real directions with real measurements. Fabricated scores are repeated-digit decimals, fabricated vectors are integer ramps, and the models those name do not resolve.`
+              : "Synthetic corpus: everything listed is fabricated to exercise the interface. Scores are repeated-digit decimals, vectors are integer ramps, and the models named do not resolve."}
+          </div>
+        )}
 
       </main>
+
+      <script define:vars={{ NEEDS, KINDS, LABELS }}>
+        // The need drives the answer. Kind and label are there so the reader
+        // states their own case rather than reading ours, and because picking
+        // "something else" is the honest answer for most artifacts: three kinds
+        // and three labels is what this corpus happens to hold, not what the
+        // schema permits.
+        const need = document.getElementById("pick-need");
+        const kind = document.getElementById("pick-kind");
+        const label = document.getElementById("pick-label");
+        const answer = document.getElementById("answer");
+
+        const OPEN_FIELD =
+          " Neither `kind` nor the label is a list you have to choose from: " +
+          "both are open strings, and those dropdowns show what this corpus " +
+          "currently holds rather than what it accepts.";
+
+        function render() {
+          let text = NEEDS[need.value] ?? "";
+          if (kind.value === "something else" || label.value === "something else") {
+            text += OPEN_FIELD;
+          }
+          answer.textContent = text;
+        }
+
+        for (const el of [need, kind, label]) el.addEventListener("change", render);
+      </script>
 
       <aside class="rail">
         <div class="panel">
