@@ -553,42 +553,254 @@ def suggestions(conn: sqlite3.Connection) -> dict[str, list[str]]:
 
 
 STYLE = """
-:root { color-scheme: light dark; }
+/* The tokens are `astro/src/styles/app.css`'s, copied rather than linked, and the
+   page is set in the site's serif for the same reason: this is the same product
+   seen from the inside. Copied, because this page is served by a stdlib handler
+   with no static route, and giving it one so it could reach into `astro/` would
+   hand this process a file-serving surface it has no other reason to have. The
+   blues are the two ends of one blackbody curve and that file carries the
+   contrast measurements for both surfaces. Red is not here at all: the site
+   reserves it for status, and a refusal is an outcome rather than a fault. */
+:root {
+  color-scheme: light dark;
+  --ink: #16161a; --dim: #6b6b72; --faint: #97979e;
+  --line: #e4e4e8; --wash: #fafafa; --page: #fff;
+  --warn: #8a5a00; --warn-line: #e6d38a;
+  --accent: #356AFF; --accent-fill: #386BFE;
+  --pop: #fff; --pop-line: #b3b3be;
+  --pop-shadow: 0 6px 16px -10px rgba(22, 22, 26, .5),
+                0 1px 2px rgba(22, 22, 26, .07);
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e8e8ea; --dim: #a0a0a8; --faint: #74747c;
+    --line: #2a2a30; --wash: #16161a; --page: #0d0d10;
+    --warn: #d8a548; --warn-line: #4a3d1a;
+    --accent: #95B1FF; --accent-fill: #95B1FF;
+    --pop: #16161a; --pop-line: #44444f;
+    --pop-shadow: 0 10px 26px -12px rgba(0, 0, 0, .85);
+  }
+}
+
 * { box-sizing: border-box; }
-body { font: 15px/1.55 ui-sans-serif, system-ui, sans-serif; margin: 0;
-       padding: 2rem 1.5rem 6rem; max-width: 52rem; }
-h1 { font-size: 1.3rem; margin: 0 0 .25rem; }
-h2 { font-size: .95rem; text-transform: uppercase; letter-spacing: .08em;
-     margin: 2.25rem 0 .75rem; opacity: .65; }
-p.note { opacity: .75; margin: .35rem 0 0; }
-fieldset { border: 1px solid; border-color: color-mix(in srgb, currentColor 22%, transparent);
-           border-radius: 6px; padding: 1rem 1.1rem 1.2rem; margin: 0 0 1rem; }
-legend { padding: 0 .4rem; font-weight: 600; }
-label { display: block; margin: .8rem 0 0; }
-label > span { display: block; font-weight: 600; font-size: .85rem; }
-label > em { display: block; font-style: normal; opacity: .7; font-size: .82rem;
-             margin-bottom: .25rem; }
-input, textarea, button { font: inherit; width: 100%; padding: .45rem .55rem;
-                          border-radius: 5px;
-                          border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-                          background: transparent; color: inherit; }
-textarea { min-height: 7rem; }
-button { width: auto; cursor: pointer; padding: .5rem 1.1rem; font-weight: 600; }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
-.modes { display: flex; gap: 1.25rem; margin-bottom: .5rem; }
-.modes label { display: flex; gap: .4rem; align-items: center; margin: 0; }
-.modes input { width: auto; }
-.panel { margin-top: 1.25rem; padding: 1rem 1.1rem; border-radius: 6px;
-         border: 1px solid color-mix(in srgb, currentColor 30%, transparent); }
-.panel[hidden] { display: none; }
-dl.facts { display: grid; grid-template-columns: 10rem 1fr; gap: .3rem 1rem;
-           margin: .5rem 0 0; font-family: ui-monospace, monospace; font-size: .84rem; }
-dl.facts dt { opacity: .65; }
-dl.facts dd { margin: 0; overflow-wrap: anywhere; }
-.refused { border-color: currentColor; }
-.refused strong { display: block; margin-bottom: .35rem; }
-pre { white-space: pre-wrap; margin: 0; font-size: .84rem; overflow-wrap: anywhere; }
-footer { margin-top: 3rem; opacity: .7; font-size: .86rem; }
+[hidden] { display: none !important; }
+body {
+  font: 15px/1.6 ui-serif, Georgia, "Times New Roman", serif;
+  color: var(--ink); background: var(--page);
+  margin: 0; padding: 2.4rem clamp(1.25rem, 4vw, 4rem) 6rem;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ------------------------------------------------------------------ head */
+
+header.top {
+  display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap;
+  border-bottom: 1px solid var(--line); padding-bottom: .9rem; margin-bottom: 2rem;
+}
+header.top .wordmark {
+  font-family: var(--mono); font-size: .95rem; font-weight: 600;
+  letter-spacing: -.02em;
+}
+header.top .bind {
+  margin-left: auto; font-family: var(--mono); font-size: .78rem; color: var(--faint);
+}
+h1 { font-size: 1.95rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
+.lede { color: var(--dim); margin: 0 0 1.8rem; max-width: 44rem; }
+.lede code { font-family: var(--mono); font-size: .85em; }
+
+/* ---------------------------------------------------------------- layout */
+/* The form is the input and the readout is the result, so the readout is the
+   column that never leaves the screen. */
+
+.work {
+  display: grid; grid-template-columns: minmax(0, 1fr) 25rem;
+  gap: 2.8rem; align-items: start;
+}
+@media (max-width: 70rem) {
+  .work { grid-template-columns: 1fr; }
+  .rail { position: static; }
+}
+.form { max-width: 54rem; }
+/* Scrollable in itself, because a header with twenty keys in it makes the
+   readout taller than the window and a sticky block taller than its viewport
+   stops following. */
+.rail { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow: auto; }
+
+h2 {
+  font-size: 1.1rem; margin: 2.4rem 0 .2rem; letter-spacing: -.005em;
+  border-bottom: 1px solid var(--line); padding-bottom: .35rem;
+}
+.note { color: var(--dim); font-size: .85rem; margin: .5rem 0 0; max-width: 42rem; }
+.note code { font-family: var(--mono); font-size: .88em; }
+
+/* ----------------------------------------------------------------- field */
+
+.grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.6rem; margin-top: 1rem;
+}
+.grid.single { grid-template-columns: minmax(0, 1fr); }
+.field { position: relative; display: flex; flex-direction: column; gap: .25rem; }
+.field > label {
+  display: flex; align-items: baseline; gap: .45rem;
+  font-size: .85rem; color: var(--ink);
+}
+/* A field name that is a column name is set in mono, the way every stored string
+   on the site is, and a name this form made up for a human stays in the serif. */
+.field .name { font-family: var(--mono); font-size: .82rem; }
+.field .name.said { font-family: inherit; font-size: .88rem; }
+/* The dotted rule is the site's mark for "this is operable", on sortable table
+   headers and on the blanks in the situation picker. Here it reads as "there is
+   more to this one", and pointing at the field or tabbing into it says what. */
+.field .name { text-decoration: underline dotted var(--faint); text-underline-offset: 3px; }
+.field:hover .name, .field:focus-within .name { text-decoration-color: var(--accent); }
+.field .may {
+  font-size: .72rem; color: var(--faint); border: 1px solid var(--line);
+  border-radius: 999px; padding: 0 .4rem; white-space: nowrap;
+}
+
+input, textarea {
+  font: inherit; width: 100%; color: var(--ink); background: var(--page);
+  border: 1px solid var(--line); border-radius: 4px; padding: .4rem .55rem;
+}
+input:hover, textarea:hover { border-color: var(--dim); }
+textarea { min-height: 6.5rem; line-height: 1.5; resize: vertical; }
+input[type="file"] { padding: .3rem; font-size: .88rem; }
+input[type="file"]::file-selector-button {
+  font: inherit; font-size: .85rem; color: var(--ink); background: var(--wash);
+  border: 1px solid var(--line); border-radius: 3px;
+  padding: .2rem .6rem; margin-right: .6rem; cursor: pointer;
+}
+/* The tensor facts and the pins are strings the corpus stores, so the box they
+   are typed into shows them the way the corpus will. */
+.field.string input, .field.string textarea { font-family: var(--mono); font-size: .86rem; }
+
+/* The explanation. One floating surface on the site, the type-ahead popup, and
+   these borrow its tokens so a second one does not invent a second look. It is
+   not hover-only: `:focus-within` opens it for a keyboard, and the input carries
+   `aria-describedby` so it is read out whether or not it is on screen. */
+.field .why {
+  position: absolute; z-index: 20; top: 100%; left: 0; margin-top: .3rem;
+  width: max(100%, 21rem); max-width: min(30rem, calc(100vw - 3rem));
+  padding: .6rem .8rem;
+  font-size: .85rem; line-height: 1.5; color: var(--ink);
+  background: var(--pop); border: 1px solid var(--pop-line); border-radius: 5px;
+  box-shadow: var(--pop-shadow);
+  opacity: 0; visibility: hidden;
+}
+.field .why code { font-family: var(--mono); font-size: .88em; }
+.field .why .from { display: block; margin-top: .35rem; color: var(--dim); font-size: .95em; }
+.field:hover .why, .field:focus-within .why { opacity: 1; visibility: visible; }
+/* The right-hand column would hang its explanation off the edge of the page. */
+.grid > .field:nth-child(even) .why { left: auto; right: 0; }
+/* A delay, so crossing the form with a pointer does not set off a row of them.
+   The only motion on the page, and it answers something the reader did. */
+@media (prefers-reduced-motion: no-preference) {
+  .field .why { transition: opacity .09s ease, visibility 0s linear .09s; }
+  .field:hover .why, .field:focus-within .why {
+    transition: opacity .1s ease .3s, visibility 0s linear .3s;
+  }
+}
+
+/* ------------------------------------------------------------ mode, bytes */
+
+.modes { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+.modes .seg {
+  display: flex; align-items: baseline; gap: .45rem; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 4px; padding: .45rem .75rem;
+  font-size: .9rem; color: var(--dim);
+}
+.modes .seg input { width: auto; }
+.modes .seg:hover { border-color: var(--dim); }
+.modes .seg:has(input:checked) { border-color: var(--accent-fill); background: var(--wash); }
+.modes .seg input:checked ~ .what { color: var(--ink); }
+.modes .what strong { font-weight: 600; }
+
+fieldset { border: 0; border-left: 2px solid var(--line); border-radius: 0;
+           padding: .2rem 0 .2rem 1.1rem; margin: 1.3rem 0 0; }
+fieldset > legend { display: none; }
+
+/* ------------------------------------------------------------- the handoff */
+
+.handoff {
+  border: 1px solid var(--line); border-radius: 6px; background: var(--wash);
+  padding: .9rem 1.1rem 1.1rem; margin-top: .4rem;
+}
+.handoff h2 { border: 0; margin: 0; padding: 0; font-size: 1rem; }
+.handoff .note { margin-top: .3rem; }
+.handoff .acts { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .8rem; }
+#agent-paste { margin-top: .9rem; }
+#agent-paste textarea {
+  min-height: 4rem; background: var(--page);
+  font-family: var(--mono); font-size: .84rem;
+}
+.said-quiet { font-size: .82rem; color: var(--dim); display: block; margin-bottom: .25rem; }
+.status { font-size: .84rem; color: var(--dim); margin: .6rem 0 0; }
+
+/* ---------------------------------------------------------------- buttons */
+
+button {
+  font: inherit; font-size: .92rem; color: var(--ink); background: var(--page);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: .45rem .9rem; cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--wash); border-color: var(--dim); }
+/* Nothing on this site is a filled button, so the one that does the work says so
+   with the brand rule instead. */
+button.go { border-color: var(--accent-fill); color: var(--accent); }
+button:disabled { color: var(--faint); border-color: var(--line); cursor: default; }
+
+.acts { display: flex; gap: .6rem; flex-wrap: wrap; }
+.acts.after { margin-top: .6rem; }
+.rail .acts { margin-bottom: 1.2rem; }
+
+/* ----------------------------------------------------------- the readout */
+/* The strongest thing on the page. It is what the tool is for: the form is a
+   claim and this is what the bytes said back. */
+
+.out { border: 1px solid var(--line); border-radius: 6px; margin-bottom: 1.2rem; }
+.out > h3 {
+  font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--faint); font-weight: 600; margin: 0;
+  padding: .6rem .9rem; border-bottom: 1px solid var(--line); background: var(--wash);
+}
+.out .body { padding: .85rem .9rem; border-left: 3px solid transparent; }
+.out[data-state="empty"] .body { color: var(--dim); font-size: .88rem; }
+.out[data-state="busy"] .body { color: var(--dim); }
+.out[data-state="read"] .body { border-left-color: var(--accent-fill); }
+.out[data-state="refused"] .body { border-left-color: var(--warn-line); }
+.out .body > p { margin: 0 0 .5rem; }
+.out .body > p:last-child { margin-bottom: 0; }
+
+.refusal-what { font-weight: 600; color: var(--warn); }
+.refusal-why { overflow-wrap: anywhere; }
+
+dl.facts { margin: 0; }
+dl.facts > div { padding: .45rem 0; border-bottom: 1px solid var(--line); }
+dl.facts > div:first-child { padding-top: 0; }
+dl.facts > div:last-child { border-bottom: 0; padding-bottom: 0; }
+dl.facts dt { color: var(--faint); font-size: .78rem; }
+dl.facts dd { margin: .1rem 0 0; overflow-wrap: anywhere; }
+dl.facts dd.mono { font-family: var(--mono); font-size: .84rem; }
+dl.facts dd.prose { font-size: .88rem; }
+/* Absence renders as absence, in the italic the site uses for it, and never as a
+   zero, a blank or a red line. */
+dl.facts dd.absent { color: var(--faint); font-style: italic; font-size: .88rem; }
+
+footer { margin-top: 3.5rem; padding-top: .9rem; border-top: 1px solid var(--line); }
+footer p { margin: 0; color: var(--dim); font-size: .85rem; max-width: 42rem; }
+footer code { font-family: var(--mono); font-size: .88em; }
+
+/* The one field that holds prose rather than a value, so it keeps a measure
+   instead of running the width of the column. */
+#f-definition { max-width: 42rem; min-height: 8rem; }
+
+/* Reaches a screen reader and nothing else. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
 """
 
 SCRIPT = """
@@ -615,28 +827,61 @@ function fields() {
   return out;
 }
 
-function refuse(where, text) {
-  const box = q(where);
+// The readout. `state` drives the rule down its left edge, so a result, a
+// refusal and an untouched panel are three states of one thing rather than three
+// widgets, and a refusal is never colored as an alarm.
+function panel(id, state) {
+  const box = q(id);
   box.hidden = false;
-  box.className = 'panel refused';
-  box.innerHTML = '<strong>Refused</strong><pre></pre>';
-  box.querySelector('pre').textContent = text;
+  box.dataset.state = state;
+  return box.querySelector('.body');
 }
 
-function facts(where, payload) {
-  const box = q(where);
-  box.hidden = false;
-  box.className = 'panel';
+function say(id, state, text) {
+  const p = document.createElement('p');
+  p.textContent = text;
+  panel(id, state).replaceChildren(p);
+}
+
+function refuse(id, text) {
+  const what = document.createElement('p');
+  what.className = 'refusal-what';
+  what.textContent = 'Refused';
+  const why = document.createElement('p');
+  why.className = 'refusal-why';
+  why.textContent = text;
+  panel(id, 'refused').replaceChildren(what, why);
+}
+
+// Presentation only, and a value this guesses wrong renders as ordinary text. A
+// value with no space in it, or a run of `key=value`, is a string the corpus
+// stores and gets the mono face every stored string on this site is set in.
+// Anything else is the tool talking and keeps the serif. The sentences the
+// server writes where nothing was derived start the same few ways, and those
+// render as absence rather than as a reading.
+const ABSENT = /^(not |unnamed$|none[\\s.,]|none$|nothing,|the file carries no header$)/;
+const STORED = /^[\\w.\\-\\/]+=/;
+
+function classOf(value) {
+  if (ABSENT.test(value)) return 'absent';
+  if (STORED.test(value) || !/\\s/.test(value)) return 'mono';
+  return 'prose';
+}
+
+function facts(id, payload) {
   const dl = document.createElement('dl');
   dl.className = 'facts';
   for (const [k, v] of payload.display) {
+    const row = document.createElement('div');
     const dt = document.createElement('dt');
     dt.textContent = k;
     const dd = document.createElement('dd');
     dd.textContent = v;
-    dl.append(dt, dd);
+    dd.className = classOf(v);
+    row.append(dt, dd);
+    dl.append(row);
   }
-  box.replaceChildren(dl);
+  panel(id, 'read').replaceChildren(dl);
 }
 
 let handle = null;
@@ -655,9 +900,7 @@ q('check').addEventListener('click', async () => {
   q('write').disabled = true;
   q('written').hidden = true;
   const m = modeOf();
-  q('checked').hidden = false;
-  q('checked').className = 'panel';
-  q('checked').textContent = 'checking\\u2026';
+  say('checked', 'busy', 'Reading the bytes\\u2026');
   let res;
   if (m === 'link') {
     res = await post('/check', {
@@ -666,7 +909,11 @@ q('check').addEventListener('click', async () => {
     });
   } else {
     const file = q('file').files[0];
-    if (!file) { refuse('checked', 'No file chosen.'); return; }
+    if (!file) {
+      refuse('checked', 'No file chosen. Bytes mode reads a file from this '
+        + 'machine; link mode reads one already published somewhere.');
+      return;
+    }
     const url = '/check?mode=bytes&filename=' + encodeURIComponent(file.name)
       + '&fields=' + encodeURIComponent(JSON.stringify(fields()));
     res = await post(url, { body: file });
@@ -680,9 +927,7 @@ q('check').addEventListener('click', async () => {
 q('write').addEventListener('click', async () => {
   if (!handle) return;
   q('write').disabled = true;
-  q('written').hidden = false;
-  q('written').className = 'panel';
-  q('written').textContent = 'writing\\u2026';
+  say('written', 'busy', 'Writing the rows\\u2026');
   const res = await post('/write', {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ handle, fields: fields() }),
@@ -695,27 +940,265 @@ q('write').addEventListener('click', async () => {
   facts('written', res.body);
   handle = null;
 });
+
+// The two seams for the prompt handoff, which is built elsewhere. Both routes
+// may not exist on this run, and a button that answers a 404 with a sentence is
+// the whole contract: nothing here parses a prompt or writes one.
+function agentSays(text) {
+  const line = q('agent-status');
+  line.hidden = false;
+  line.textContent = text;
+}
+
+q('agent-prompt').addEventListener('click', async () => {
+  const res = await post('/agent-prompt', {
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ fields: fields() }),
+  });
+  if (!res.ok || !res.body.prompt) {
+    agentSays('Nothing answers /agent-prompt on this run, so there is no prompt '
+      + 'to copy. The form works without it.');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(res.body.prompt);
+    agentSays('Copied. Run it where the extraction happened and paste what comes '
+      + 'back.');
+  } catch (e) {
+    q('agent-text').value = res.body.prompt;
+    agentSays('The clipboard refused, so the prompt is in the box below instead.');
+  }
+});
+
+q('agent-fill').addEventListener('click', async () => {
+  const text = q('agent-text').value.trim();
+  if (!text) { agentSays('Nothing pasted yet.'); return; }
+  const res = await post('/agent-paste', {
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pasted: text }),
+  });
+  if (!res.ok || !res.body.fields) {
+    agentSays('Nothing answers /agent-paste on this run, so the paste was not '
+      + 'read. Type the fields in below.');
+    return;
+  }
+  let filled = 0;
+  for (const el of document.querySelectorAll('[data-field]')) {
+    const value = res.body.fields[el.dataset.field];
+    if (typeof value === 'string') { el.value = value; filled += 1; }
+  }
+  agentSays(filled + ' fields filled from the paste. Every one of them is still '
+    + 'editable, and nothing is checked until you check the bytes.');
+});
 """
 
 
+# Every sentence here comes from whatever owns the rule, and names it, so the
+# reader can go and check rather than take this page's word: the comments in
+# `schema/migrations`, the module docstrings under `src/registry`, `BRIEF.md`, and
+# this file's own refusals. Nothing below is a fresh explanation of a column. A
+# second explanation is a second thing to go stale, and the one written next to
+# the column is the one the person who made it meant.
+WHY = {
+    "link_repo":
+        "owner/name on the Hub. The bytes stay there and never rest here; what "
+        "this records is the pointer. No size limit, because nothing is held.",
+    "link_commit":
+        "Forty hex characters. <code>registry.fetch</code> resolves by commit "
+        "only: a tag is movable by whoever owns the repo, so a pin to one is a "
+        "pin to whatever is there today, which is the opposite of what "
+        "<code>author/label@version</code> promises.",
+    "link_path":
+        "Recorded as <code>artifact_path</code> verbatim. "
+        "<code>fetch.resolve</code> hands one path field to the remote, so the "
+        "path inside the repo and the row's <code>artifact_path</code> are the "
+        "same string or the fetch is a 404.",
+    "file":
+        "Converted to safetensors here and checked outside this repository. "
+        "<code>registry.ingest</code> owns which bytes can be read without "
+        "running them; a format nobody has written a converter for is refused "
+        "with a sentence naming what has one and where another goes, which is "
+        "not a statement that the format is illegitimate.",
+    "bytes_repo":
+        "The author's own namespace. <code>publish.upload</code> refuses this "
+        "registry's own, because bytes there would be a copy this project serves "
+        "rather than a thing an author published, which is a different column "
+        "and a different question.",
+    "bytes_path":
+        "Also the row's <code>artifact_path</code>, character for character: one "
+        "path field goes to the remote, so a fetch finds the file or it does not.",
+    "bytes_message": "What the upload says it is, in the commit it makes.",
+    "shape":
+        "Optional and checked. <code>artifact.confirmed</code> holds the bytes "
+        "to whatever you state and the row keeps what you said; state nothing "
+        "and the row records what the bytes say.",
+    "dtype":
+        "As numpy spells it. Stated, it is checked against the bytes and kept; "
+        "left empty, the row takes the dtype the file carries.",
+    "l2_norm":
+        "Cited from wherever you got it, and checked against the bytes. Empty is "
+        "not a wrong claim: the column is nullable and the row will record what "
+        "the file says.",
+    "sha256":
+        "Of the whole file, header included, not of the tensor payload. The file "
+        "is what gets fetched, cached and handed to a parser, so the file is what "
+        "has to be identified. <code>artifact.sort_header</code> exists so that "
+        "is a stable quantity, because safetensors serializes its header out of a "
+        "randomly seeded HashMap.",
+    "author":
+        "Your namespace, free to claim. A label namespace permits an unlimited "
+        "number of claimants, so claiming one takes nothing from anybody else.",
+    "label":
+        "Free to claim, and other people may claim it too. A bare label is a "
+        "computed view across everyone claiming it, owned by nobody, and ten "
+        "people extracting it differently is the content rather than a "
+        "duplication problem.",
+    "version":
+        "<code>author/label@version</code> resolves to one frozen submission "
+        "forever. A correction is a new version rather than a rewrite of this one.",
+    "created_at":
+        "When the work happened, which is not when it was typed in here.",
+    "definition":
+        "Your own theory of the trait, in prose. Load bearing twice: it feeds "
+        "contrast-pair generation, and it is the thing another author disagrees "
+        "with when they claim the same label. Migration 001 made it NOT NULL and "
+        "nothing here will invent one.",
+    "intervention_id":
+        "The primary key, and what an eval report or an attack points at.",
+    "kind":
+        "An open string. <code>direction</code>, <code>sae-latent</code>, "
+        "<code>probe</code>, <code>reft</code> and <code>lora</code> are the ones "
+        "with client support today, not the permitted set. An unrecognized kind "
+        "is storable and displayable and simply has no apply path until somebody "
+        "writes one.",
+    "model_id":
+        "A direction has no meaning apart from the model it was read out of. "
+        "Base and instruct are different models; so is a different revision.",
+    "model_revision":
+        "Empty means nobody recorded it, and it renders as that. NOT NULL does "
+        "not produce a revision, it produces a string: an author who never "
+        "recorded one types <code>unknown</code>, or <code>main</code>, or pastes "
+        "the sha the model has today, and the last is worse than nothing because "
+        "it is a false provenance claim that reads exactly like a true one.",
+    "layer":
+        "An integer, and the column cannot be absent. A hook that is not at a "
+        "layer is a kind of artifact this column cannot describe, which is worth "
+        "saying out loud rather than filling with a zero.",
+    "layer_convention":
+        "Stated in the schema rather than the README because getting this wrong "
+        "is silent: a vector applied at the wrong layer appears not to work "
+        "rather than failing loudly. <code>block-0indexed</code> is a common "
+        "value and not the only one.",
+    "hook_point":
+        "Where in the block this acts. An open string, with "
+        "<code>resid_pre</code>, <code>resid_post</code>, <code>mlp_out</code> "
+        "and <code>attn_out</code> as the common values rather than the allowed "
+        "ones; architectures have hook points those four do not name.",
+    "chat_template_hash":
+        "Vectors extracted under one template may not transfer to another, and a "
+        "vector applied under the wrong one appears not to work rather than "
+        "failing loudly. Empty if none was applied.",
+    "activation_norm":
+        "The typical activation magnitude at that layer, which lets a "
+        "coefficient be expressed as a fraction of it rather than a raw alpha "
+        "that means nothing across models. Empty unless a coefficient here is "
+        "one of those.",
+    "coeff_low":
+        "The bottom of the range you swept and would recommend. Empty if you did "
+        "not sweep one: empty records as not measured, and a zero would record "
+        "as a measurement.",
+    "coeff_high":
+        "The top of the same range. Empty if you did not sweep one.",
+    "steering_position":
+        "Where in the sequence this is applied. An open string, and the other "
+        "half of what somebody needs to apply this the way you did.",
+    "license_status":
+        "For the source model. A steering vector is derived from model weights, "
+        "so what that model's license permits for derived artifacts is the "
+        "question, and unresolved redistribution rights mean the artifact cannot "
+        "be served.",
+}
+
+# Where each explanation above comes from, kept apart from the text so the page
+# can always put it last, whatever else got appended to the sentence.
+SOURCE = {
+    "link_repo": "artifacts/INTAKE.md",
+    "link_commit": "src/registry/fetch.py",
+    "link_path": "artifacts/intake.py",
+    "file": "src/registry/ingest.py",
+    "bytes_repo": "artifacts/publish.py",
+    "bytes_path": "artifacts/intake.py",
+    "shape": "src/registry/artifact.py",
+    "sha256": "schema/migrations/006_artifact_digest.sql",
+    "label": "BRIEF.md, the object graph",
+    "definition": "schema/migrations/001_init.sql",
+    "kind": "schema/migrations/001_init.sql",
+    "model_id": "schema/migrations/001_init.sql",
+    "model_revision": "schema/migrations/005_unrecorded_revision.sql",
+    "layer_convention": "schema/migrations/001_init.sql",
+    "hook_point": "BRIEF.md, the data model",
+    "chat_template_hash": "BRIEF.md, the data model",
+    "activation_norm": "schema/migrations/001_init.sql",
+    "steering_position": "BRIEF.md, the data model",
+    "license_status": "schema/migrations/001_init.sql",
+}
+
+SUGGEST_NOTE = (
+    " Suggestions are read out of what this corpus already holds, so there is no "
+    "second taxonomy to go stale. Anything typed in is taken, and a value nobody "
+    "has used before is the normal way a corpus grows."
+)
+
+
+def _why(name: str, note: str = "", *, suggested: bool = False) -> str:
+    """The explanation for one field, with where it came from last.
+
+    Order matters and is the reason `SOURCE` is a second table: the citation is
+    the end of the note however much else got appended to it, and a source line
+    stranded mid-paragraph reads as part of the next sentence.
+    """
+    text = " ".join(part for part in (html.escape(note), WHY.get(name, "")) if part)
+    if suggested:
+        text += SUGGEST_NOTE
+    if name in SOURCE:
+        text += f'<span class="from">{html.escape(SOURCE[name])}</span>'
+    return text
+
+
 def _field(name: str, title: str, note: str, *, value: str = "",
-           suggest: list[str] | None = None, area: bool = False) -> str:
+           suggest: list[str] | None = None, area: bool = False,
+           empty_ok: bool = False, string: bool = False) -> str:
+    """One field, its name, and the explanation that hangs off it.
+
+    The explanation is not a `title` attribute. It is an element the input points
+    at with `aria-describedby`, so a screen reader reads it on focus whether or
+    not it is on screen, `:focus-within` opens it for a keyboard, and a pointer
+    opens it by resting on the field. Three ways in, one piece of text.
+    """
     listid = f"sug-{name}" if suggest else ""
     attrs = f' list="{listid}"' if suggest else ""
+    described = f' aria-describedby="why-{name}"'
     control = (
-        f'<textarea data-field="{name}" id="f-{name}"></textarea>'
+        f'<textarea data-field="{name}" id="f-{name}"{described}></textarea>'
         if area else
         f'<input data-field="{name}" id="f-{name}" value="{html.escape(value)}"'
-        f' spellcheck="false" autocomplete="off"{attrs}>'
+        f' spellcheck="false" autocomplete="off"{described}{attrs}>'
     )
     options = ""
     if suggest:
         options = f'<datalist id="{listid}">' + "".join(
             f'<option value="{html.escape(s)}">' for s in suggest
         ) + "</datalist>"
+    # A column name is set in mono, the way every stored string on the site is.
+    # A name this form made up for a human keeps the serif.
+    said = "" if title == title.lower() and " " not in title else " said"
+    tag = '<span class="may">may be empty</span>' if empty_ok else ""
+    why = _why(name, note, suggested=bool(suggest))
     return (
-        f'<label for="f-{name}"><span>{html.escape(title)}</span>'
-        f'<em>{html.escape(note)}</em>{control}{options}</label>'
+        f'<div class="field{" string" if string else ""}">'
+        f'<label for="f-{name}"><span class="name{said}">{html.escape(title)}</span>'
+        f'{tag}</label>{control}{options}'
+        f'<div class="why" id="why-{name}">{why}</div></div>'
     )
 
 
@@ -723,26 +1206,54 @@ def page(conn: sqlite3.Connection, *, token: str, repo: str, origin: str) -> byt
     s = suggestions(conn)
     cap = BYTES_CAP // (1024 * 1024)
 
+    # The handoff seams. The prompt and the parsing behind them are built
+    # elsewhere and neither route may exist on this run, so both are designed as
+    # part of the page and both answer a 404 with a sentence.
+    handoff = (
+        '<section class="handoff">'
+        '<h2>Hand it to your coding agent</h2>'
+        '<p class="note">An agent sitting in the checkout where the extraction '
+        'happened can read most of this off your own scripts. Copy the prompt, '
+        'run it there, and paste back what it produces. Nothing it fills in is '
+        'checked until you check the bytes, and every field stays editable.</p>'
+        '<div class="acts">'
+        '<button type="button" id="agent-prompt">Copy a prompt for your coding '
+        'agent</button>'
+        '</div>'
+        '<div id="agent-paste">'
+        '<label class="said-quiet" for="agent-text">Paste what it produced</label>'
+        '<textarea id="agent-text" spellcheck="false"></textarea>'
+        '<div class="acts after">'
+        '<button type="button" id="agent-fill">Fill the form from this</button>'
+        '</div></div>'
+        '<p class="status" id="agent-status" hidden></p>'
+        '</section>'
+    )
+
     where = (
         '<h2>Where the bytes are</h2>'
+        '<p class="note">Two modes, one end state: a row pointing at a pinned '
+        'remote. Neither writes a served copy.</p>'
         '<div class="modes">'
-        '<label><input type="radio" name="mode" value="link" checked> '
-        'Link: they are already published somewhere</label>'
-        '<label><input type="radio" name="mode" value="bytes"> '
-        'Bytes: I have the file here</label>'
+        '<label class="seg"><input type="radio" name="mode" value="link" checked>'
+        '<span class="what"><strong>Link</strong>, they are published somewhere'
+        '</span></label>'
+        '<label class="seg"><input type="radio" name="mode" value="bytes">'
+        '<span class="what"><strong>Bytes</strong>, I have the file here</span>'
+        '</label>'
         '</div>'
 
         '<fieldset id="link-fields"><legend>Link</legend>'
         '<p class="note">Fetched once into a throwaway cache, checked, and '
-        'dropped. What is recorded is the pointer.</p>'
-        + _field("link_repo", "Hub repo", "owner/name, a model repo.")
+        'dropped. What is recorded is the pointer, so there is no size limit.</p>'
+        '<div class="grid">'
+        + _field("link_repo", "Hub repo", "owner/name, a model repo.", string=True)
         + _field("link_commit", "Commit",
-                 "Forty hex characters. A branch or a tag is refused, because "
-                 "whoever owns the repo can move one.")
+                 "Forty hex characters.", string=True)
+        + '</div><div class="grid single">'
         + _field("link_path", "Path in the repo",
-                 "Recorded as artifact_path verbatim. fetch.resolve hands one "
-                 "path field to the remote, so these are the same string.")
-        + '</fieldset>'
+                 "Where the file sits inside that repo.", string=True)
+        + '</div></fieldset>'
 
         '<fieldset id="bytes-fields" hidden><legend>Bytes</legend>'
         f'<p class="note">Read here, converted to safetensors, checked outside '
@@ -752,106 +1263,129 @@ def page(conn: sqlite3.Connection, *, token: str, repo: str, origin: str) -> byt
         f'this machine and says nothing about the artifact. Above it, publish '
         f'the bytes wherever you already publish and use link mode, which has '
         f'no size limit at all.</p>'
-        '<label for="f-file"><span>File</span>'
-        '<em>Anything registry.ingest has a converter for. A format nobody '
-        'wrote one for is refused with a sentence naming what has one and '
-        'where another goes.</em>'
-        '<input type="file" id="file"></label>'
-        + _field("bytes_repo", "Publish to", "The author's own Hub namespace. "
-                 "Never this registry's, which would be a served copy.",
-                 value=repo)
+        '<div class="grid single">'
+        '<div class="field">'
+        '<label for="file"><span class="name said">File</span></label>'
+        '<input type="file" id="file" aria-describedby="why-file">'
+        f'<div class="why" id="why-file">{_why("file")}</div>'
+        '</div></div>'
+        '<div class="grid">'
+        + _field("bytes_repo", "Publish to", "The author's own Hub namespace.",
+                 value=repo, string=True)
         + _field("bytes_path", "Path in the repo",
-                 "Also the row's artifact_path, character for character.")
-        + _field("bytes_message", "Commit message", "What the upload says it is.",
+                 "Where it will sit inside that repo.", string=True)
+        + '</div><div class="grid single">'
+        + _field("bytes_message", "Commit message", "",
                  value="Publish one steering artifact")
-        + '</fieldset>'
+        + '</div></fieldset>'
     )
 
     stated = (
         '<h2>What you state about the bytes</h2>'
-        '<p class="note">All optional and all checked. State one and the bytes '
-        'are held to it and the row keeps what you said; state nothing and the '
-        'row records what the bytes say. Saying nothing is not a wrong claim.</p>'
-        '<div class="row">'
-        + _field("shape", "shape", "As the row will hold it, e.g. a bracketed list.")
-        + _field("dtype", "dtype", "As numpy spells it.")
-        + _field("l2_norm", "l2_norm", "Cited from wherever you got it.")
-        + _field("sha256", "sha256", "Of the whole file, header included.")
+        '<p class="note">All four can be left empty, and every one that is not '
+        'is checked. State one and the bytes are held to it and the row keeps '
+        'what you said; state nothing and the row records what the bytes say. '
+        'Saying nothing is not a wrong claim.</p>'
+        '<div class="grid">'
+        + _field("shape", "shape", "As the row will hold it, a bracketed list.",
+                 empty_ok=True, string=True)
+        + _field("dtype", "dtype", "", empty_ok=True, string=True)
+        + _field("l2_norm", "l2_norm", "", empty_ok=True, string=True)
+        + _field("sha256", "sha256", "", empty_ok=True, string=True)
         + '</div>'
     )
 
     submission = (
         '<h2>The submission</h2>'
-        '<div class="row">'
-        + _field("author", "author", "Your namespace. Free to claim.",
-                 suggest=s["author"])
-        + _field("label", "label", "Free to claim, and other people may claim it too.",
-                 suggest=s["label"])
-        + _field("version", "version", "author/label@version freezes to this forever.")
-        + _field("created_at", "created_at", "When the work happened.", value=_now())
+        '<p class="note">One author\'s complete take, versioned and immutable. '
+        'Somebody else claiming the same label is the content here, not a '
+        'collision.</p>'
+        '<div class="grid">'
+        + _field("author", "author", "", suggest=s["author"], string=True)
+        + _field("label", "label", "", suggest=s["label"], string=True)
+        + _field("version", "version", "", string=True)
+        + _field("created_at", "created_at", "", value=_now(), string=True)
+        + '</div><div class="grid single">'
+        + _field("definition", "definition", "", area=True)
         + '</div>'
-        + _field("definition", "definition",
-                 "Your own theory of the trait, in prose. This is the thing "
-                 "somebody else disagrees with.", area=True)
     )
 
     intervention = (
         '<h2>The intervention</h2>'
-        '<div class="row">'
-        + _field("intervention_id", "id", "Primary key. What an eval or an attack "
-                 "will point at.")
-        + _field("kind", "kind", "Open string.", suggest=s["kind"])
-        + _field("model_id", "model_id", "Base and instruct are different models.",
-                 suggest=s["model_id"])
-        + _field("model_revision", "model_revision",
-                 "Leave empty if nobody recorded it. Empty reads as not recorded, "
-                 "which is not the same as unknown and much better than a sha "
-                 "the model happens to have today.")
-        + _field("layer", "layer", "An integer.")
-        + _field("layer_convention", "layer_convention",
-                 "Getting this wrong is silent.", suggest=s["layer_convention"])
-        + _field("hook_point", "hook_point", "Open string.", suggest=s["hook_point"])
-        + _field("chat_template_hash", "chat_template_hash",
-                 "Empty if none was applied.")
-        + _field("activation_norm", "activation_norm",
-                 "Only if a coefficient here is a fraction of activation "
-                 "magnitude. Empty otherwise.")
-        + _field("coeff_low", "coeff_low", "Empty if you did not sweep one.")
-        + _field("coeff_high", "coeff_high", "Empty if you did not sweep one.")
-        + _field("steering_position", "steering_position", "Open string.",
-                 suggest=s["steering_position"])
-        + _field("license_status", "license_status",
-                 "A steering vector is derived from model weights, so what the "
-                 "model's license permits for derived artifacts is the question.",
-                 suggest=s["license_status"])
+        '<p class="note">The application contract. A vector applied at the wrong '
+        'layer, hook point or chat template appears not to work rather than '
+        'failing loudly, which is why these sit beside the artifact and not in a '
+        'README.</p>'
+        '<div class="grid">'
+        + _field("intervention_id", "id", "", string=True)
+        + _field("kind", "kind", "", suggest=s["kind"], string=True)
+        + _field("model_id", "model_id", "", suggest=s["model_id"], string=True)
+        + _field("model_revision", "model_revision", "", empty_ok=True, string=True)
+        + _field("layer", "layer", "", string=True)
+        + _field("layer_convention", "layer_convention", "",
+                 suggest=s["layer_convention"], string=True)
+        + _field("hook_point", "hook_point", "", suggest=s["hook_point"], string=True)
+        + _field("chat_template_hash", "chat_template_hash", "", empty_ok=True,
+                 string=True)
+        + _field("activation_norm", "activation_norm", "", empty_ok=True, string=True)
+        + _field("coeff_low", "coeff_low", "", empty_ok=True, string=True)
+        + _field("coeff_high", "coeff_high", "", empty_ok=True, string=True)
+        + _field("steering_position", "steering_position", "",
+                 suggest=s["steering_position"], empty_ok=True, string=True)
+        + '</div><div class="grid single">'
+        + _field("license_status", "license_status", "",
+                 suggest=s["license_status"], empty_ok=True, string=True)
         + '</div>'
+    )
+
+    # The readout, and the reason it is a column of its own: the form is a claim
+    # and this is what the bytes said back. It stays on screen while the form
+    # scrolls, because it is the thing the tool is for.
+    rail = (
+        '<aside class="rail">'
+        '<div class="acts">'
+        '<button type="button" id="check" class="go">Check the bytes</button>'
+        '<button type="button" id="write" disabled>Write the rows</button>'
+        '</div>'
+        '<section class="out" id="checked" data-state="empty">'
+        '<h3>What the bytes say</h3>'
+        '<div class="body" aria-live="polite">'
+        '<p>Nothing read yet. Checking fetches or converts the file, prints the '
+        'digest, the shape, the dtype and the norm it found, and writes nothing. '
+        'Anything you stated above is held against what it reads.</p>'
+        '<p>A refusal lands here too, with the reason and the module that owns '
+        'the rule. That is an outcome, not a fault.</p>'
+        '</div></section>'
+        '<section class="out" id="written" data-state="empty" hidden>'
+        '<h3>The rows</h3><div class="body" aria-live="polite"></div>'
+        '</section>'
+        '</aside>'
     )
 
     body = (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<meta name="robots" content="noindex,nofollow">'
         '<title>intake, local only</title>'
         f'<style>{STYLE}</style></head>'
         f'<body data-k="{html.escape(token)}">'
+        '<header class="top"><span class="wordmark">controlbun</span>'
+        f'<span class="bind">{html.escape(origin)}</span></header>'
         '<h1>intake</h1>'
-        f'<p class="note">Running on {html.escape(origin)} and reachable from '
-        'nowhere else. This is the operator tool, not a submission route: '
-        'nothing can be submitted to this registry, and that is what the '
-        'dual-use policy is waiting on. Both modes end the same way, as a row '
-        'pointing at a pinned remote. Nothing here writes a served copy.</p>'
-        + where + stated + submission + intervention +
-        '<h2>Check, then write</h2>'
-        '<p class="note">Checking reads the bytes and writes nothing. It shows '
-        'what it actually read, so you can disagree with it before anything is '
-        'recorded.</p>'
-        '<p><button type="button" id="check">Check the bytes</button> '
-        '<button type="button" id="write" disabled>Write the rows</button></p>'
-        '<div class="panel" id="checked" hidden></div>'
-        '<div class="panel" id="written" hidden></div>'
-        '<footer>No eval is written here, and a submission with none is a '
-        'normal state rather than an incomplete one. Rows go into registry.db '
-        'and into artifacts/intake.jsonl, which is the copy that survives '
-        '<code>make site</code>.</footer>'
+        '<p class="lede">One artifact into the corpus, from this machine and no '
+        'other. This is the operator tool and not a submission route: nothing '
+        'can be submitted to this registry, and that is what the dual-use policy '
+        'is waiting on. Point at a field name, or tab into it, for what the '
+        'column means and who says so.</p>'
+        '<div class="work"><main class="form">'
+        + handoff + where + stated + submission + intervention +
+        '<footer><p>No eval is written here, and a submission with none is a '
+        'normal state rather than an incomplete one. Rows go into '
+        '<code>registry.db</code> and into <code>artifacts/intake.jsonl</code>, '
+        'which is the copy that survives <code>make site</code>.</p></footer>'
+        '</main>'
+        + rail +
+        '</div>'
         f'<script>{SCRIPT}</script></body></html>'
     )
     return body.encode()

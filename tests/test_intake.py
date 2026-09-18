@@ -24,13 +24,16 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import socket
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import threading
 import urllib.error
 import urllib.request
+from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from pathlib import Path
 
@@ -498,6 +501,111 @@ def test_the_page_prefills_no_number_it_did_not_derive(tool):
             f"{name} arrives prefilled, which puts a number in front of the "
             "operator that nothing derived"
         )
+
+
+def test_the_page_is_balanced_markup_with_no_id_used_twice(tool):
+    """The page is a string built by concatenation, which is how a tag goes missing.
+
+    A stray `</div>` moves the readout inside the form and an id reused puts two
+    explanations behind one field, and both render as something slightly wrong
+    rather than as an error.
+    """
+    conn = db.connect(tool.database)
+    try:
+        page = intake.page(conn, token="t", repo="a/b", origin="o").decode()
+    finally:
+        conn.close()
+
+    void = {"input", "br", "hr", "meta", "link", "img", "source", "option"}
+
+    class Balance(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.open: list[str] = []
+            self.wrong: list[str] = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag not in void:
+                self.open.append(tag)
+
+        def handle_endtag(self, tag):
+            if tag in void:
+                return
+            if not self.open or self.open[-1] != tag:
+                self.wrong.append(f"</{tag}> closes {self.open[-1:] or ['nothing']}")
+            else:
+                self.open.pop()
+
+    read = Balance()
+    read.feed(page)
+    assert not read.wrong and not read.open, (read.wrong, read.open)
+
+    ids = re.findall(r'id="([^"]+)"', page)
+    assert len(ids) == len(set(ids)), \
+        [i for i in ids if ids.count(i) > 1]
+
+
+def test_the_page_script_parses(tool):
+    """The script is a Python string, so nothing else checks it is JavaScript."""
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node not installed")
+    script = Path(tempfile.mkdtemp(prefix="registry-page-script-")) / "page.mjs"
+    script.write_text(intake.SCRIPT)
+    done = subprocess.run([node, "--check", str(script)], capture_output=True,
+                          text=True)
+    shutil.rmtree(script.parent, ignore_errors=True)
+    assert done.returncode == 0, done.stderr
+
+
+def test_every_field_explains_itself_somewhere_a_keyboard_can_reach(tool):
+    """A `title` attribute is a tooltip a keyboard and a screen reader never get.
+
+    So the explanation is an element the control points at with
+    `aria-describedby`: read out on focus, opened by `:focus-within` for a
+    pointer-less reader, and hidden behind nothing that only a mouse can do.
+    """
+    conn = db.connect(tool.database)
+    try:
+        page = intake.page(conn, token="t", repo="a/b", origin="o").decode()
+    finally:
+        conn.close()
+
+    described = dict(re.findall(r'id="(why-[^"]+)">(.*?)</div>', page, re.S))
+    controls = re.findall(r'<(?:input|textarea) data-field="(\w+)"[^>]*>', page)
+    assert controls, "no fields on the page at all"
+    for name in controls + ["file"]:
+        tag = re.search(rf'<(?:input|textarea)[^>]*\bid="(?:f-)?{name}"[^>]*>', page)
+        assert tag, f"{name} is not on the form"
+        assert "title=" not in tag.group(0), (
+            f"{name} explains itself with a title attribute, which is hover-only"
+        )
+        assert f'aria-describedby="why-{name}"' in tag.group(0), (
+            f"{name} points at no explanation"
+        )
+        assert len(described.get(f"why-{name}", "").strip()) > 20, (
+            f"why-{name} is missing or empty"
+        )
+
+
+def test_the_prompt_handoff_seams_are_on_the_page(tool):
+    """Two ids another module wires up, so this page holds the shape for them.
+
+    Designed here and empty here: the prompt text and the paste parsing are
+    somebody else's, and until those routes exist both buttons answer a 404 with
+    a sentence rather than a broken page.
+    """
+    conn = db.connect(tool.database)
+    try:
+        page = intake.page(conn, token="t", repo="a/b", origin="o").decode()
+    finally:
+        conn.close()
+    assert 'id="agent-prompt"' in page
+    region = re.search(r'<div id="agent-paste">(.*?)</div>\s*<p class="status"',
+                       page, re.S)
+    assert region and "<textarea" in region.group(1), (
+        "the paste region has no textarea in it"
+    )
 
 
 def test_the_record_replays_into_a_rebuilt_database(tool):

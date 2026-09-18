@@ -39,6 +39,31 @@ A submission route is one of the three capabilities that fire the dual-use trigg
 (`DECISIONS.md`, 2026-09-17). The policy does not exist, so the thing that must not
 exist is a listener anyone but the operator can reach.
 
+## Reading the form
+
+Every field name carries its own explanation, taken from whatever owns the rule
+and citing it: the migration comments in `schema/migrations`, the module
+docstrings under `src/registry`, `BRIEF.md`. Point at a name, or tab into the
+field, and it opens. It is not a `title` attribute: the input points at the text
+with `aria-describedby`, so a screen reader reads it on focus and a keyboard
+opens it without a pointer. `tests/test_intake.py` checks that every field has
+one and that none of them is hover-only.
+
+Fields the schema stores as nullable are marked "may be empty", which is the only
+thing on the page that distinguishes one field from another. Nothing is ranked,
+nothing is scored, and the suggestions behind the open fields are still read out
+of the corpus.
+
+The readout is the column on the right, and it stays there while the form
+scrolls, because the form is a claim and the readout is what the bytes said back.
+A refusal lands in the same panel as a reading, in the same type, with the reason
+and the module that owns the rule. It is an outcome rather than a fault and is
+not colored as one.
+
+Two ids on the page belong to the prompt handoff, which is built elsewhere:
+`agent-prompt` and `agent-paste`. Until the routes behind them exist, both say so
+in a sentence and the form works without them.
+
 ## Two modes, one end state
 
 Both finish as a row pointing at a pinned remote. Neither writes `served_repo`.
