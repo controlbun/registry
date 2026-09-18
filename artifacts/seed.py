@@ -39,7 +39,19 @@ from source import COMMIT, DIRECTIONS, REPO  # noqa: E402
 AUTHOR = "soham"
 LABEL = "pro-human"
 MODEL = "allenai/Olmo-3-1125-32B"
-LAYER = 32
+
+# Three of these sit at layer 32 and one does not, so this stopped being a
+# constant. Layer is a property of an artifact rather than of the author.
+LAYER = {
+    "meandiff": 32,
+    "logistic": 32,
+    "lda":      32,
+    "L24":      24,
+}
+
+# Ordered so the layer-32 siblings stay together and the odd one is last, which
+# is also the order they were extracted in.
+VERSIONS = ("meandiff", "logistic", "lda", "L24")
 
 # The extraction timestamps out of each file's own `meta`, to the second. Used as
 # `created_at` so ordering by newest reflects when the work happened rather than
@@ -48,12 +60,14 @@ EXTRACTED = {
     "meandiff": "2026-06-08T22:05:52Z",
     "logistic": "2026-06-08T22:52:10Z",
     "lda":      "2026-06-08T22:52:06Z",
+    "L24":      "2026-06-08T23:20:02Z",
 }
 
 FILES = {
     "meandiff": "d_olmo3_v1.safetensors",
     "logistic": "d_olmo3_logistic.safetensors",
     "lda":      "d_olmo3_lda.safetensors",
+    "L24":      "d_olmo3_L24_logistic.safetensors",
 }
 
 # What `ingest_arena.py` recorded for the file it wrote, keyed by that filename.
@@ -136,12 +150,14 @@ AUTHOR_D_VERSION = {
     "meandiff": "v1",
     "logistic": "olmo3_logistic",
     "lda":      "olmo3_lda",
+    "L24":      "olmo3_L24_logistic",
 }
 
 METHOD_LINE = {
     "meandiff": "mean of (chosen - rejected) last-token residuals",
     "logistic": "logistic-regression probe on chosen vs rejected, coefficient vector",
     "lda":      "linear discriminant analysis on chosen vs rejected",
+    "L24":      "logistic-regression probe on chosen vs rejected, coefficient vector",
 }
 
 # `<file>.confound_audit.json`, `confound_cosines`. Cosine of the shipped direction
@@ -164,6 +180,11 @@ TRANSFER = {"meandiff": 0.74, "logistic": 0.716, "lda": 0.685}
 # for a unit-norm d it equals the norm of the class-mean difference times the
 # cosine between d and that difference, and reproduces from v1's to within 0.01%.
 TRAIN_GAP = {"meandiff": 18.95, "logistic": 13.034, "lda": 7.928}
+
+# `layer_sweep_olmo-3-1125-32b_logistic.json`, `layers[].resid_norm`. A property
+# of the model at that layer rather than of any direction, which is why the
+# layer-24 row has one even though its confound audit was never run.
+RESID_NORM = {"meandiff": 50.97, "logistic": 50.97, "lda": 50.97, "L24": 30.56}
 
 DEFINITION = (
     "Pro-human is whatever separates the chosen from the rejected member of 135 "
@@ -193,7 +214,7 @@ ESTIMATOR_NOTE = (
 def seed(conn) -> None:
     ex = conn.execute
 
-    for version in ("meandiff", "logistic", "lda"):
+    for version in VERSIONS:
         rel = f"artifacts/soham/{FILES[version]}"
         facts = confirmed_facts(rel)
 
@@ -218,7 +239,7 @@ def seed(conn) -> None:
                 None,
                 # Cited above, checked against the file, written as cited. See
                 # CITED and `confirmed_facts`.
-                LAYER, "block-0indexed", "resid_post", facts.shape, facts.dtype,
+                LAYER[version], "block-0indexed", "resid_post", facts.shape, facts.dtype,
                 facts.l2_norm,
                 # Not recorded, and not the same as unknown: the residual norm at
                 # layer 32 is measured (50.97, in the layer sweep) but the
@@ -259,8 +280,13 @@ def seed(conn) -> None:
                     "coefficient_semantics":
                         "raw multiplier of the unit direction; the bake-off does "
                         "not scale by residual norm",
-                    "residual_norm_at_layer_32": 50.97,
-                    "mean_train_gap": TRAIN_GAP[version],
+                    # The residual norm at this artifact's own layer, from the
+                    # sweep. It was keyed to layer 32 while every direction sat
+                    # there; a layer-24 row carrying layer 32's norm would be a
+                    # measurement of a different place in the model.
+                    f"residual_norm_at_layer_{LAYER[version]}": RESID_NORM[version],
+                    **({"mean_train_gap": TRAIN_GAP[version]}
+                       if version in TRAIN_GAP else {}),
                     "layer_sweep":
                         "layers 16, 24, 32, 40, 48; held-out separation 1.000 at "
                         "every one, so the sweep does not pick a layer",
@@ -291,7 +317,26 @@ def seed(conn) -> None:
                      "approach_probe"])),
     )
 
-    for version in ("meandiff", "logistic", "lda"):
+    # `.get`, not `[...]`. Three of these four carry a confound audit and a
+    # transfer ratio; the layer-24 one does not, because the arena never ran that
+    # battery against it. Absence is the state and the page renders it as one.
+    # Writing a zero, or borrowing a sibling's number because they share a
+    # method and a dataset, would be inventing a measurement.
+    SEPARATION = (
+        "Held-out separation is 1.000, measured on the held-out split of the "
+        "same 135 pairs the direction was fitted on, so it is internal "
+        "consistency rather than transfer. No trait score and no coherence "
+        "score: no judged behavioral evaluation was run."
+    )
+    NO_AUDIT = (
+        " No confound audit and no control-pair transfer for this one: the "
+        "arena ran that battery on the three layer-32 directions and not on "
+        "this. Its siblings' numbers are not transferable to it, sharing a "
+        "method and a dataset notwithstanding."
+    )
+
+    for version in VERSIONS:
+        audited = version in CONFOUNDS
         ex(
             "INSERT INTO eval_report (id,eval_suite_id,intervention_id,reported_at,"
             "transfer_score,confound_json,notes,is_synthetic)"
@@ -299,14 +344,29 @@ def seed(conn) -> None:
             (
                 f"er_soham_{version}", "es_soham_audit", f"iv_soham_{version}",
                 EXTRACTED[version],
-                TRANSFER[version],
-                json.dumps(CONFOUNDS[version]),
-                "Held-out separation is 1.000, measured on the held-out split of "
-                "the same 135 pairs the direction was fitted on, so it is "
-                "internal consistency rather than transfer. No trait score and no "
-                "coherence score: no judged behavioral evaluation was run.",
+                TRANSFER.get(version),
+                json.dumps(CONFOUNDS[version]) if audited else None,
+                SEPARATION if audited else SEPARATION + NO_AUDIT,
             ),
         )
+
+    # A real pin, replacing nothing: the fixtures carry a synthetic one and this
+    # sits beside it. Season 2 of the arena froze this direction so player scores
+    # within the season stayed commensurable, which is the textbook case for
+    # pinning and the opposite of designation as long as it stays visible.
+    ex(
+        "INSERT INTO pin (id,pinned_by,pinned_at,purpose,author,label,version,"
+        "alternatives_json,rationale) VALUES (?,?,?,?,?,?,?,?,?)",
+        ("pin_arena_s2", "steering-arena", EXTRACTED["L24"],
+         "Season 2 scoring target, frozen so player scores within the season are "
+         "commensurable",
+         AUTHOR, LABEL, "L24",
+         json.dumps([f"{AUTHOR}/{LABEL}@{v}" for v in VERSIONS if v != "L24"]),
+         "Chosen at the time from a five-layer sweep whose held-out separation "
+         "was 1.000 at every layer, so separation could not pick one. Not a "
+         "claim that layer 24 is the right layer; a claim that the season needed "
+         "one and this was it."),
+    )
     conn.commit()
 
 

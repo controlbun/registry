@@ -36,6 +36,18 @@ DIRECTIONS = [
     ("d_olmo3_lda.npz",
      "09cc9991b9361840a2717534ccdabbca7e2a117fcae3cdcc169f89a57df1c3f1",
      "54b6aebafdb2533c81616c9aa4e27d20dd44b9a70b25c95f330111f9f550e173"),
+    # Layer 24, and the odd one out in three ways. It is at a different layer
+    # from the three above, its own `meta` calls it a "Layer-sweep candidate",
+    # and Season 2's migration pins it as that season's direction. All three are
+    # true: the sweep produced it and then it was the one that shipped.
+    #
+    # Adding it does not reopen the settled decision that the five-point sweep
+    # is recipe payload rather than five submissions. That decision is against
+    # turning a diagnostic into five rows. This is the one point of it that was
+    # selected and used, which is a different fact about the same file.
+    ("d_olmo3_L24_logistic.npz",
+     "ee714589a1da99c4eff445dd63612c15847b51d142cdc78f0476cdd2bbaec6f6",
+     "e448b8f4266403f17e32182b2d2a5ed9a62bc86078fe7e6cec397daa49494616"),
 ]
 
 LICENSE = (
