@@ -102,7 +102,11 @@ design. Tests that fail the build:
 - Any label namespace permits an unlimited number of claimants
 - Absence of an eval renders as its own state, not as an error
 - No closed enum on any user-supplied field. Document common values; reject none.
-  Schema `CHECK` constraints listing permitted strings fail the build.
+  Schema `CHECK` constraints listing permitted strings fail the build. This covers
+  `kind`, `hook_point`, `profile`, method and **artifact file format**: a
+  converter set is the same kind of thing, so shipping two converters is fine and
+  refusing bytes because the format "is not supported" is not. Refuse what cannot
+  be verified, and say that instead.
 - A judged score renders with a coherence measure beside it or renders as
   uninterpretable, never as a bare number
 - Cosine similarity is a displayed fact, never evidence of disagreement and never
