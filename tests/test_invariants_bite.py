@@ -47,6 +47,15 @@ VIOLATIONS = {
         "if (!kinds.includes(kind)) throw new Error('bad');\n",
         "test_no_check_constraint_enumerates_strings",
     ),
+    # `registry.ingest` has a dict of converters, which is one rename away from
+    # being a list of the formats an author is allowed to publish in. The
+    # refusal it writes today says nothing can read these bytes and where a
+    # converter goes. This is the sentence it must not start saying instead.
+    "refusing a format for not being on the list": (
+        "src/registry/probe.py",
+        "def read(blob):\n    raise ValueError('unsupported format')\n",
+        "test_no_check_constraint_enumerates_strings",
+    ),
     "label unique on its own": (
         "schema/migrations/900_probe.sql",
         "CREATE TABLE probe (\n    label TEXT,\n    UNIQUE (label)\n);\n",

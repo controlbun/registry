@@ -7,9 +7,10 @@ different files. For a project whose whole claim is that published numbers
 re-derive from raw artifacts, a file that does not reproduce itself is not
 acceptable: the sha256 in the ingest record would be a number that means nothing.
 
-Both writers need the same guarantee, which is why `sort_header` is here rather
-than in either of them. `fixtures/build.py` writes the synthetic corpus and
-`artifacts/ingest_arena.py` converts real directions somebody else published.
+Every writer needs the same guarantee, which is why `sort_header` is here rather
+than in any of them. `fixtures/build.py` writes the synthetic corpus and
+`registry.ingest` writes whatever arrives from anywhere else, including the real
+directions `artifacts/ingest_arena.py` converts.
 
 `local_path` is here for the mirror-image reason: four callers turn a database
 value into a filesystem path, and all four have to refuse the same things.
@@ -162,6 +163,28 @@ def local_path(rel: str | Path, *, root: Path | None = None) -> Path:
     return candidate
 
 
+def _split(raw: bytes) -> tuple[dict, bytes]:
+    """A safetensors file as its header and everything after it.
+
+    One place that knows the layout, because a second would be a second place
+    to get the offset wrong: an 8-byte little-endian length, that many bytes of
+    JSON, then the tensor payload. Three callers read it now, one to rewrite
+    the header and two to look at what is in it.
+    """
+    size = struct.unpack("<Q", raw[:8])[0]
+    return json.loads(raw[8:8 + size]), raw[8 + size:]
+
+
+def metadata_of(blob: bytes) -> dict[str, str]:
+    """The `__metadata__` block, or an empty one where the writer set none.
+
+    Absent metadata is not an error and does not become one here. A file
+    somebody wrote without a header is a file with nothing recorded in it,
+    which is a state.
+    """
+    return _split(blob)[0].get("__metadata__", {})
+
+
 def sort_header(path: str | Path) -> None:
     """Rewrite a safetensors header with sorted keys, in place.
 
@@ -170,9 +193,7 @@ def sort_header(path: str | Path) -> None:
     """
     path = Path(path)
     raw = path.read_bytes()
-    size = struct.unpack("<Q", raw[:8])[0]
-    header = json.loads(raw[8:8 + size])
-    payload = raw[8 + size:]
+    header, payload = _split(raw)
 
     sorted_header = json.dumps(header, sort_keys=True, separators=(",", ":")).encode()
     sorted_header += b" " * (-len(sorted_header) % 8)
@@ -295,6 +316,21 @@ def _keep_the_claim(claim: Claim, facts: Facts) -> Facts:
     )
 
 
+def confirm_digest(blob: bytes, claim: Claim = Claim(), *,
+                   subject: str) -> str:
+    """The digest half, run before any parser sees the bytes. Returns it.
+
+    Split out of `confirmed` because the ingest path needs this half on bytes
+    `confirmed` cannot parse at all: a `.npz` arriving from somebody else's
+    server is checked against its recorded digest here, and only then handed to
+    numpy. Same comparison, same refusal, one function, so a caller cannot get
+    a weaker version of the check by being early in the pipeline.
+    """
+    digest = hashlib.sha256(blob).hexdigest()
+    _refuse(subject, disagreements(claim, Facts(sha256=digest, size=len(blob))))
+    return digest
+
+
 def confirmed(blob: bytes, claim: Claim = Claim(), *, subject: str) -> Facts:
     """Bytes plus what is claimed about them, in: the facts to record, or a refusal.
 
@@ -321,8 +357,7 @@ def confirmed(blob: bytes, claim: Claim = Claim(), *, subject: str) -> Facts:
     and is the same comparison both times, once with only a digest derived and
     once with everything.
     """
-    digest = hashlib.sha256(blob).hexdigest()
-    _refuse(subject, disagreements(claim, Facts(sha256=digest, size=len(blob))))
+    digest = confirm_digest(blob, claim, subject=subject)
 
     tensors = load_bytes(blob)
     if len(tensors) != 1:

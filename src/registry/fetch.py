@@ -47,19 +47,29 @@ class FetchError(RuntimeError):
     """An artifact could not be resolved to bytes."""
 
 
+def commit_sha(value: str) -> str:
+    """Forty hex characters, or a refusal. One rule, stated once.
+
+    `registry.ingest` pins a repo file the same way and against a different
+    host, and two copies of this would be two chances for one of them to start
+    accepting a tag.
+    """
+    if len(value) != _SHA or not all(c in "0123456789abcdef" for c in value.lower()):
+        raise FetchError(
+            f"{value!r} is not a commit SHA. Resolution is by commit only: a "
+            "branch or tag can be moved by whoever owns the repo, so pinning to "
+            "one pins to whatever is there today."
+        )
+    return value
+
+
 def hub_url(repo: str, commit: str, path: str) -> str:
     """The URL a pinned artifact lives at.
 
     Split out so a test can assert the shape without a network call, and so the
     one place that knows the Hub's URL layout is named.
     """
-    if len(commit) != _SHA or not all(c in "0123456789abcdef" for c in commit.lower()):
-        raise FetchError(
-            f"{commit!r} is not a commit SHA. Resolution is by commit only: a "
-            "branch or tag can be moved by whoever owns the repo, so pinning to "
-            "one pins to whatever is there today."
-        )
-    return f"{HUB}/{repo}/resolve/{commit}/{path.lstrip('/')}"
+    return f"{HUB}/{repo}/resolve/{commit_sha(commit)}/{path.lstrip('/')}"
 
 
 def _cache_path(repo: str, commit: str, path: str) -> Path:
@@ -70,29 +80,30 @@ def _cache_path(repo: str, commit: str, path: str) -> Path:
     return CACHE / key / Path(path).name
 
 
-def from_hub(repo: str, commit: str, path: str, *, timeout: int = 60) -> bytes:
-    """Bytes of one file, at one commit. Cached forever, because a SHA is forever."""
-    cached = _cache_path(repo, commit, path)
-    if cached.exists():
-        return cached.read_bytes()
+def get_url(url: str, *, timeout: int = 60, not_found: str | None = None) -> bytes:
+    """One GET, with the failures named rather than surfacing as HTTP internals.
 
-    url = hub_url(repo, commit, path)
+    Shared with `registry.ingest`, which fetches a digest-pinned URL that is
+    not always a Hub URL. A second copy of this would be a second place to
+    forget that a redirect is the normal case here rather than the exception,
+    which is the one thing in it that is not obvious.
+    """
     try:
         # Redirects are followed by default and matter here: LFS objects, which
         # is every real artifact, redirect to a CDN rather than being served
-        # from the Hub host.
+        # from the host that was asked.
         with urllib.request.urlopen(url, timeout=timeout) as r:
-            blob = r.read()
+            return r.read()
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            raise FetchError(
-                f"{repo}@{commit[:12]} has no {path}. Either the commit does not "
-                "exist or the file was never in it. A pinned fetch does not fall "
-                "back to another revision."
-            ) from e
+            raise FetchError(not_found or (
+                f"{url} returned 404. Either the commit does not exist or the "
+                "file was never in it. A pinned fetch does not fall back to "
+                "another revision."
+            )) from e
         if e.code in (401, 403):
             raise FetchError(
-                f"{repo} is not publicly readable. This client sends no "
+                f"{url} is not publicly readable. This client sends no "
                 "credentials, and everything this registry points at is public by "
                 "construction, so a private artifact is a fact about the "
                 "submission rather than a login prompt."
@@ -100,6 +111,24 @@ def from_hub(repo: str, commit: str, path: str, *, timeout: int = 60) -> bytes:
         raise FetchError(f"{url} returned {e.code}") from e
     except urllib.error.URLError as e:
         raise FetchError(f"{url} could not be reached: {e.reason}") from e
+
+
+def from_hub(repo: str, commit: str, path: str, *, timeout: int = 60) -> bytes:
+    """Bytes of one file, at one commit. Cached forever, because a SHA is forever."""
+    cached = _cache_path(repo, commit, path)
+    if cached.exists():
+        return cached.read_bytes()
+
+    blob = get_url(
+        hub_url(repo, commit, path),
+        timeout=timeout,
+        # Named here rather than in `get_url`, which has only the URL to go on.
+        not_found=(
+            f"{repo}@{commit[:12]} has no {path}. Either the commit does not "
+            "exist or the file was never in it. A pinned fetch does not fall "
+            "back to another revision."
+        ),
+    )
 
     cached.parent.mkdir(parents=True, exist_ok=True)
     cached.write_bytes(blob)

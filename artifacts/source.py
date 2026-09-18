@@ -17,7 +17,12 @@ COMMIT = "b8b472175b7a2af1b7a7ecd7a784e982a6a7453a"
 # LFS blobs do not come back from raw.githubusercontent.com, which serves the
 # pointer file instead. The media host serves the object, and takes the same
 # commit-pinned path.
-MEDIA = "https://media.githubusercontent.com/media"
+#
+# A template rather than a prefix, because `registry.ingest.PinnedRepoFile`
+# formats it from the same fields it records as provenance. The commit appears
+# once, in COMMIT, so the URL that is fetched and the commit that is written
+# into the file's header cannot come apart.
+MEDIA = "https://media.githubusercontent.com/media/{repo}/{commit}/{path}"
 
 # source filename, sha256 of the .npz at COMMIT, sha256 of the .safetensors
 # `ingest_arena.py` writes from it.

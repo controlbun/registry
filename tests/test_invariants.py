@@ -223,7 +223,13 @@ def test_no_check_constraint_enumerates_strings():
     # A closed enum in application code rejects exactly as hard as a CHECK does.
     offenders += scan(r"\b(ALLOWED|PERMITTED|VALID|SUPPORTED)_\w+\s*=")
     offenders += scan(r"\.includes\([^)]*\)\s*\)?\s*(\|\||\?|:)?\s*(throw|raise)")
-    offenders += scan(r"(throw|raise)[^\n]*\b(unknown|unsupported|invalid)\s+(kind|hook|profile|method)")
+    # `format` joined this list when `registry.ingest` arrived, because a file
+    # format is the same kind of thing `kind` is: nobody here decides which ways
+    # of packing a tensor are legitimate. What ingest may decide is which bytes
+    # it can read without executing them, and a refusal that says so reads
+    # nothing like one that says the format is not on the list. Tightened rather
+    # than relaxed: no line in the tree matched this when the word was added.
+    offenders += scan(r"(throw|raise)[^\n]*\b(unknown|unsupported|invalid)\s+(kind|hook|profile|method|format)")
     assert not offenders, (
         "A closed enumeration declares which ways of doing the thing are legitimate, "
         "and whoever invents the next one has nowhere to put it. Document common "

@@ -1433,3 +1433,111 @@ first is provenance.
 **Supersedes:** nothing. Pays off item 4 of `V2.md`'s order list, and finishes
 what "Fetched bytes are checked against a recorded digest" (2026-09-16) started
 on the read path.
+
+## 2026-09-17 Ingest takes bytes from anywhere, and the converters are not a permission list
+**Decided:** `registry.ingest` is the general path: a source, a `Claim`, and one
+checked safetensors file out. `artifacts/ingest_arena.py` keeps its pinned table
+and its `--check` mode and calls it. The three vendored artifacts are byte
+identical, confirmed by a live refetch from the pinned commit and not only by the
+recorded digests.
+
+Four pieces, and each one is a seam somebody outside can use:
+
+- **Sources** are a two-method protocol, `read` and `provenance`, with no base
+  class. `LocalBytes` for an upload or a file, `PinnedURL` for one URL pinned to
+  a digest, `PinnedRepoFile` for a path in a repo at a commit. A source's
+  provenance is derived from the fields it already holds rather than handed in
+  beside it, so there is no second copy of a commit to go stale, and
+  `PinnedRepoFile` takes a URL template rather than choosing from a table of
+  hosts we happen to know.
+- **`FORMATS`** is a mutable dict of `sniff` plus `read`, keyed by content and
+  never by filename, because a filename is a claim and the bytes are the fact.
+  `.npz` and `.safetensors` ship. A format nobody wrote a converter for is
+  refused with a sentence naming what has one and where another goes.
+- **Pickle is refused rather than unsupported**, and the distinction is the whole
+  point. Two layers, neither covering the other: `zipfile` reads the member list
+  without decoding anything, which catches an archive carrying a pickle, and
+  `allow_pickle=False` inside the npz converter catches an object array inside a
+  member named like every other one, which the member scan cannot see.
+- **The output is staged and moved into place only after it is checked.**
+
+**Why the format set is the interesting part.** A list of formats is the
+closed-enum failure at file level: `method: a / b / c` for containers. `kind` is
+an open string and this is the same kind of thing. What ingest is entitled to
+decide is not which ways of packing a tensor are legitimate, it is which bytes it
+can read without executing them, and those two sentences look similar and are
+nothing alike. The first is a rule about contributors. The second is a statement
+about this code, and it is why a pickle gets refused while an unrecognized
+container gets an apology and a pointer at the dict.
+
+So `format` joined the vocabulary that `test_no_check_constraint_enumerates_strings`
+refuses next to `kind`, `hook`, `profile` and `method`. Tightened, not relaxed:
+nothing in the tree matched when the word was added, and narrowing the pattern
+back makes the new probe in `tests/test_invariants_bite.py` go silent, which is
+how the word is known to be doing work.
+
+**Not exported from `registry/__init__.py`.** That module is the consumer
+surface, and a read-only client package advertising an ingest entry point would
+be advertising a write path that does not exist. Nothing here serves, uploads or
+mirrors anything: `schema/migrations/004` is explicit that serving a copy makes
+this a distributor and needs the dual-use policy, which is deferred. Ingest ends
+with a file on local disk and what happens to it afterwards is a separate
+decision.
+
+**Three findings that were not in the brief.**
+
+The old `convert` saved over the committed artifact and compared the result
+afterwards. A drifted conversion therefore reported the drift correctly, exited
+nonzero, and had already replaced the bytes the recorded digest identifies. The
+next `--check` compared the bad file against the record and failed again, which
+is right and far too late. Staging and renaming is not tidiness, it is the fix.
+
+`safetensors` header order is unstable across processes, as `registry.artifact`
+already says, but only visibly so with enough keys: with two metadata keys two
+processes agree about half the time. The first version of the reproducibility
+probe used two, and removing `sort_header` altogether slid past it. Twelve keys
+and six processes, and the probe asserts the unsorted control produces more than
+one digest so it cannot pass by safetensors having become deterministic.
+
+CPython invalidates a `.pyc` on source size plus mtime **truncated to seconds**.
+A mutation that swaps one character for another keeps the size, so a same-size
+edit applied in the same second as the previous run reuses stale bytecode: the
+mutation is on disk, never loaded, and the probe reports that the check does not
+bite when the check is fine. That happened while proving these checks bite, which
+is the failure this project keeps producing, arriving in the harness built to
+catch it. Anything that mutates a file in place and reruns needs
+`PYTHONDONTWRITEBYTECODE`. The existing bite tests are safe because they patch
+copies in a fresh directory.
+
+**What this makes impossible to express.** A format this path cannot read without
+running it. That is a real loss and it is named rather than hidden: an author
+whose artifact only exists as a `.pt` cannot ingest it here, and the answer is a
+conversion they run, not a flag we set. Second, a source with no digest at all.
+`PinnedURL` requires one because a fetch by name resolves to whatever is there
+today, and `LocalBytes` does not, which is the honest split: bytes in hand have
+no transit to be substituted in. Third, a payload key that collides with a
+provenance key, which makes re-ingesting an already-ingested file a refusal
+rather than a silent overwrite. Nothing became required: a caller claiming
+nothing gets the derived facts, as `confirmed` already did.
+
+**Safety:** refusals, not routes. No upload path, no API, no bulk fetch, nothing
+served, and one fewer way to load a file that executes on load. The single new
+network capability is a GET at a URL pinned to a content digest, which is
+narrower than what `fetch.from_hub` already does.
+
+**Where the guard lives.** `tests/test_ingest_bite.py`. Sixteen mutations of the
+implementation were applied one at a time and every one was confirmed to turn a
+named probe red, including the two above that were green the first time. The
+probes that matter: a converter spy that asserts the parser is never reached
+rather than merely that an exception was raised, a pickle that records having run
+so the flag is shown to be load bearing rather than asserted to be, and a
+round-trip of `arena_payload` against the committed headers, which is the only
+offline check that would notice the conversion changing before somebody reruns it
+with network months later. Not added to the invariant list in `CLAUDE.md`, on the
+same reading as `006` and the write-claim entry, with one reservation: the open
+converter set is the plurality premise at field level rather than a correctness
+check, so it may belong there. Raise it.
+
+**Supersedes:** nothing. Implements "safetensors on ingest, always" (2026-09-11)
+for sources other than one GitHub commit, and is the shared path the v2 write
+step in `V2.md` section 2 would call.
