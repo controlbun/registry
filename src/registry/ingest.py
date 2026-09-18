@@ -394,11 +394,41 @@ def one_array(parsed: Parsed) -> Payload:
         raise RefusedBytes(
             f"these bytes hold {len(parsed.arrays)} arrays "
             f"({sorted(parsed.arrays)}) and nothing here knows which one is "
-            "the artifact. Pass `payload=` to say which, and to say what of "
-            "the rest belongs in the header."
+            "the artifact. Name the one you mean, and say what of the rest "
+            "belongs in the header. This is not a refusal of the file: a "
+            "library of directions and their controls is one file to whoever "
+            "built it, and only the author can say which array is the "
+            "artifact. Callers pass `payload=`; the intake form has a field."
         )
     name, tensor = next(iter(parsed.arrays.items()))
     return Payload(name=name, tensor=tensor, metadata=dict(parsed.metadata))
+
+
+def named_array(name: str) -> Callable[[Parsed], Payload]:
+    """The `payload=` for the common case: the author names their own tensor.
+
+    `one_array` refuses a multi-array file because nothing here can tell which
+    one is the artifact. The author can, and this is how they say so. A library
+    of directions, contrasts and their random controls is one file to the person
+    who built it and eight arrays to a reader, and that asymmetry is a fact
+    about their corpus rather than a defect in it.
+
+    The name has to be one the file actually holds. A miss is refused against
+    the real list rather than falling back to anything, because a fallback here
+    would write a different tensor from the one that was asked for and every
+    number recorded afterwards would describe it.
+    """
+    def choose(parsed: Parsed) -> Payload:
+        if name not in parsed.arrays:
+            raise RefusedBytes(
+                f"these bytes hold no array called {name!r}. They hold "
+                f"{sorted(parsed.arrays)}. Nothing is guessed from a near "
+                "match, because writing the wrong tensor under the right name "
+                "is the one failure nothing downstream can catch."
+            )
+        return Payload(name=name, tensor=parsed.arrays[name],
+                       metadata=dict(parsed.metadata))
+    return choose
 
 
 # --------------------------------------------------------------------------- #

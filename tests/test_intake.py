@@ -702,3 +702,72 @@ def test_the_site_does_not_know_the_intake_tool_exists():
         "process on loopback, and a link to it from a published page is an "
         "invitation the page cannot honor for anybody but the operator."
     )
+
+
+# --------------------------------------------------------------------------- #
+# Naming the tensor in a file that holds several.
+#
+# The refusal came first and the affordance came second, which is the right way
+# round: `ingest.one_array` has always refused a multi-array file, and the
+# author naming one back is how a library of directions and their controls gets
+# in without the form deciding which array is the artifact.
+
+
+def _library() -> bytes:
+    """A stand-in for a direction library: several arrays in one file.
+
+    Integer ramps, labeled synthetic in the header for the reason
+    `fixtures/SYNTHETIC.md` gives. Nothing here is a measurement and the shapes
+    are small enough to read.
+    """
+    from safetensors.numpy import save
+    return save({
+        "direction": np.arange(8, dtype=np.float32),
+        "contrast": np.arange(8, dtype=np.float32) * 2,
+        "random_matched": np.arange(8, dtype=np.float32) * 3,
+    })
+
+
+def test_a_file_of_several_arrays_is_refused_and_the_refusal_names_them(tmp_path):
+    from registry import ingest as ing
+    with pytest.raises(ing.RefusedBytes) as refused:
+        intake.check_bytes(_library(), "lib.safetensors", "v/d.safetensors",
+                           stated={})
+    said = str(refused.value)
+    for name in ("direction", "contrast", "random_matched"):
+        assert name in said, f"the refusal has to name {name} or it is a dead end"
+    assert "not a refusal of the file" in said
+
+
+def test_naming_a_tensor_that_is_not_there_is_refused_against_the_real_list():
+    """No near-match fallback. Writing the wrong tensor under the right name is
+    the one failure nothing downstream catches."""
+    from registry import ingest as ing
+    with pytest.raises(ing.RefusedBytes) as refused:
+        intake.check_bytes(_library(), "lib.safetensors", "v/d.safetensors",
+                           stated={}, tensor="dierction")
+    assert "dierction" in str(refused.value)
+    assert "direction" in str(refused.value)
+
+
+def test_naming_the_tensor_writes_that_one_and_keeps_its_name():
+    checked = intake.check_bytes(_library(), "lib.safetensors", "v/d.safetensors",
+                                 stated={}, tensor="direction")
+    try:
+        assert checked.tensor_name == "direction"
+        assert checked.facts.shape == "[8]"
+        # The one that was asked for, not the one the format serialized first.
+        blob = Path(checked.staged).read_bytes()
+        assert artifact.tensor_names(blob) == ["direction"]
+    finally:
+        shutil.rmtree(checked.staging_root, ignore_errors=True)
+
+
+def test_the_form_offers_the_tensor_field_and_explains_it(tool):
+    conn = db.connect(tool.database)
+    try:
+        page = intake.page(conn, token="t", repo="a/b", origin="o").decode()
+    finally:
+        conn.close()
+    assert 'data-field="bytes_tensor"' in page
+    assert 'id="why-bytes_tensor"' in page

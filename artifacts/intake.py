@@ -321,7 +321,7 @@ def check_link(repo: str, commit: str, path: str, stated: dict[str, str]) -> Che
 
 
 def check_bytes(blob: bytes, filename: str, path: str,
-                stated: dict[str, str]) -> Checked:
+                stated: dict[str, str], tensor: str = "") -> Checked:
     """Convert and check a dropped file, outside this repository.
 
     `root=` points `registry.ingest` at a temporary directory, so the checked
@@ -332,6 +332,13 @@ def check_bytes(blob: bytes, filename: str, path: str,
 
     Everything about which bytes are readable is `registry.ingest`'s, including
     the refusals. Nothing is re-decided here.
+
+    `tensor` is empty for a file holding one array, which is most of them. A
+    file holding several is refused by `ingest.one_array` in a message that
+    names them all, and naming one back here is how the author says which is
+    the artifact. Empty stays the default rather than picking for them: a form
+    that guessed would be a form that silently published whichever tensor the
+    format happened to serialize first.
     """
     if not path:
         raise Refused(
@@ -350,6 +357,7 @@ def check_bytes(blob: bytes, filename: str, path: str,
             out=path,
             subject=f"{filename} -> {path}",
             claim=_claim(stated),
+            payload=ingest.named_array(tensor) if tensor else None,
             root=staging,
         )
     except BaseException:
@@ -1028,6 +1036,13 @@ WHY = {
     "bytes_path":
         "Also the row's <code>artifact_path</code>, character for character: one "
         "path field goes to the remote, so a fetch finds the file or it does not.",
+    "bytes_tensor":
+        "May be empty, and usually is. A file holding one array needs nothing "
+        "here. A file holding several is refused by "
+        "<code>ingest.one_array</code> in a message naming every one it found, "
+        "and typing one of them back is how you say which is the artifact. "
+        "Nothing is guessed from a near match: writing the wrong tensor under "
+        "the right name is the one failure nothing downstream can catch.",
     "bytes_message": "What the upload says it is, in the commit it makes.",
     "shape":
         "Optional and checked. <code>artifact.confirmed</code> holds the bytes "
@@ -1129,6 +1144,7 @@ SOURCE = {
     "file": "src/registry/ingest.py",
     "bytes_repo": "artifacts/publish.py",
     "bytes_path": "artifacts/intake.py",
+    "bytes_tensor": "src/registry/ingest.py",
     "shape": "src/registry/artifact.py",
     "sha256": "schema/migrations/006_artifact_digest.sql",
     "label": "BRIEF.md, the object graph",
@@ -1275,7 +1291,10 @@ def page(conn: sqlite3.Connection, *, token: str, repo: str, origin: str) -> byt
                  value=repo, string=True)
         + _field("bytes_path", "Path in the repo",
                  "Where it will sit inside that repo.", string=True)
-        + '</div><div class="grid single">'
+        + '</div><div class="grid">'
+        + _field("bytes_tensor", "Which tensor",
+                 "Only when the file holds more than one.", string=True,
+                 empty_ok=True)
         + _field("bytes_message", "Commit message", "",
                  value="Publish one steering artifact")
         + '</div></fieldset>'
@@ -1610,6 +1629,7 @@ class Handler(BaseHTTPRequestHandler):
                 filename=query.get("filename", ["the dropped file"])[0],
                 path=form.get("bytes_path", "").strip(),
                 stated=self._stated(form),
+                tensor=form.get("bytes_tensor", "").strip(),
             )
         else:
             payload = json.loads(self._body(1 << 20) or b"{}")

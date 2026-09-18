@@ -1765,3 +1765,43 @@ every property that keeps it local is a test rather than a habit.
 **Supersedes:** nothing. Builds on 2026-09-18 "The author publishes his own
 artifacts, and the registry records the pin", whose `push` became `upload` so
 two callers share one network write.
+
+## 2026-09-18 GAP: `layer` is one integer, so a band cannot be stated at all
+**Found, not decided.** `001_init.sql` declares `layer INTEGER NOT NULL`. An
+artifact whose direction is `(21, 8192)` over layers 30 to 50 has no way to say
+so. Recorded as a gap rather than fixed, because v0 scope is fixed and this is
+schema.
+
+**How it surfaced.** A real submission attempt, against a Llama-3.3-70B
+direction library built outside this project. The author's agent worked the
+whole contract out of their files and then stopped on this one: the vector it
+was asked to submit is a band, the author's own record names layer 34 as the
+one they evaluate at, and taking that slice is a real answer that throws away
+twenty other rows of a tensor somebody deliberately built. Its words were that
+the layer field cannot express it and we should talk about it, which is the
+correct escalation and not something the prompt told it to look for.
+
+**Why this is the premise and not an inconvenience.** The trip-wire list catches
+a closed enum on a user-supplied field, and this is the same assertion arriving
+through a column type: `INTEGER NOT NULL` declares that a steering artifact is a
+thing that exists at one layer. Nobody decided that. It is the shape of the
+first four artifacts, which are all single-layer, generalized into a constraint
+by being written down once. The inverse question answers itself here: what this
+makes impossible to express is a multi-layer intervention, and people build
+those.
+
+**What is not the answer.** Twenty-one rows, one per layer. The 2026-09-14
+decision against turning a five-point sweep into five rows already settled that,
+and it settled it for the same reason: a sweep is one artifact somebody made,
+and exploding it into rows makes the registry assert a granularity the author
+did not.
+
+**Not fixed here.** Three shapes are worth weighing when it is: `layer` widening
+to carry a range with its convention, a `layers` column that a single-layer
+artifact fills with one element, or the band living in the recipe payload the
+way non-Hub provenance does, which the 2026-09-14 entry already calls a gap and
+would make this the second thing hiding there. The third is the cheapest and is
+probably wrong for the same reason it was wrong the first time.
+
+**Supersedes:** nothing. Related to 2026-09-14 "Non-Hub provenance lives in the
+recipe payload, and that is a gap", which is the same kind of entry.
