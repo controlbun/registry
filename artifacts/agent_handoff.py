@@ -341,9 +341,25 @@ reason to refuse it.
 
 ## Where the artifact is, and the pin
 
-**artifact_path** The path of the file inside the repo it is published in. This
-same string is what the registry records, so it is character for character the
-path in the repo or the fetch is a 404.
+**artifact_path** Where the file sits inside the published repo, and nowhere
+else. Relative, no leading slash.
+
+**This is not where the file is on your author's machine.** That is the mistake
+this field actually gets, and it gets it from people who found the file, which
+is to say from you. A scratch path, a cluster mount, a home directory or
+anything starting with `/` is refused, and refused rather than cleaned up,
+because the registry hands this exact string to the host when somebody later
+downloads the vector. A local path stored here describes a folder that exists
+on one machine, so every fetch after today looks for it and gets a 404.
+
+If the artifact is already published, give the path it has in that repo,
+character for character. If it is not published yet, this field is a decision
+rather than a lookup: choose where it will sit once it is uploaded, and say so.
+`vectors/<name>.safetensors` is a reasonable shape and nothing requires it.
+
+So: read where the file is now to find and verify the bytes, then answer with
+where it goes. Those are two different strings and only the second one belongs
+here.
 
 **artifact_repo** The repo the author published it in, as `owner/name`. Their
 own account, never the registry's.
@@ -403,7 +419,7 @@ coeff_low: <the swept range, low end>
 coeff_high: <the swept range, high end>
 steering_position: <where it is applied during generation>
 license_status: <what the model license permits, where you read it, when>
-artifact_path: <path inside the repo>
+artifact_path: <where it sits in the published repo, relative, not a local path>
 artifact_repo: <owner/name>
 artifact_commit: <forty hex characters>
 not-found: <field name> <why there is no value, in a sentence>

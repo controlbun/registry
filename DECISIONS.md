@@ -1805,3 +1805,50 @@ probably wrong for the same reason it was wrong the first time.
 
 **Supersedes:** nothing. Related to 2026-09-14 "Non-Hub provenance lives in the
 recipe payload, and that is a gap", which is the same kind of entry.
+
+## 2026-09-18 GAP: ingest reads any host, but a row can only pin the Hub
+**Found, not decided.** The write path is host-agnostic and the read path is
+not, so an artifact published on GitHub can be ingested and cannot be pinned.
+
+**The asymmetry, exactly.** `ingest.PinnedRepoFile` takes a `host` and a
+`url_template` and its docstring already settles the principle: "A table of the
+ones we happen to have met would be a list of where an artifact is allowed to
+come from, which is not ours to write." This is not hypothetical support. All
+four real directions in this corpus came in through it with `host="github.com"`
+and GitHub's media template, because that is where the arena publishes.
+
+Then `fetch.resolve` sends both of its remote branches to `from_hub`, which
+builds `{HUB}/{repo}/resolve/{commit}/{path}` and nothing else, and
+`intervention` has `artifact_repo` and `artifact_commit` with no column saying
+which host they are on. So `github.com/a/b` and `huggingface.co/a/b` are one
+string in the row, which is the collision `PinnedRepoFile` names and guards
+against on the way in.
+
+**What this makes impossible to express.** Link mode against anything but the
+Hub. An author whose vectors live in a GitHub repo, which the author of this
+registry says is most of them, has two ways in: republish the bytes to a Hub
+namespace, which makes a second copy of something already published and
+recorded at a commit; or keep a local file, which is not a pin at all. Neither
+records the fact that the artifact is already published, pinned and public
+where its author put it.
+
+**The provenance survives and is not reachable.** `PinnedRepoFile.provenance`
+writes `source_repo: github.com/owner/name` and `source_commit` into the
+safetensors header, so the true origin is in the bytes. Nothing resolves from
+it. A fact recorded where no code reads it is the shape this file has flagged
+twice before.
+
+**Why it is the premise and not plumbing.** Same failure as the layer gap
+recorded above and the closed enums the trip-wire list covers: the schema
+asserting what a legitimate artifact looks like, here by making one host the
+only one a pin can name. Nobody decided the Hub was the registry's host. It is
+where the first artifacts were going and the resolver was written to match.
+
+**Not fixed here.** The shape is already written on the other side: a host
+beside the repo, and a url_template in `resolve` the way `PinnedRepoFile`
+carries one, so the read path stops knowing any host by name. That is migration
+007 plus `fetch`, which is schema, and v0 scope is fixed.
+
+**Supersedes:** nothing. Same kind of entry as 2026-09-18 "GAP: `layer` is one
+integer" and 2026-09-14 "Non-Hub provenance lives in the recipe payload, and
+that is a gap", which this partly explains.

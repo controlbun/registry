@@ -464,3 +464,21 @@ def test_the_payload_the_route_returns_carries_the_pairs_the_panel_prints():
     assert payload["absent"]["model_revision"]
     assert payload["pinned"] is False
     assert ("kind", "direction") in [tuple(p) for p in payload["display"]]
+
+
+def test_the_prompt_warns_that_artifact_path_is_not_a_local_path():
+    """The one field a capable agent gets wrong while understanding it.
+
+    A real submission attempt answered `artifact_path` with the cluster path the
+    file was read from, and said in a different field that it knew the two were
+    different. The field was asking for a decision and read like a lookup, so
+    the prompt now says which, and says it where the answer gets written.
+    """
+    text = handoff.prompt()
+    body = text.split("## Where the artifact is")[1]
+    assert "not where the file is on your author's machine" in body.lower()
+    assert "404" in body
+    # And in the template, where an agent skimming for the shape will see it.
+    template = text.split("=== BEGIN CONTROLBUN SUBMISSION ===")[1]
+    line = [l for l in template.splitlines() if l.startswith("artifact_path:")]
+    assert line and "not a local path" in line[0]
