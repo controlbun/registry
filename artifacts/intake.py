@@ -81,6 +81,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(HERE))
 
 from registry import artifact, db, fetch, ingest  # noqa: E402
+import agent_handoff  # noqa: E402
 import publish  # noqa: E402
 
 # Loopback, and not a default. There is no flag that changes this and adding one
@@ -1536,7 +1537,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(200, self._check())
                 if route == "/write":
                     return self._json(200, self._write())
-        except Refused as refused:
+                if route == "/agent-prompt":
+                    return self._json(200, {"prompt": self._prompt()})
+                if route == "/agent-paste":
+                    return self._json(200, self._paste())
+        except (Refused, agent_handoff.Refused) as refused:
             return self._refused(str(refused))
         except (artifact.MismatchedArtifact, artifact.UnsafeArtifactPath,
                 ingest.RefusedBytes, fetch.FetchError, publish.ServedCopy,
@@ -1562,6 +1567,36 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(500, {"refused": f"{type(unexpected).__name__}: "
                                                f"{unexpected}"})
         self._refused("no such endpoint here.", 404)
+
+    def _prompt(self) -> str:
+        """The manual the author hands their agent, with this corpus's own
+        vocabulary folded in.
+
+        `suggestions` is passed rather than omitted so the prompt can say what
+        other people have typed, which is the only claim it makes about those
+        strings. `agent_handoff` renders them as observation and not as a menu,
+        and the prompt reads the same without them.
+        """
+        conn = self.intake.connect()
+        try:
+            return agent_handoff.prompt(suggestions(conn))
+        finally:
+            conn.close()
+
+    def _paste(self) -> dict:
+        """What the author's agent replied, turned into field values.
+
+        Parsed here rather than in the page script because the rules are the
+        schema's, and one implementation is the one a test can drive. Nothing
+        is written: the values land in the form still editable, and the bytes
+        are still checked before any row exists.
+        """
+        body = self._body(1 << 20)
+        try:
+            pasted = json.loads(body or b"{}").get("pasted", "")
+        except json.JSONDecodeError:
+            raise Refused("the paste did not arrive as JSON.") from None
+        return agent_handoff.received(pasted)
 
     def _check(self) -> dict:
         query = parse_qs(urlsplit(self.path).query)
