@@ -1,0 +1,4 @@
+{
+  "note": "Where the author published each artifact, keyed by the artifact_path the row carries. Written by artifacts/publish.py record, read by artifacts/publish.py apply_pins, which artifacts/seed.py calls after it inserts. This file is the durable copy: make site drops registry.db and rebuilds it, so a commit written only into a column does not survive a build. repo is the author's own namespace and never controlbun, which would be a served copy and is a different column for the reasons in schema/migrations/004. commit is forty hex characters, by the one rule in registry.fetch.commit_sha; a branch is not a pin. Empty until the upload has happened: an entry here is a claim that bytes are at that commit, and artifacts/publish.py verify is what checks it.",
+  "files": {}
+}

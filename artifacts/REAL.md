@@ -32,6 +32,9 @@ The `.npz` is verified against a recorded sha256 before it is read and the
 `.safetensors` against a recorded sha256 after it is written, so a clean checkout
 reproduces these byte for byte and `make verify` never needs the network.
 
+Publishing them to the Hub, and pinning the commit so the client can fetch them
+without a checkout, is `artifacts/PUBLISHING.md`.
+
 `.npz` became safetensors on ingest because `numpy.load` has an `allow_pickle`
 argument and a registry handing out other people's array files cannot ask a reader
 to trust a flag default. All three load with `allow_pickle=False`, which the

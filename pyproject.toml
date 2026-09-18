@@ -10,6 +10,20 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest==8.4.2"]
+# The author's own upload step, and nothing else. `registry.fetch` reads the Hub
+# over plain HTTP and says in its docstring why: a pinned download is a GET at a
+# documented URL, and the library earns its nine transitive packages only where
+# there is upload and auth to do. That is exactly here, and it stays optional so
+# a consumer installing the client never pays for it.
+#
+#   uv pip install --python .venv/bin/python -e '.[publish]'
+#
+# Apache-2.0 itself. Two of the eleven packages it pulls in are weak copyleft and
+# are flagged rather than waved through: certifi is MPL-2.0 and tqdm is
+# MPL-2.0 AND MIT. MPL obligations attach to modified files of those projects,
+# nothing here modifies or redistributes either, and this extra is not installed
+# by default, so nothing the registry publishes carries them.
+publish = ["huggingface_hub==0.36.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

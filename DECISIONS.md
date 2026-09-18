@@ -1585,3 +1585,87 @@ rather than before existing, which is what this entry says.
 
 **Supersedes:** nothing. Refines the 2026-09-15 override, which deferred the
 policy past launch without saying what would end the deferral. This says what.
+
+## 2026-09-18 The author publishes his own artifacts, and the registry records the pin
+**Decided:** `artifacts/publish.py`, four separable steps: `plan` prints what
+would happen and touches nothing, `push` uploads, `record` writes the pin, and
+`verify` fetches it back and compares. The pin is `artifact_repo` plus
+`artifact_commit`, in the author's own Hub namespace, defaulting to
+`sohampadia/pro-human`. `huggingface_hub==0.36.0` becomes an optional
+`publish` extra, needed by `push` and by nothing else.
+
+**Why now.** `fetch.resolve` has three branches and the corpus only ever took
+the third. Every real row records a local `artifact_path` and no remote, so the
+Hub path existed, was covered by tests against a stand-in server, and had never
+run against the real host for a real artifact. A client installed anywhere
+without a checkout could not load anything. Publishing the four directions is
+what turns `client.load("soham/pro-human@L24").vector()` into a true sentence
+off this machine.
+
+**The author's namespace, not `controlbun`.** `artifact_repo` is where the
+author put a thing and `served_repo` is where this registry serves a copy from,
+and `004` keeps them apart so a mirror that drifted from its origin is
+expressible. Nothing here writes the second pair, and that is the line the
+dual-use deferral turns on: the 2026-09-17 trigger fires when *this* serves
+bytes, can be submitted to, or grows a bulk surface. An author uploading his own
+file to his own account, with the registry recording a pointer, is none of the
+three. It adds no capability a reader did not already have, since the artifact
+is public at a URL either way; what it adds is that the pointer is checkable.
+
+**Two findings that changed the design.**
+
+The path inside the Hub repo has to equal `artifact_path` character for
+character, because `fetch.resolve` hands one path field to whichever of the
+three sources it picks. `004` says "our copy keeps the author's filename" and
+reads like a remark about tidiness; against the code it is a constraint. So the
+files go to `artifacts/soham/...` inside the Hub repo rather than to its root,
+and `plan` prints the path twice so the `hf upload` argument that would get this
+wrong is visible before it is run. The alternative was a seventh migration
+adding a remote path column, which buys a nicer-looking repo and a second place
+for a path to go stale.
+
+A pin written only into a column does not survive `make site`, which drops the
+database and rebuilds it from `fixtures/build.py` and `artifacts/seed.py`. The
+row would fall back to the local file, which is present on the machine that ran
+the build and nowhere else, so the regression is invisible exactly where it is
+introduced. `artifacts/published.json` is the durable record, `apply_pins` is
+the only function that writes those two columns, and both the rebuild and
+`record` call it.
+
+**A commit, never a branch, and the rule is not restated.** `record` goes
+through `fetch.commit_sha`, so `--at-head` reads what `main` points at and
+freezes the answer rather than recording the name. Resolving a branch is done
+here and not in `registry.fetch`, which says in its own docstring that it does
+not resolve one: a helper sitting next to that sentence is one refactor away
+from being wired into the read path.
+
+**What this makes impossible to express.** An artifact whose remote path differs
+from its local path, which is the constraint above and is a real cost to anyone
+whose Hub layout is already fixed; the answer is a column, and it should be
+added when somebody actually needs it rather than in advance. A pin to a moving
+reference, which is the point. And publishing anything from `fixtures/`, which
+`select` leaves out: a fabricated direction uploaded under the author's name
+would publish a file whose whole purpose is being not one.
+
+**Nothing became required.** Both columns stay nullable and empty is the normal
+state. A row with no pin resolves locally, exactly as before, and `verify` on an
+unpinned corpus reports that there is nothing to check rather than failing.
+
+**Safety.** No upload endpoint, no submission form, no public API, no bulk
+fetch. The only new network write is the author pushing his own bytes with his
+own token, read from `.env` and printed nowhere. `verify`'s refusal is the
+substantive half: a commit that resolves to *something* is indistinguishable
+from a correct one until the bytes are compared, and a wrong pin is worse than
+no pin, because the client then refuses the artifact and names the author's own
+file as the substituted one.
+
+**Where the guard lives.** `tests/test_publish.py`, offline against a stand-in
+Hub. The probes that matter: `plan` pointed at a dead host, so a dry run that
+reads anything remote fails; the local path and the path in the repo asserted
+equal on every planned upload; a rebuild that has to keep the pin; a pin naming
+no row refused rather than silently updating zero rows; and a commit serving
+different bytes under the right path, which is the failure a live upload cannot
+rule out by itself.
+
+**Supersedes:** nothing. Pays off the remote branch of `fetch.resolve`, which
+has been written since 2026-09-14 and unexercised against the real host.

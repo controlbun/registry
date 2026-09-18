@@ -17,6 +17,11 @@ is a measurement: the shape, the dtype, the L2 norm and `artifact_sha256`. Three
 are cited, one is computed, and every one of them is refused unless the vendored
 file agrees. A fact about a tensor that was typed in is a fact that can be typed
 in wrong, and the row is what every later check reads. See `confirmed_facts`.
+
+Two more columns are written at the end and not in the `INSERT`: where the
+author published each artifact, out of `artifacts/published.json`. That file is
+the durable copy of a pin, because this script runs against a database that was
+just dropped and rebuilt. See `artifacts/publish.py`.
 """
 
 from __future__ import annotations
@@ -34,6 +39,7 @@ sys.path.insert(0, str(HERE))
 
 from registry import artifact, db  # noqa: E402
 from registry.artifact import local_path  # noqa: E402
+from publish import PinError, apply_pins  # noqa: E402
 from source import COMMIT, DIRECTIONS, REPO  # noqa: E402
 
 AUTHOR = "soham"
@@ -368,6 +374,23 @@ def seed(conn) -> None:
          "one and this was it."),
     )
     conn.commit()
+
+    # Where the author published these, if he has. Applied here rather than
+    # written into the INSERT above because `artifacts/publish.py record` has to
+    # write the same two columns against a database that already exists, and one
+    # function writing them means the rebuild and the recording step cannot come
+    # apart. Empty until an upload has happened, and an empty record leaves both
+    # columns NULL, which is how every row in this corpus starts: pointing at a
+    # local file and at nothing remote. See `artifacts/published.json`.
+    try:
+        applied = apply_pins(conn)
+    except PinError as stale:
+        raise SystemExit(
+            f"{stale}\n\nRefusing to seed: a pin that matches nothing is a "
+            "published claim about an artifact this corpus does not hold."
+        ) from stale
+    for rel, repo, commit in applied:
+        print(f"  published  {rel} -> {repo}@{commit[:12]}")
 
 
 def main() -> None:
