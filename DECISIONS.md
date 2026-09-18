@@ -1669,3 +1669,99 @@ rule out by itself.
 
 **Supersedes:** nothing. Pays off the remote branch of `fetch.resolve`, which
 has been written since 2026-09-14 and unexercised against the real host.
+
+## 2026-09-18 Intake is a form on 127.0.0.1, and the binding is what keeps it clear of the dual-use trigger
+**Decided:** `artifacts/intake.py serve`, a standard-library HTTP server bound to
+127.0.0.1, with two modes that end at the same place: a row pointing at a pinned
+remote. Link mode takes a repo, a commit and a path, fetches once into a
+throwaway cache, checks the bytes and keeps the pointer. Bytes mode takes a file
+up to 500 MB, converts and checks it outside this repository, pushes it to the
+author's own namespace through the extracted `publish.upload`, records the pin
+and deletes the staged file. The form writes the `submission` and `intervention`
+rows, not just an artifact pointer. Nothing writes `served_repo`.
+
+**Why the binding is the decision and not an implementation detail.** The
+2026-09-17 trigger fires when anything can be submitted. This accepts a file and
+writes rows, which is a submission route by every description except who can
+reach it, and who can reach it is the entire difference. So the constraint lives
+in code rather than in a sentence: the listener takes its address from one
+constant, there is no `--host`, and three more checks sit on top of the bind
+because the bind alone is not enough. A per-run token, in the URL the command
+prints and nowhere else. The `Host` header, because a hostname that resolves to
+127.0.0.1 walks straight through a loopback bind. `Origin` and `Sec-Fetch-Site`,
+because a page the operator did not open, in the same browser, can post to a
+loopback port. `tests/test_intake.py` holds all four.
+
+**The wall is checked on the other side too.** The way this leaks is not somebody
+rebinding the socket. It is a form appearing on the published site in six months
+with nothing failing, because the pieces were sitting in the repo and reader
+convenience won once. So the same test file reads `astro/dist` and fails the
+build on a form element, a POST target, an upload encoding, a file input,
+`XMLHttpRequest`, `sendBeacon` or a loopback address; asserts `astro.config.mjs`
+is still `output: "static"` with no adapter; asserts no page exports a POST
+handler; and asserts the view layer does not mention this tool at all.
+`astro.config.mjs` already said a build that emits files cannot drift into being
+a public surface the way a running process can. This is the running process, so
+it pays for the asymmetry with checks the static build does not need.
+
+**Nothing here decides what an artifact may be.** `registry.ingest` owns which
+bytes can be read without executing them and answers with an open converter set.
+`registry.artifact` owns the comparison between a claim and the bytes.
+`registry.fetch` owns the rule that a pin is a commit. The form owns a socket,
+some HTML and two INSERTs, and every rule it appears to apply is one of those
+three being called, refusal sentence included. Fields are text inputs over
+datalists, which is the precedent `astro/src/data/observed-labels.ts` set: the
+suggestions are read out of what the corpus already holds, so there is no second
+taxonomy to go stale, and there is no `<select>` anywhere on the page. A dropdown
+of permitted values is the closed enum arriving through a control.
+
+**The cap is worded as what it is.** 500 MB, because the form holds the whole
+file in memory to digest, sniff, convert and recheck it before anything is
+written, and that order is the security property. The refusal says that, says it
+is a cap on this form on this machine, and points at link mode, which has no
+limit because it holds nothing. Invariant 7: refuse what cannot be verified and
+say that, never that something is not supported.
+
+**Three findings.**
+
+`publish.py`'s "never `controlbun/*`" was prose in a docstring, which is the
+shape `CLAUDE.md` calls aspirational. It is a check in `publish.upload` now,
+because the second caller takes its repo out of a text field and the difference
+between publishing your own bytes and serving a copy of somebody's is one word
+typed into a box.
+
+`make site` deletes `registry.db`, so a row written by this form is gone on the
+next build. `artifacts/intake.jsonl` is the durable copy, append-only and
+tracked, and `insert` is the one function both the live write and `replay` call.
+That is `published.json`'s argument about two columns, applied to twenty.
+
+**`make site` does not replay the record, and that is left open.**
+`falsifier/verify.py` fails any row whose `artifact_path` has no file on disk,
+and every row this writes is one of those: the bytes are at a pinned remote,
+which is the normal case the registry was designed for and the case the falsifier
+has never seen, because every row in the corpus today is local. Teaching it that
+a pinned remote with no local copy is a state rather than a missing file is a
+change to the gate and belongs in its own decision. Until then the replay is a
+command the operator runs.
+
+**What this makes impossible to express.** A submission from anybody but the
+operator, which is the point and is the cost: the tension `CLAUDE.md` names
+between open contribution and misuse gating is not resolved here, it is deferred
+by making the only write path local. An artifact whose bytes are neither
+published anywhere nor small enough to pass through this machine's memory, which
+is a real gap and the answer is publishing them first, not raising the cap. And
+a linked artifact that is not already safetensors: link mode records a pointer
+the client will parse for itself, so converting it here would leave the row
+pointing at one file and describing another. Bytes mode converts, and publishes
+what it converted.
+
+**Safety.** No public endpoint, no bulk fetch, no listing surface, and nothing
+served. The one new network write is the author pushing his own bytes with his
+own token, read the way `publish.py` reads it and printed nowhere, including in
+the request log: the run token is in the URL, so the log prints the route and not
+the request line. The new local capability is a process that accepts a file, and
+every property that keeps it local is a test rather than a habit.
+
+**Supersedes:** nothing. Builds on 2026-09-18 "The author publishes his own
+artifacts, and the registry records the pin", whose `push` became `upload` so
+two callers share one network write.

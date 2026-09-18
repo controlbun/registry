@@ -1,0 +1,596 @@
+"""The local intake form, and the wall between it and the published site.
+
+Two halves, and the second is the one that matters most.
+
+The first drives the server in process: link mode against a stand-in Hub, bytes
+mode with the upload replaced, and the refusals in between. What it asserts is
+that both modes end as a row pointing at a pinned remote, that nothing writes
+`served_repo`, and that no artifact bytes are left anywhere afterwards.
+
+The second reads `astro/dist` and `astro.config.mjs`. `artifacts/intake.py` is a
+running process that accepts a file and writes rows, which is exactly the thing
+`DECISIONS.md` 2026-09-17 says fires the dual-use trigger when anybody but the
+operator can reach it. The binding is what keeps it clear of that, so the binding
+is checked, and so is the published site, because the way this leaks is not
+somebody rebinding the socket. It is a form appearing on the static site months
+from now with nothing failing.
+
+Every tensor written here is a synthetic fixture, labeled in its own header, for
+the reason `fixtures/SYNTHETIC.md` gives: an integer ramp is obvious on sight and
+no number here is a measurement of anything.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import socket
+import sqlite3
+import sys
+import tempfile
+import threading
+import urllib.error
+import urllib.request
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
+from pathlib import Path
+
+import numpy as np
+import pytest
+from safetensors.numpy import save_file
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "artifacts"))
+
+import intake  # noqa: E402
+import publish  # noqa: E402
+from registry import artifact, db  # noqa: E402
+
+# Forty hex characters so `fetch.commit_sha` takes it. Not a commit anything made.
+SHA = "b" * 40
+REPO = "author/directions"
+REMOTE_PATH = "vectors/probe.safetensors"
+
+SYNTHETIC = ("SYNTHETIC FIXTURE. An integer ramp, normalized. Not a real "
+             "direction, not derived from any model, not a measurement.")
+
+
+def synthetic_blob(tmp: Path, dim: int = 8) -> bytes:
+    """A safetensors file whose header says it is a fixture. Bytes, not numbers."""
+    ramp = np.arange(dim, dtype=np.float32) + 1.0
+    path = tmp / "probe.safetensors"
+    save_file({"direction": ramp / np.linalg.norm(ramp)}, str(path),
+              metadata={"synthetic": "true", "note": SYNTHETIC})
+    artifact.sort_header(path)
+    return path.read_bytes()
+
+
+# --------------------------------------------------------------------------- #
+# The server, in process, over a real socket.
+
+
+@pytest.fixture
+def blob(tmp_path) -> bytes:
+    return synthetic_blob(tmp_path)
+
+
+@pytest.fixture
+def hub(blob):
+    """A stand-in Hub serving one file at one commit."""
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            if self.path == f"/{REPO}/resolve/{SHA}/{REMOTE_PATH}":
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(blob)))
+                self.end_headers()
+                self.wfile.write(blob)
+                return
+            self.send_error(404)
+
+        def log_message(self, *a):
+            pass
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    httpd = HTTPServer(("127.0.0.1", port), Handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{port}"
+    httpd.shutdown()
+
+
+@pytest.fixture
+def tool(tmp_path, monkeypatch, hub):
+    """A running intake, an empty schema, and a tree of its own to not write to.
+
+    `intake.ROOT` is repointed so `artifact.local_path` resolves an
+    `artifact_path` against the temp tree, and so the assertion that no artifact
+    bytes were left behind has somewhere finite to look.
+    """
+    from registry import fetch
+
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    monkeypatch.setattr(intake, "ROOT", tree)
+    monkeypatch.setattr(intake, "RECORD", tmp_path / "intake.jsonl")
+    monkeypatch.setattr(fetch, "HUB", hub)
+    monkeypatch.setattr(fetch, "CACHE", tmp_path / "cache")
+
+    database = str(tmp_path / "registry.db")
+    conn = db.connect(database)
+    db.migrate(conn)
+    conn.close()
+
+    state = intake.Intake(database, "sohampadia/pro-human")
+    handler = type("Bound", (intake.Handler,), {"intake": state})
+    httpd = ThreadingHTTPServer((intake.HOST, 0), handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+
+    class Client:
+        def __init__(self):
+            self.base = f"http://{intake.HOST}:{httpd.server_address[1]}"
+            self.token = state.token
+            self.tree = tree
+            self.database = database
+            self.record = tmp_path / "intake.jsonl"
+            self.staged = state.staged
+
+        def call(self, route, *, body=None, kind=None, token=None,
+                 host=None, origin=None) -> tuple[int, dict]:
+            url = f"{self.base}{route}"
+            url += ("&" if "?" in route else "?") + "k=" + (
+                self.token if token is None else token)
+            request = urllib.request.Request(
+                url, data=body, method="POST" if body is not None else "GET")
+            if kind:
+                request.add_header("Content-Type", kind)
+            if host:
+                request.add_header("Host", host)
+            if origin:
+                request.add_header("Origin", origin)
+            try:
+                with urllib.request.urlopen(request) as reply:
+                    return reply.status, reply.read()
+            except urllib.error.HTTPError as refused:
+                return refused.code, refused.read()
+
+        def post_json(self, route, payload, **kw):
+            code, raw = self.call(route, body=json.dumps(payload).encode(),
+                                  kind="application/json", **kw)
+            return code, json.loads(raw)
+
+        def rows(self) -> list[sqlite3.Row]:
+            conn = db.connect(self.database)
+            conn.row_factory = sqlite3.Row
+            try:
+                return conn.execute("SELECT * FROM intervention").fetchall()
+            finally:
+                conn.close()
+
+    yield Client()
+    httpd.shutdown()
+    httpd.server_close()
+    state.close()
+
+
+SUBMISSION = {
+    "author": "probe", "label": "kindness", "version": "v1",
+    "definition": "A synthetic probe submission written by the test suite.",
+    "created_at": "2026-09-18T00:00:00Z",
+    "intervention_id": "iv_probe_v1", "kind": "direction",
+    "model_id": "placeholder/does-not-resolve-1b", "model_revision": "",
+    "layer": "3", "layer_convention": "block-0indexed",
+    "hook_point": "resid_post", "chat_template_hash": "",
+    "activation_norm": "", "coeff_low": "", "coeff_high": "",
+    "steering_position": "", "license_status": "",
+    "shape": "", "dtype": "", "l2_norm": "", "sha256": "",
+}
+
+
+def link_fields(**over) -> dict:
+    return {**SUBMISSION, "link_repo": REPO, "link_commit": SHA,
+            "link_path": REMOTE_PATH, **over}
+
+
+def leftovers() -> set[Path]:
+    return set(Path(tempfile.gettempdir()).glob("registry-intake-*"))
+
+
+# --------------------------------------------------------------------------- #
+# Both modes end at the same place.
+
+
+def test_link_mode_records_the_pointer_and_keeps_no_bytes(tool):
+    """The end state is a row and nothing else: no file, no served copy."""
+    before = leftovers()
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    assert code == 200, checked
+    shown = dict(checked["display"])
+    assert shown["sha256"] and shown["shape"] == "[8]" and shown["dtype"] == "float32"
+
+    code, written = tool.post_json("/write", {"handle": checked["handle"],
+                                              "fields": link_fields()})
+    assert code == 200, written
+
+    row, = tool.rows()
+    assert (row["artifact_repo"], row["artifact_commit"]) == (REPO, SHA)
+    assert row["artifact_path"] == REMOTE_PATH
+    assert row["artifact_sha256"] == shown["sha256"]
+    assert row["served_repo"] is None and row["served_commit"] is None
+
+    assert not list(tool.tree.rglob("*.safetensors")), (
+        "link mode kept the bytes it fetched. What it records is a pointer; a "
+        "copy in the tree is the distributor question arriving sideways."
+    )
+    from registry import fetch
+    assert not fetch.CACHE.exists(), (
+        "the fetch went through the operator's real cache. It is swapped for a "
+        "throwaway so the check is a download rather than a reread, and so "
+        "nothing is left behind by a mode whose whole claim is that it keeps "
+        "the pointer and not the bytes."
+    )
+    assert leftovers() == before
+
+
+def test_bytes_mode_publishes_and_records_only_the_pin(tool, blob, monkeypatch):
+    """Converted here, uploaded to the author's namespace, and gone from here."""
+    before = leftovers()
+    pushed: list[tuple[str, Path]] = []
+
+    def fake_upload(files, *, repo, message, create=False):
+        for rel, local in files:
+            assert local.exists(), "the upload was handed a path with no file"
+            assert not local.is_relative_to(tool.tree), (
+                f"{local} is inside the repository. Bytes mode stages outside it "
+                "so that nothing it handles can become a file this registry holds."
+            )
+            pushed.append((rel, Path(local)))
+        return SHA, f"{repo}/commit/{SHA}"
+
+    monkeypatch.setattr(publish, "upload", fake_upload)
+
+    fields = {**SUBMISSION, "bytes_path": "artifacts/probe/d.safetensors",
+              "bytes_repo": "someauthor/directions", "bytes_message": "probe"}
+    code, raw = tool.call(
+        "/check?mode=bytes&filename=probe.npz&fields="
+        + urllib.parse.quote(json.dumps(fields)),
+        body=blob, kind="application/octet-stream")
+    checked = json.loads(raw)
+    assert code == 200, checked
+    shown = dict(checked["display"])
+    assert shown["shape"] == "[8]" and shown["tensor"] == "direction"
+
+    code, written = tool.post_json("/write", {"handle": checked["handle"],
+                                              "fields": fields})
+    assert code == 200, written
+
+    assert [rel for rel, _ in pushed] == ["artifacts/probe/d.safetensors"]
+    row, = tool.rows()
+    assert (row["artifact_repo"], row["artifact_commit"]) == \
+        ("someauthor/directions", SHA)
+    assert row["artifact_path"] == "artifacts/probe/d.safetensors"
+    assert row["served_repo"] is None
+
+    assert not list(tool.tree.rglob("*.safetensors")), (
+        "bytes mode left the artifact in the repository. It converts, checks, "
+        "publishes and records the pin; holding the bytes is the one thing it "
+        "is not for."
+    )
+    assert not pushed[0][1].exists(), "the staged file outlived the upload"
+    assert leftovers() == before
+
+
+def test_neither_mode_can_write_a_served_copy():
+    """A source check, because this is the line the dual-use deferral sits on."""
+    text = (ROOT / "artifacts" / "intake.py").read_text()
+    offenders = [
+        line.strip() for line in text.splitlines()
+        # The column being assigned, or named in a statement that writes. Prose
+        # about the columns is the rest of the mentions and is the point of them.
+        if re.search(r"served_(repo|commit)\s*(=[^=]|,)", line)
+        or re.search(r"(INSERT|UPDATE)[^\n]*served_", line, re.I)
+    ]
+    assert not offenders, (
+        "intake writes served_repo, which makes this registry a distributor "
+        "rather than an index and fires the first trigger in DECISIONS.md "
+        f"2026-09-17:\n{offenders}"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# What it refuses, and how the refusal reads.
+
+
+def test_over_the_cap_reads_as_a_cap_on_this_form(tool):
+    """Invariant 7: refuse what cannot be verified, and say that.
+
+    The refusal a reader must not get is that their file is too big for this
+    registry, or that the format is not on a list. What is true is narrower: this
+    form checks the whole file in memory before it writes anything, that costs
+    memory, and there is another door with no limit on it.
+    """
+    oversized = urllib.request.Request(
+        f"{tool.base}/check?mode=bytes&filename=big.safetensors&k={tool.token}",
+        data=b"", method="POST")
+    oversized.add_header("Content-Length", str(intake.BYTES_CAP + 1))
+    try:
+        with urllib.request.urlopen(oversized, timeout=5):
+            pytest.fail("the cap did not bite")
+    except urllib.error.HTTPError as refused:
+        reason = json.loads(refused.read())["refused"]
+
+    assert "link mode" in reason
+    for word in ("not supported", "unsupported", "too large for this registry"):
+        assert word not in reason.lower(), (
+            f"the refusal says {word!r}, which describes the artifact. The cap "
+            "is a property of this form on this machine."
+        )
+
+
+def test_a_branch_is_not_a_pin(tool):
+    code, body = tool.post_json(
+        "/check", {"mode": "link", "fields": link_fields(link_commit="main")})
+    assert code == 400
+    assert "commit" in body["refused"]
+
+
+def test_a_pickle_is_refused_with_the_reason_ingest_gives(tool):
+    """The rule lives in `registry.ingest` and is not restated here."""
+    pickle = b"\x80\x04" + b"\x00" * 64
+    code, raw = tool.call(
+        "/check?mode=bytes&filename=d.pt&fields=" + urllib.parse.quote(
+            json.dumps({**SUBMISSION, "bytes_path": "artifacts/p/d.safetensors"})),
+        body=pickle, kind="application/octet-stream")
+    assert code == 400
+    assert "pickle" in json.loads(raw)["refused"]
+
+
+def test_uploading_into_this_registrys_namespace_is_refused(tool, blob, monkeypatch):
+    """`publish.upload` owns this and intake inherits it by calling it."""
+    fields = {**SUBMISSION, "bytes_path": "artifacts/p/d.safetensors",
+              "bytes_repo": "controlbun/mirror"}
+    code, raw = tool.call(
+        "/check?mode=bytes&filename=d.safetensors&fields="
+        + urllib.parse.quote(json.dumps(fields)),
+        body=blob, kind="application/octet-stream")
+    handle = json.loads(raw)["handle"]
+
+    monkeypatch.setattr(publish, "_token", lambda: "not used; the guard is first")
+    code, body = tool.post_json("/write", {"handle": handle, "fields": fields})
+    assert code == 400
+    assert "served" in body["refused"] and "dual-use" in body["refused"]
+    assert not tool.rows()
+
+
+def test_editing_the_artifact_after_the_check_is_refused(tool):
+    """The form stays editable, so the check has to be about what gets written."""
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    code, body = tool.post_json(
+        "/write", {"handle": checked["handle"],
+                   "fields": link_fields(link_path="vectors/somethingelse.safetensors")})
+    assert code == 400
+    assert "link_path" in body["refused"] and "Check again" in body["refused"]
+    assert not tool.rows()
+
+
+def test_a_missing_definition_is_refused_rather_than_invented(tool):
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    code, body = tool.post_json(
+        "/write", {"handle": checked["handle"],
+                   "fields": link_fields(definition="   ")})
+    assert code == 400
+    assert "definition" in body["refused"]
+    assert not tool.rows()
+
+
+def test_an_unmeasured_field_records_as_absent_and_never_as_zero(tool):
+    """Invariant 6, applied to the write path rather than to a page."""
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    tool.post_json("/write", {"handle": checked["handle"],
+                              "fields": link_fields()})
+    row, = tool.rows()
+    for column in ("model_revision", "chat_template_hash", "activation_norm",
+                   "coeff_low", "coeff_high", "steering_position",
+                   "license_status"):
+        assert row[column] is None, (
+            f"{column} was left empty on the form and stored as {row[column]!r}. "
+            "An empty string and a zero both read as an answer."
+        )
+
+
+# --------------------------------------------------------------------------- #
+# Reachable from here and from nowhere else.
+
+
+def test_a_request_with_no_run_token_is_refused(tool):
+    code, _ = tool.call("/", token="")
+    assert code == 403
+    code, _ = tool.post_json("/check", {"mode": "link", "fields": link_fields()},
+                             token="wrong")
+    assert code == 403
+
+
+def test_a_rebound_hostname_is_refused(tool):
+    """The bind alone does not stop a name that resolves to 127.0.0.1."""
+    code, _ = tool.call("/", host="intake.attacker.example")
+    assert code == 403
+
+
+def test_a_cross_origin_post_is_refused(tool):
+    code, body = tool.post_json("/check", {"mode": "link", "fields": link_fields()},
+                                origin="https://elsewhere.example")
+    assert code == 403
+    assert not tool.rows()
+
+
+def test_it_binds_loopback_and_offers_no_way_to_change_that(tool):
+    source = (ROOT / "artifacts" / "intake.py").read_text()
+    assert intake.HOST == "127.0.0.1"
+    assert "0.0.0.0" not in source, (
+        "a bind address other than loopback appears in the tool. The localhost "
+        "binding is the whole difference between an operator tool and the "
+        "submission route the dual-use policy is waiting on."
+    )
+    # The prose is allowed to name the flag that does not exist; the parser is
+    # not allowed to define it. An option gets used.
+    options = re.findall(r'add_argument\(\s*"(--[\w-]+)"', source)
+    assert not ({"--host", "--bind", "--interface", "--address"} & set(options)), (
+        f"the binding is an option: {options}"
+    )
+    assert re.search(r'ThreadingHTTPServer\(\(HOST,', source), (
+        "the listener no longer takes its address from the one constant"
+    )
+    assert tool.base.startswith("http://127.0.0.1:")
+
+
+def test_the_run_token_is_never_logged(tool, capsys):
+    tool.call("/")
+    logged = capsys.readouterr()
+    assert tool.token not in logged.err + logged.out, (
+        "the token is in the URL, so logging a request line puts it in the "
+        "terminal scrollback"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Open fields, and a page that invents nothing.
+
+
+def test_no_field_offers_a_closed_set(tool):
+    conn = db.connect(tool.database)
+    try:
+        html = intake.page(conn, token="t", repo="a/b", origin="o").decode()
+    finally:
+        conn.close()
+    assert "<select" not in html, (
+        "a dropdown of permitted values is the closed-enum failure arriving "
+        "through a control. Suggest with a datalist behind a free-text field, "
+        "which is what astro/src/data/observed-labels.ts already argues for."
+    )
+    for name in ("kind", "hook_point", "label", "layer_convention",
+                 "license_status"):
+        field = re.search(rf'<input data-field="{name}"[^>]*>', html)
+        assert field, f"{name} is not on the form"
+        assert "readonly" not in field.group(0) and "disabled" not in field.group(0)
+
+
+def test_the_page_prefills_no_number_it_did_not_derive(tool):
+    """Never fabricate numbers, applied to the HTML.
+
+    The tensor facts are the fields somebody would be tempted to seed with a
+    plausible shape or a unit norm, and a prefilled one is a claim the operator
+    did not make.
+    """
+    conn = db.connect(tool.database)
+    try:
+        html = intake.page(conn, token="t", repo="a/b", origin="o").decode()
+    finally:
+        conn.close()
+    for name in ("shape", "dtype", "l2_norm", "sha256", "layer",
+                 "activation_norm", "coeff_low", "coeff_high"):
+        field = re.search(rf'<input data-field="{name}"[^>]*>', html)
+        assert 'value=""' in field.group(0), (
+            f"{name} arrives prefilled, which puts a number in front of the "
+            "operator that nothing derived"
+        )
+
+
+def test_the_record_replays_into_a_rebuilt_database(tool):
+    """`make site` drops registry.db. The record is why that is survivable."""
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    tool.post_json("/write", {"handle": checked["handle"],
+                              "fields": link_fields()})
+    assert tool.record.exists() and len(intake.read_record(tool.record)) == 1
+
+    Path(tool.database).unlink()
+    conn = db.connect(tool.database)
+    db.migrate(conn)
+    try:
+        assert intake.replay(conn, tool.record) == ["probe/kindness@v1"]
+    finally:
+        conn.close()
+    row, = tool.rows()
+    assert (row["artifact_repo"], row["artifact_commit"]) == (REPO, SHA)
+
+
+# --------------------------------------------------------------------------- #
+# The published site, which is where this leaks if it ever leaks.
+
+
+DIST = ROOT / "astro" / "dist"
+
+# What a write surface looks like in built output. `<input>` on its own is not
+# on the list: the situation picker on the front page is two of them, and
+# banning the tag would ban the control that makes the open fields open.
+WRITE_SURFACE = {
+    r"<form\b": "a form element",
+    r"method\s*[:=]\s*[\"']?\s*post\b": "a POST target",
+    r"\benctype\b": "a form encoding, which only a submitting form needs",
+    r"\bformaction\b": "a submit button with its own target",
+    r'type\s*=\s*["\']?file\b': "a file input",
+    r"\bmultipart/form-data\b": "an upload encoding",
+    r"\bXMLHttpRequest\b": "a scripted request older than fetch",
+    r"\bsendBeacon\b": "a fire-and-forget POST",
+    r"\b127\.0\.0\.1\b": "a loopback address, which is the intake tool's",
+    r"\blocalhost:\d": "a loopback address, which is the intake tool's",
+}
+
+
+def test_the_built_site_ships_no_form_and_no_post_target():
+    """The site is `output: "static"` and has to stay a thing that cannot accept.
+
+    v0 accepts no uploads and serves nothing publicly, and the dual-use policy
+    that a submission route needs does not exist. The intake form is the first
+    code in this repository that takes a file and writes a row, so this is the
+    check that it never arrives on the published site by being copied, imported
+    or reimplemented there.
+    """
+    if not DIST.exists():
+        pytest.skip("site not built; run `make site`")
+    offenders = []
+    for path in sorted(DIST.rglob("*")):
+        if not path.is_file() or path.suffix not in {".html", ".js", ".mjs", ".css"}:
+            continue
+        text = path.read_text(errors="ignore")
+        for pattern, what in WRITE_SURFACE.items():
+            for m in re.finditer(pattern, text, re.I):
+                offenders.append(f"{path.relative_to(DIST)}: {what} ({m.group(0)!r})")
+    assert not offenders, (
+        "the built site carries a write surface:\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_the_site_build_emits_files_and_cannot_run_a_route():
+    config = (ROOT / "astro" / "astro.config.mjs").read_text()
+    assert re.search(r'output:\s*"static"', config), (
+        "astro.config.mjs is no longer static output. Its own comment says why: "
+        "a build that emits files cannot drift into being a public surface the "
+        "way a running process can."
+    )
+    assert "adapter" not in config, "an adapter turns the site into a server"
+
+    pages = ROOT / "astro" / "src" / "pages"
+    routes = [
+        p.relative_to(ROOT) for p in pages.rglob("*")
+        if p.is_file() and re.search(r"export\s+(const|async\s+function)\s+POST",
+                                     p.read_text(errors="ignore"))
+    ]
+    assert not routes, f"an endpoint that accepts POST is in the site: {routes}"
+
+
+def test_the_site_does_not_know_the_intake_tool_exists():
+    hits = [
+        p.relative_to(ROOT) for p in (ROOT / "astro" / "src").rglob("*")
+        if p.is_file() and "intake" in p.read_text(errors="ignore")
+    ]
+    assert not hits, (
+        f"the view layer references the intake tool: {hits}. It is a separate "
+        "process on loopback, and a link to it from a published page is an "
+        "invitation the page cannot honor for anybody but the operator."
+    )

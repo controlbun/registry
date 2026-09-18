@@ -185,6 +185,34 @@ def metadata_of(blob: bytes) -> dict[str, str]:
     return _split(blob)[0].get("__metadata__", {})
 
 
+def tensor_names(blob: bytes) -> list[str]:
+    """The tensors a safetensors file declares, read off its header alone.
+
+    Here rather than in a caller for the reason `_split` is here: the 8-byte
+    length prefix is known in one place, and a second reader of that layout is
+    a second chance to get the offset wrong. Nothing is parsed and no payload is
+    touched, so a caller holding a large file can pass a prefix of it.
+
+    Displayed, never compared. `confirmed` already refuses a file carrying more
+    than one tensor, and which name the author gave theirs is carried through
+    rather than assigned, which is the point `registry.ingest.Payload` makes.
+    """
+    return sorted(k for k in _split(blob)[0] if k != "__metadata__")
+
+
+def header_of(path: str | Path) -> bytes:
+    """Enough of a safetensors file on disk to read its header, and no payload.
+
+    For the case the functions above are awkward in: half a gigabyte on disk
+    whose tensor name somebody wants to show. Reading the file to answer that
+    would be a second full copy in memory for a string.
+    """
+    with Path(path).open("rb") as handle:
+        prefix = handle.read(8)
+        size = struct.unpack("<Q", prefix)[0]
+        return prefix + handle.read(size)
+
+
 def sort_header(path: str | Path) -> None:
     """Rewrite a safetensors header with sorted keys, in place.
 
