@@ -1541,3 +1541,47 @@ check, so it may belong there. Raise it.
 **Supersedes:** nothing. Implements "safetensors on ingest, always" (2026-09-11)
 for sources other than one GitHub commit, and is the shared path the v2 write
 step in `V2.md` section 2 would call.
+
+## 2026-09-17 No dual-use policy yet, and the trigger is a capability rather than a date
+**Decided:** Do not write one now. `POLICY.md` was drafted and became
+`WHAT-IT-DOES.md`, which keeps the verified description and drops the positions.
+
+**Why now is wrong.** A policy governs decisions and there are none. Nothing can
+be submitted, nothing is served, and `fetch.py` sends no credentials at anything.
+The four questions `BRIEF.md` says need answers before launch, bulk fetch, rate
+limits, gating behind identity, and takedown, are all about distribution, and
+there is no distribution. `CLAUDE.md` blocks *distribution features* on the
+policy, not the site's existence.
+
+Drafting it now also means committing to positions against imagined submissions.
+A policy written against hypotheticals is usually wrong against the first real
+case, and this one would be published under the author's name.
+
+**Most of the draft was not policy.** It was a description of what the system
+does: no bytes served, no API, no bulk fetch, no rate limit because there is
+nothing to limit, nothing ranked, no popularity signal collected. Those are true
+and useful regardless, and they answer the question a stranger reading the site
+cold left with, "is this live, a prototype, or a proposal". Calling that file
+`POLICY.md` mislabelled it and made description look like commitment.
+
+**The trigger, and it is a capability rather than a date.** Write it before
+whichever of these happens first:
+
+- **Anything is served as bytes.** `004_served_copy.sql` is explicit: serving a
+  copy makes this a distributor rather than an index, and "we only pointed at it"
+  stops being available as an answer.
+- **Anything can be submitted.** `V2.md` makes the review criterion schema
+  validity plus dual use. Without the second, review has no rule and becomes
+  taste, which is the erosion that entry is mostly about.
+- **A bulk or listing surface exists**, including a machine-readable dump of the
+  corpus.
+
+**One thing the deferral costs, recorded rather than argued.** `BRIEF.md`:
+"This also determines whether labs and academic groups engage at all, which
+determines whether reputable players' vectors ever actually show up." Without a
+stance, the people whose artifacts would make the corpus worth reading may not
+touch it. That is an argument for writing it before soliciting contributions
+rather than before existing, which is what this entry says.
+
+**Supersedes:** nothing. Refines the 2026-09-15 override, which deferred the
+policy past launch without saying what would end the deferral. This says what.
