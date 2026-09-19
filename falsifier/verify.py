@@ -77,16 +77,70 @@ def fail(check: str, detail: str) -> None:
     failures.append(f"[{check}] {detail}")
 
 
-def text_of(page: Path) -> str:
+# A region the page attributes to an author rather than asserting itself: a
+# definition, a theory, a support card's purpose, an attacker's response. The
+# attribute is written by the components and checked below, so it is a contract
+# and not an incidental class name.
+AUTHORED = re.compile(r"<(\w+)[^>]*\sdata-authored[^>]*>.*?</\1>", re.S)
+
+
+def text_of(page: Path, *, authored: bool = False) -> str:
     """Reader-visible copy only. Script and style content is not published
-    prose, and SVG geometry is coordinates rather than measurements."""
+    prose, and SVG geometry is coordinates rather than measurements.
+
+    **Authored prose comes out too, and that is a decision rather than a
+    convenience.** A definition is one author's theory of their label in their
+    own words, and a real one arrived quoting its own measurements: `F =
+    0.9690`, `p = 0.0005`, a permutation null. Those are the author's claims
+    about their own work and they trace to the submission rather than to
+    anything this registry derived, so holding them to the export would call a
+    true number fabricated. Scanning them as though the registry asserted them
+    was worse in the other direction: one of them collided with a fixture value
+    and convicted a real page of publishing figures that were invented.
+
+    What keeps this from being a hole is `check_authored_regions_are_marked`.
+    The exclusion is only as trustworthy as the marking, so the marking is
+    checked: every claimant definition in the export has to appear inside one
+    of these regions on the page that shows it, and a page cannot mark itself
+    entirely and go unread.
+
+    Pass `authored=True` to get only those regions, which is how the guard
+    reads them.
+    """
     raw = page.read_text()
     for tag in ("script", "style", "svg"):
         raw = re.sub(rf"<{tag}.*?</{tag}>", " ", raw, flags=re.S)
+    if authored:
+        raw = " ".join(m.group(0) for m in AUTHORED.finditer(raw))
+    else:
+        raw = AUTHORED.sub(" ", raw)
     return html.unescape(re.sub(r"<[^>]+>", " ", raw))
 
 
 # --------------------------------------------------------------------------- #
+
+
+def _pinned(row) -> bool:
+    """Whether this row's bytes live somewhere other than this checkout.
+
+    **A file that is not here is not the same as a file that is missing.** The
+    whole point of a pin is that the artifact lives at somebody else's commit
+    and this repository holds a pointer, so for a pinned row the absence of a
+    local copy is the normal case and the designed one. Only a row that records
+    no remote at all is claiming bytes this checkout should be holding, and for
+    that one a missing file is a real finding.
+
+    This distinction did not exist while every row was a vendored file, which
+    is why the check was written without it. `artifacts/intake.py` writes rows
+    of the other kind, and the first real submission was one.
+
+    The falsifier does not fetch. Rechecking a pinned artifact means pulling it
+    over the network, which would make the gate depend on somebody else's host
+    being up and on this machine having a connection, and `make verify` never
+    needs the network by design. What that costs is named in the summary rather
+    than hidden: these rows are recorded, not rechecked.
+    """
+    return bool(row["artifact_repo"] or row["served_repo"])
 
 
 def check_artifacts_match_their_metadata(conn: sqlite3.Connection) -> None:
@@ -103,7 +157,8 @@ def check_artifacts_match_their_metadata(conn: sqlite3.Connection) -> None:
     raising, skip a row with no bytes in this repository, and name the row.
     """
     rows = conn.execute(
-        "SELECT id, artifact_path, shape, dtype, l2_norm FROM intervention"
+        "SELECT id, artifact_path, shape, dtype, l2_norm,"
+        " artifact_repo, served_repo FROM intervention"
     ).fetchall()
     if not rows:
         fail("artifacts", "no interventions to check; the falsifier is inert")
@@ -119,6 +174,8 @@ def check_artifacts_match_their_metadata(conn: sqlite3.Connection) -> None:
             fail("artifacts", f"{row['id']}: {exc}")
             continue
         if not path.exists():
+            if _pinned(row):
+                continue
             fail("artifacts", f"{row['id']}: {row['artifact_path']} is missing")
             continue
 
@@ -168,7 +225,8 @@ def check_artifact_digests_match_the_record(conn: sqlite3.Connection) -> None:
     ingest.
     """
     rows = conn.execute(
-        "SELECT id, artifact_path, artifact_sha256 FROM intervention"
+        "SELECT id, artifact_path, artifact_sha256,"
+        " artifact_repo, served_repo FROM intervention"
     ).fetchall()
 
     checked = 0
@@ -187,6 +245,8 @@ def check_artifact_digests_match_the_record(conn: sqlite3.Connection) -> None:
             fail("digests", f"{row['id']}: {exc}")
             continue
         if not path.exists():
+            if _pinned(row):
+                continue
             fail("digests", f"{row['id']}: {row['artifact_path']} is missing, so "
                             "the recorded digest describes bytes nobody has")
             continue
@@ -286,6 +346,67 @@ def check_published_numbers_are_accounted_for(payload: dict) -> None:
             if number not in known:
                 fail("published", f"/{where}/ shows {number}, which appears nowhere "
                                   "in the exported data")
+
+
+def check_authored_regions_are_marked(payload: dict) -> None:
+    """The exclusion in `text_of` is only as good as the marking, so: is it marked.
+
+    Two ways this goes wrong and both are checked.
+
+    **A definition rendered without the attribute** puts the author's numbers
+    back under the registry's own assertion, which is the thing the marking
+    exists to prevent. So every claimant definition in the export has to turn
+    up inside a marked region on some built page.
+
+    **A page that marks everything** reads as entirely quoted and is scanned
+    for nothing, which would let a template bug publish any figure it liked.
+    So a page whose unmarked copy is shorter than its marked copy is a finding,
+    on the reasoning that a page is a registry's page with the author quoted in
+    it, never the reverse.
+
+    Neither is hypothetical in the way the rest of this file's checks are. The
+    marking arrived the same day as the first definition containing numerals,
+    which is to say the day the question could first be got wrong.
+    """
+    pages = sorted(DIST.rglob("index.html"))
+    if not pages:
+        fail("authored", "no built pages found; run `make site` before verifying")
+        return
+
+    definitions = [
+        (claimant, " ".join((claimant.get("definition") or "").split()))
+        for entry in payload["labels"] for claimant in entry["claimants"]
+    ]
+    definitions = [(c, t) for c, t in definitions if t]
+
+    # The question is not whether a definition is marked somewhere. It is
+    # whether one is **rendered outside** a marked region, which is the state
+    # that puts an author's numbers under the registry's own assertion. A
+    # definition that appears on no page is not rendered and there is nothing
+    # to mark, which is the ordinary case for a corpus whose pages are a
+    # fixture rather than a build.
+    #
+    # Matched on a distinctive run rather than the whole string, because a page
+    # wraps and collapses whitespace and this is asking where the text sits,
+    # not whether it survived character for character.
+    unmarked = " ".join(" ".join(text_of(page).split()) for page in pages)
+    for claimant, text in definitions:
+        if text[:60] in unmarked:
+            fail("authored",
+                 f"{claimant['author']}/{claimant['label']}@"
+                 f"{claimant['version']}: the definition renders outside any "
+                 "`data-authored` region, so its numbers are scanned as the "
+                 "registry's own and a figure the author is quoting reads as "
+                 "one this registry derived")
+
+    for page in pages:
+        where = f"/{page.relative_to(DIST).parent}/"
+        own = len(text_of(page).split())
+        theirs = len(text_of(page, authored=True).split())
+        if theirs > own:
+            fail("authored", f"{where} is more quoted prose than page. A marked "
+                             "region is not scanned, so a page that is mostly "
+                             "marked is a page that is mostly unchecked")
 
 
 def check_export_matches_the_database(conn: sqlite3.Connection, payload: dict) -> None:
@@ -414,6 +535,7 @@ def main() -> int:
     check_export_matches_the_database(conn, payload)
     check_published_numbers_are_accounted_for(payload)
     check_synthetic_marker_matches_the_page(payload)
+    check_authored_regions_are_marked(payload)
 
     if failures:
         print(f"falsifier: {len(failures)} failure(s)\n", file=sys.stderr)
@@ -423,7 +545,20 @@ def main() -> int:
               file=sys.stderr)
         return 1
 
+    # Said out loud rather than left implicit. A row whose bytes are at
+    # somebody else's commit is not rechecked here, because the gate does not
+    # reach the network, so a green falsifier covers fewer rows than the corpus
+    # holds. A number that nobody counted is how a check goes quietly inert,
+    # which is the failure this file exists to make impossible.
+    elsewhere = conn.execute(
+        "SELECT COUNT(*) FROM intervention"
+        " WHERE artifact_repo IS NOT NULL OR served_repo IS NOT NULL"
+    ).fetchone()[0]
     print("falsifier: every published number re-derives or traces to its source")
+    if elsewhere:
+        print(f"falsifier: {elsewhere} row(s) pinned to bytes outside this "
+              "checkout, recorded rather than rechecked; `registry.fetch` "
+              "verifies those against their digest when anybody loads one")
     return 0
 
 

@@ -30,7 +30,7 @@ const { relations, label } = Astro.props;
         <a class="mono" href={`/${r.to_author}/`}>{r.to_author}</a>
         <span class="mono">/{r.to_label}</span>
       </div>
-      {r.note && <p class="definition">{r.note}</p>}
+      {r.note && <p class="definition" data-authored>{r.note}</p>}
     </div>
   ))
 )}

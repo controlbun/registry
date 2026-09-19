@@ -16,6 +16,7 @@ mean an npm install inside pytest.
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from datetime import datetime
@@ -53,15 +54,25 @@ def every_page() -> list[Path]:
     return sorted(DIST.rglob("index.html"))
 
 
-def text_of(html: str) -> str:
+AUTHORED = re.compile(r"<(\w+)[^>]*\sdata-authored[^>]*>.*?</\1>", re.S)
+
+
+def text_of(html: str, *, authored: bool = True) -> str:
     """Reader-visible copy only.
 
     Script and style contents survive naive tag-stripping and are not text a reader
     sees. Leaving CSS in produced a false positive once already: the hex color
     #1a1a1a contains "#1" and read as a ranking marker.
+
+    `authored=False` also drops the regions the page attributes to an author.
+    Whether that is right depends entirely on the question being asked, so it
+    is a parameter rather than a default: what a page *shows* includes quoted
+    prose, and what the *registry asserts* does not.
     """
     for tag in ("script", "style"):
         html = re.sub(rf"<{tag}.*?</{tag}>", "", html, flags=re.S)
+    if not authored:
+        html = AUTHORED.sub(" ", html)
     return re.sub(r"<[^>]+>", " ", html)
 
 
@@ -123,8 +134,18 @@ def test_the_code_that_prints_an_angle_also_prints_its_caveat():
 
 
 def test_nothing_is_ranked():
+    """What the registry asserts, not what an author wrote inside quotation.
+
+    Read with authored prose stripped, because this asks whether the registry
+    ranks anything and a definition is one author describing their own work. A
+    real submission contains the phrase "~25-token 1st-person retrospective
+    reports", and a substring scan called that an ordinal and failed the build.
+    That is the trap `CLAUDE.md` names about "better" and "best": a word list
+    catching the sentence rather than the meaning. The marking that makes this
+    separable is the same `data-authored` the falsifier reads.
+    """
     for path in every_page():
-        body = text_of(path.read_text()).lower()
+        body = text_of(path.read_text(), authored=False).lower()
         # The word "rank" appears in captions saying nothing is ranked. What must
         # be absent is an actual ordering: positions, ordinals, a composite.
         for marker in ("#1", "#2", "1st", "2nd", "overall score",
@@ -249,4 +270,32 @@ def test_the_ordering_bar_does_not_quote_an_uninterpretable_threshold():
             continue
         assert f"the {order.CORPUS_THRESHOLD}" not in body, (
             f"{path.relative_to(DIST)} quotes the threshold as if it were derived"
+        )
+
+
+def test_every_definition_is_marked_as_the_authors_words():
+    """Authored prose is excluded from the number scan, so it has to be marked.
+
+    Proven to bite: removing `data-authored` from `ArtifactCard.astro` and
+    rebuilding produces sixteen falsifier failures, the five quoted figures in
+    a real definition plus a fixture-value collision plus one line per
+    claimant. The exclusion is only worth as much as the marking, so the
+    marking is a test and not a convention.
+    """
+    payload = json.loads(
+        (ROOT / "astro" / "src" / "data" / "registry.json").read_text())
+    definitions = [
+        " ".join((c.get("definition") or "").split())
+        for entry in payload["labels"] for c in entry["claimants"]
+    ]
+    definitions = [d for d in definitions if d]
+    assert definitions, "no definitions in the corpus, so this test is inert"
+
+    unmarked = " ".join(
+        " ".join(text_of(p.read_text(), authored=False).split())
+        for p in every_page()
+    )
+    for text in definitions:
+        assert text[:60] not in unmarked, (
+            f"a definition renders outside a `data-authored` region: {text[:60]!r}"
         )

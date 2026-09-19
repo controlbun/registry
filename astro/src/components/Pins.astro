@@ -34,7 +34,7 @@ const when = (iso) =>
         <strong>{p.pinned_by}</strong> pinned
         {" "}<span class="mono">{p.target}</span> on {when(p.pinned_at)}
       </div>
-      <p class="definition">{p.purpose}</p>
+      <p class="definition" data-authored>{p.purpose}</p>
       {p.rationale && <p class="note">{p.rationale}</p>}
 
       <div class="passed-over">

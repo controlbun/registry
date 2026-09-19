@@ -21,7 +21,7 @@ const r = c.recipe;
 <div class="card">
   <div class="card-main">
     <h2>Definition</h2>
-    <p class="definition">{c.definition}</p>
+    <p class="definition" data-authored>{c.definition}</p>
 
     <h2>Method</h2>
     {r ? (
@@ -40,7 +40,7 @@ const r = c.recipe;
         </dl>
 
         <h2>Author's theory</h2>
-        <p class="definition">{r.theory}</p>
+        <p class="definition" data-authored>{r.theory}</p>
 
         <h2>Reproducing it</h2>
         <dl class="spec">

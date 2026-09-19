@@ -160,6 +160,17 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
 .who { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .98rem; }
 .provenance { color: var(--dim); font-size: .8rem; margin-top: .25rem; }
 .definition { margin: .55rem 0 .85rem; max-width: 46rem; }
+
+/* Authored prose: one person's words, quoted, not something this registry
+   derived or stands behind. Marked because a real definition turned up
+   quoting its own measurements, and a reader seeing a figure on this site has
+   no other way to tell an author's claim from a checked one. The falsifier
+   reads the same attribute and scans everything outside it, so the rule down
+   the side is the visible half of a rule that also fails the build. */
+[data-authored] {
+  border-left: 2px solid var(--line);
+  padding-left: .85rem;
+}
 .measures { display: flex; gap: 2rem; flex-wrap: wrap; font-size: .88rem; }
 
 .absent { color: var(--faint); font-style: italic; }

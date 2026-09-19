@@ -1970,3 +1970,57 @@ publishes the conversion to the Hub. Worth deciding separately.
 the Hub", which is the entry that specified this, and 2026-09-14 "Non-Hub
 provenance lives in the recipe payload, and that is a gap", whose decision that
 the columns stay Hub-shaped is now false.
+
+## 2026-09-19 `make site` replays intake, and authored prose is marked as authored
+**Decided:** `make site` runs `artifacts/intake.py replay` between the seeders
+and the export, so a row that arrived through the form is part of the corpus
+without anybody remembering a step. Two checks had to change first and the
+second is the interesting one.
+
+**A pinned row has no local file and that is not a missing file.** The
+falsifier failed any row whose `artifact_path` was not on disk. That was right
+while every row was a vendored file and wrong the moment one was a pin: the
+point of a pin is that the bytes are at somebody else's commit. `_pinned` tells
+them apart, and the run prints how many rows it did not recheck, because a gate
+that quietly covers less than it used to is how a check goes inert. The
+falsifier still does not fetch, so `make verify` still never needs the network.
+
+**A definition is prose and prose contains numerals.** The first real
+submission quoted its author's own measurements in its definition: `F = 0.9690`,
+`p = 0.0005`, a permutation null. The number scan called five of them
+unaccounted, and a sixth, `0.5000`, collided with a fixture value and convicted
+a real page of publishing figures that were invented. Both readings were wrong
+and they were wrong in opposite directions.
+
+**Decided: mark the prose, scan around it.** Every region the site attributes
+to a person carries `data-authored`: definitions, theories, an attacker's
+response, a support card's purpose. The falsifier reads that attribute and
+scans everything outside it exactly as strictly as before.
+
+**What this is not.** It is not an exemption for numbers somebody wants to
+publish unchecked. The falsifier's standard was always "re-derives **or** traces
+to its source", and a quoted figure traces to the submission that carries it.
+What changed is that the page now says so, with a rule down the side, so a
+reader can tell a figure this registry derived from a figure its author is
+claiming. Before today nothing on the site made that distinction, because no
+definition had contained a numeral.
+
+**The guard, because the exclusion is worth exactly what the marking is worth.**
+`check_authored_regions_are_marked` fails the build if a definition in the
+export renders outside a marked region, and if a page is more marked prose than
+page. Proven to bite rather than assumed: removing the attribute from
+`ArtifactCard.astro` and rebuilding produces sixteen failures.
+
+**One more word-list trap, the second this project has hit.** `CLAUDE.md`
+already records that banning the substring "best" caught the founding sentence.
+`test_nothing_is_ranked` scanned for the ordinal "1st" and matched
+"~25-token 1st-person retrospective reports" in the author's own methodology.
+It now reads the page with authored prose stripped, which is the same
+distinction: what the registry asserts, not what it is quoting.
+
+**What this makes impossible to express:** a figure inside authored prose is no
+longer held to the export, so an author can write any number into their own
+definition. That is already true of the field and always was. What it buys is
+that the page stops implying the registry stands behind it.
+
+**Supersedes:** nothing.

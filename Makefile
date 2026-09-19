@@ -36,6 +36,11 @@ site:
 	$(PY) fixtures/build.py
 	$(PY) artifacts/seed.py
 	$(PY) artifacts/ingest_arena.py --check
+# After the two seeders and before the export, because a row that arrived
+# through the form is part of the corpus and the export reads the database
+# once. This was a manual step for exactly as long as the falsifier failed any
+# row with no local file, which every row from the form is.
+	$(PY) artifacts/intake.py replay
 	PYTHONPATH=src $(PY) -m registry.export
 	cd astro && npm ci --silent && npm run build
 
