@@ -61,6 +61,7 @@ import json
 import os
 import sys
 import tempfile
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -413,25 +414,94 @@ def upload(files: list[tuple[str, Path]], *, repo: str, message: str,
 
     api = HfApi(endpoint=fetch.HUB, token=_token())
 
-    if not repo_exists(repo):
-        if not create:
-            raise FileNotFoundError(
-                f"{repo} does not exist or is not public. Create it in the web "
-                "UI, or ask for it to be created here. Creating a repo is a "
-                "write and this does not make one by accident."
-            )
-        api.create_repo(repo, repo_type=REPO_TYPE, exist_ok=True)
+    try:
+        if not repo_exists(repo):
+            if not create:
+                raise FileNotFoundError(
+                    f"{repo} does not exist or is not public. Create it in the "
+                    "web UI, or ask for it to be created here. Creating a repo "
+                    "is a write and this does not make one by accident."
+                )
+            api.create_repo(repo, repo_type=REPO_TYPE, exist_ok=True)
 
-    # One commit for every file, so one SHA pins the set and a reader sees the
-    # publication as the single act it was.
-    info = api.create_commit(
-        repo,
-        [CommitOperationAdd(path_in_repo=rel, path_or_fileobj=str(local))
-         for rel, local in files],
-        commit_message=message,
-        repo_type=REPO_TYPE,
-    )
+        # One commit for every file, so one SHA pins the set and a reader sees
+        # the publication as the single act it was.
+        info = api.create_commit(
+            repo,
+            [CommitOperationAdd(path_in_repo=rel, path_or_fileobj=str(local))
+             for rel, local in files],
+            commit_message=message,
+            repo_type=REPO_TYPE,
+        )
+    except Exception as refused:
+        raise _read_the_token(refused, repo) from refused
     return fetch.commit_sha(info.oid), info.commit_url
+
+
+def _read_the_token(refused: Exception, repo: str) -> Exception:
+    """A 403 answered with what this token can actually reach.
+
+    The Hub says "you don't have the rights to create a model under the
+    namespace X. Make sure your token has the correct permissions", which is
+    accurate and leaves the reader to go and find out which permission. A
+    fine-grained token knows: `whoami-v2` returns its scopes per entity, so the
+    answer is one request away and it is the request the reader would make.
+
+    Anything that is not a permissions failure is handed back untouched. A
+    network error dressed up as a scope problem would be worse than the
+    original.
+    """
+    if "403" not in str(refused) and "permission" not in str(refused).lower():
+        return refused
+
+    owner = repo.split("/")[0]
+    try:
+        request = urllib.request.Request(
+            f"{fetch.HUB}/api/whoami-v2",
+            headers={"Authorization": f"Bearer {_token()}"})
+        with urllib.request.urlopen(request, timeout=30) as reply:
+            who = json.load(reply)
+    except Exception:
+        return refused
+
+    grained = who.get("auth", {}).get("accessToken", {}).get("fineGrained")
+    if not grained:
+        return refused
+
+    reach = {
+        scope.get("entity", {}).get("name"): scope.get("permissions") or []
+        for scope in grained.get("scoped", [])
+    }
+    writable = sorted(name for name, perms in reach.items()
+                      if any(p.startswith("repo.write") or p == "repo.write"
+                             for p in perms))
+    named = who.get("auth", {}).get("accessToken", {}).get("displayName")
+
+    said = [
+        f"{repo} was refused, and the token in your environment cannot write "
+        f"there. It is a fine-grained token"
+        + (f" named {named!r}" if named else "")
+        + f", and on {owner!r} it carries "
+        + (f"{reach[owner]}" if reach.get(owner) else "no permissions at all")
+        + "."
+    ]
+    if writable:
+        said.append(
+            "It can write to " + ", ".join(writable) + " and nothing else."
+        )
+        if OUR_NAMESPACE in writable and owner != OUR_NAMESPACE:
+            said.append(
+                f"{OUR_NAMESPACE} is not an answer here: bytes there are a copy "
+                "this registry serves rather than something an author "
+                "published, which is a different column and the reason "
+                "`ServedCopy` exists."
+            )
+    said.append(
+        f"Grant it repository write on {owner!r} at {fetch.HUB}/settings/tokens, "
+        "or use a token that already has it. Nothing was uploaded and nothing "
+        "was recorded."
+    )
+    return PermissionError(" ".join(said))
 
 
 def cmd_push(args, conn) -> int:

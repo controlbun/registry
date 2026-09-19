@@ -27,6 +27,13 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Most of this file drives `publish.py` as a subprocess in a copied tree, which
+# is what an operator does. The token-diagnosis tests below call one pure
+# function instead, so the module is imported too.
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "artifacts"))
+import publish  # noqa: E402
+
 # Forty hex characters, so it passes `fetch.commit_sha`. Not a commit anything
 # made: the stand-in Hub below answers to it and nothing else does.
 SHA = "a" * 40
@@ -303,3 +310,37 @@ def test_verify_refuses_a_commit_holding_other_bytes(tree, hub):
              "--repo", REPO, "--commit", SHA],
             capture_output=True, text=True, check=True,
         )
+
+
+def test_a_403_is_answered_with_what_the_token_can_reach(monkeypatch):
+    """The Hub says "make sure your token has the correct permissions" and
+    leaves the reader to find out which. A fine-grained token knows."""
+    monkeypatch.setattr(publish, "_token", lambda: "hf_not_a_real_token")
+
+    class Reply:
+        def read(self): return json.dumps({
+            "name": "someone",
+            "auth": {"accessToken": {"displayName": "scoped", "fineGrained": {
+                "scoped": [
+                    {"entity": {"type": "org", "name": "controlbun"},
+                     "permissions": ["repo.write"]},
+                    {"entity": {"type": "user", "name": "someone"},
+                     "permissions": []},
+                ], "global": []}}},
+        }).encode()
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    monkeypatch.setattr(publish.urllib.request, "urlopen", lambda *a, **k: Reply())
+    said = str(publish._read_the_token(RuntimeError("403 Forbidden"),
+                                       "someone/directions"))
+    assert "no permissions at all" in said
+    assert "can write to controlbun" in said
+    assert "not an answer here" in said, "and why that namespace is refused"
+    assert "settings/tokens" in said
+    assert "Nothing was uploaded" in said
+
+
+def test_a_failure_that_is_not_about_permissions_is_handed_back_untouched():
+    original = RuntimeError("connection reset by peer")
+    assert publish._read_the_token(original, "someone/x") is original
