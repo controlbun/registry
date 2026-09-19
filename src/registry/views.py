@@ -20,9 +20,66 @@ from __future__ import annotations
 import json
 import sqlite3
 
+from . import fetch
+
 # The name, not the module: the package exposes a public `compare()` function,
 # which shadows the `compare` submodule for anything reaching for it by attribute.
 from .comparison import attacks_against, score_state
+
+
+def published_at(iv: sqlite3.Row | None) -> dict | None:
+    """Where the author published these bytes, as something a reader can click.
+
+    **None is the ordinary answer and does not mean anything is wrong.** Nine of
+    the ten rows in this corpus record no repo: five are synthetic fixtures and
+    four are real directions whose author never published them anywhere with a
+    URL. Both are true statements about a row rather than gaps, and neither is
+    a lesser state than the tenth. Nothing here invents a URL for a row that
+    has none, and nothing orders on whether this came back None.
+
+    The URL is built by `registry.fetch.row_url` and not here, and not in a
+    template. That function owns the rule that turns host, repo, commit, path
+    and template into a URL, including the refusals: a template that drops the
+    commit is not a pin, a scheme that is not a network fetch cannot be checked
+    by anybody else, and a placeholder carrying a format spec is doing
+    something other than building a URL. A second copy of any of that beside
+    the page would be a second chance to get it wrong, quietly, in the half
+    nobody runs the fetch tests against.
+
+    `refusal` carries the sentence `row_url` refused with, for the row whose
+    pin does not resolve. Written out rather than raised, because a single bad
+    template in one row should render as that row saying so, not as a build
+    that does not finish and a corpus nobody can see.
+    """
+    if iv is None or not (iv["artifact_repo"] and iv["artifact_commit"]):
+        return None
+
+    url: str | None = None
+    refusal: str | None = None
+    try:
+        url = fetch.row_url(
+            repo=iv["artifact_repo"],
+            commit=iv["artifact_commit"],
+            path=iv["artifact_path"] or "",
+            host=iv["artifact_host"],
+            url_template=iv["artifact_url_template"],
+        )
+    except fetch.FetchError as unresolvable:
+        refusal = str(unresolvable)
+
+    return {
+        "repo": iv["artifact_repo"],
+        "commit": iv["artifact_commit"],
+        "path": iv["artifact_path"],
+        # As recorded, never filled in. A row from before
+        # `schema/migrations/007` records neither and resolves against the
+        # client's own default; writing that default in here would read as a
+        # fact somebody checked, which is the mistake 005 and 007 both name.
+        "host": iv["artifact_host"],
+        "url_template": iv["artifact_url_template"],
+        "url": url,
+        "refusal": refusal,
+    }
 
 
 def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
@@ -180,6 +237,15 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "license_status": iv["license_status"] if iv else None,
         "chat_template_hash": iv["chat_template_hash"] if iv else None,
         "artifact_path": iv["artifact_path"] if iv else None,
+        # The digest of the file as published, which is a fact about the bytes
+        # rather than about where they are, so it travels whether or not
+        # anything is pinned. `registry.artifact.confirmed` checks bytes that
+        # arrive against it; printing it is what lets a reader who fetched the
+        # file by hand do the same check without a database.
+        "artifact_sha256": iv["artifact_sha256"] if iv else None,
+        # The other four columns of the pin, plus the URL they resolve to.
+        # None where nobody published these bytes, which is most rows.
+        "published": published_at(iv),
         "author": row["author"],
         "label": row["label"],
         "version": row["version"],

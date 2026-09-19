@@ -100,6 +100,10 @@ design. Tests that fail the build:
   ordering is ever derived from an eval result: trait, coherence, transfer and
   necessity scores are never sort keys
 - Any label namespace permits an unlimited number of claimants
+- No ordering derives from whether an artifact is published anywhere. Having a
+  URL is a fact about what the author did with the bytes, not a quality of the
+  submission, and most rows will not have one. It is a filter a reader applies,
+  never an order the page applies for them
 - Absence of an eval renders as its own state, not as an error
 - No closed enum on any user-supplied field. Document common values; reject none.
   Schema `CHECK` constraints listing permitted strings fail the build. This covers

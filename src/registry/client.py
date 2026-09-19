@@ -330,11 +330,11 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
             activation_norm=view["activation_norm"],
             dtype=view["dtype"],
             shape=view["shape"],
-            # From the intervention row directly rather than through
-            # `claimant_view`: the view shapes what a page renders, and this is
-            # not rendered anywhere yet. It travels with the fetch fields it is
-            # used against.
-            artifact_sha256=iv["artifact_sha256"] if iv else None,
+            # Through `claimant_view` like every other contract field. It was
+            # read off the row directly while nothing rendered it, and the page
+            # renders it now: the digest is what lets a reader who fetched the
+            # file by hand do the check this client does for them.
+            artifact_sha256=view["artifact_sha256"],
         ),
         evidence=Evidence(
             state=view["score_state"],

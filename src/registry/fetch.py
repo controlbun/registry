@@ -296,6 +296,35 @@ def get_url(url: str, *, timeout: int = 60, not_found: str | None = None) -> byt
         raise FetchError(f"{url} could not be reached: {e.reason}") from e
 
 
+def row_url(*, repo: str, commit: str, path: str, host: str | None = None,
+            url_template: str | None = None) -> str:
+    """The URL a row resolves to, with the row's absences filled the way
+    `from_repo` fills them, and without fetching anything.
+
+    Two callers and one rule. `from_repo` fetches it; `registry.views` prints
+    it, so a reader with a browser gets the same URL the client gets rather
+    than one a template assembled from parts beside it. The website was outside
+    this loop for as long as there was no function to call: `artifact_path`
+    travelled into the export and the other four fields did not, so every page
+    named an artifact and pointed at nothing.
+
+    The `or` defaults are the load-bearing part and are why this is not two
+    lines in each caller. A row recording no host and no template is not a
+    broken row, it is a row written before `schema/migrations/007` existed, and
+    the URL printed beside it has to be the URL it is actually fetched from.
+    Two copies of the fallback would be two chances for the page to name a
+    place the client never goes.
+    """
+    default_host, default_template = hub_pin()
+    return pinned_url(
+        host=host or default_host,
+        repo=repo,
+        commit=commit,
+        path=path,
+        url_template=url_template or default_template,
+    )
+
+
 def from_repo(*, repo: str, commit: str, path: str, host: str | None = None,
               url_template: str | None = None, timeout: int = 60) -> bytes:
     """Bytes of one file, at one commit, from wherever the row says it lives.
@@ -307,14 +336,8 @@ def from_repo(*, repo: str, commit: str, path: str, host: str | None = None,
     before there was a column to record them in, and it resolves exactly where
     it resolved then.
     """
-    default_host, default_template = hub_pin()
-    url = pinned_url(
-        host=host or default_host,
-        repo=repo,
-        commit=commit,
-        path=path,
-        url_template=url_template or default_template,
-    )
+    url = row_url(repo=repo, commit=commit, path=path, host=host,
+                  url_template=url_template)
 
     cached = _cache_path(url, path)
     if cached.exists():

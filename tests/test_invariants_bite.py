@@ -81,6 +81,31 @@ VIOLATIONS = {
         "rows.sort((a, b) => b.coherence_score - a.coherence_score);\n",
         "test_no_ordering_is_derived_from_an_eval_result",
     ),
+    "ordering on whether an artifact is published, in SQL": (
+        "astro/src/probe.ts",
+        'const q = "SELECT * FROM intervention ORDER BY artifact_repo IS NULL";\n',
+        "test_no_ordering_is_derived_from_whether_an_artifact_is_published",
+    ),
+    "ordering on whether an artifact is published, in JS": (
+        "astro/src/probe.ts",
+        "rows.sort((a, b) => Number(!!b.published) - Number(!!a.published));\n",
+        "test_no_ordering_is_derived_from_whether_an_artifact_is_published",
+    ),
+    "ordering on whether an artifact is published, in Python": (
+        "src/registry/probe.py",
+        "rows = sorted(rows, key=lambda r: r['artifact_url'] is None)\n",
+        "test_no_ordering_is_derived_from_whether_an_artifact_is_published",
+    ),
+    # The exemption in that scan is for a `SELECT DISTINCT` of the same column,
+    # which is a value vocabulary rather than a row order. This proves the
+    # exemption does not cover a row set: same column, same ORDER BY, no
+    # DISTINCT, and it has to go red.
+    "ordering rows by host under cover of the vocabulary exemption": (
+        "artifacts/probe.py",
+        'q = ("SELECT author, label FROM intervention"\n'
+        '     " ORDER BY artifact_host")\n',
+        "test_no_ordering_is_derived_from_whether_an_artifact_is_published",
+    ),
     "absent eval coerced to zero": (
         "src/registry/probe.py",
         "value = report.trait_score or 0\n",
