@@ -168,17 +168,21 @@ def test_the_page_links_to_the_bytes():
     )
 
 
-def test_the_page_gives_the_client_call_that_checks_the_digest():
-    """The link hands over bytes and leaves the check to the reader.
+def test_the_page_gives_a_way_to_check_the_digest_that_a_reader_can_run():
+    """The link hands over bytes and leaves the check to the reader, so the
+    page has to show the check.
 
-    `Submission.vector()` compares what arrives against the recorded digest
-    before returning a tensor, so the one-line call is the path that does the
-    check rather than describing it. It is on the page for that reason and not
-    as documentation.
+    This asserted the one-line client call, which does the comparison inside
+    `Submission.vector()`. That was right about which path checks and wrong
+    about who can run it: the client is not installable by anybody, and the
+    name it was shown under belongs to an unrelated package on PyPI. So the
+    page gives `curl` and `shasum`, which are on the machine of anybody who
+    would want this artifact.
     """
     c = pinned_claimant()
-    html = page_of(c)
-    assert f'registry.load("{PINNED}").vector()' in html.replace("&quot;", '"')
+    html = page_of(c).replace("&quot;", '"').replace("&amp;", "&")
+    assert "curl -L" in html and c["published"]["url"] in html
+    assert "shasum -a 256" in html
 
 
 def test_an_unpinned_row_says_so_and_keeps_its_digest():
@@ -396,3 +400,33 @@ def test_a_scheme_nobody_can_fetch_over_refuses_rather_than_linking():
     ))
     assert p["url"] is None
     assert "not something this can fetch over the network" in p["refusal"]
+
+
+def test_the_page_never_tells_a_reader_to_run_code_they_cannot_install():
+    """Every instruction on a public page has to work for the public.
+
+    The page carried `registry.load("author/label@version").vector()`, which
+    runs from a checkout of this repository with `PYTHONPATH=src` and nowhere
+    else. `controlbun` is unpublished, so there is nothing to install; and
+    `registry` on PyPI is taken, by an unrelated Windows registry library, so
+    the obvious next step lands a reader on somebody else's package and an
+    AttributeError. An instruction that is wrong in that particular direction
+    is worse than no instruction.
+
+    `curl` and `shasum` are on the machine of anybody who would want this, and
+    they are what the page says now. This test can be deleted the day the
+    client is actually installable, and not before.
+    """
+    if not DIST.exists():
+        pytest.skip("site not built; run `make site`")
+    offenders = []
+    for path in sorted(DIST.rglob("*.html")):
+        text = path.read_text(errors="ignore")
+        for pattern in (r"\bregistry\.load\s*\(", r"\bimport\s+registry\b",
+                        r"pip\s+install\s+registry\b"):
+            if re.search(pattern, text):
+                offenders.append(f"{path.relative_to(DIST)}: {pattern}")
+    assert not offenders, (
+        "the built site tells a reader to run a package that does not exist "
+        "under that name:\n  " + "\n  ".join(offenders)
+    )

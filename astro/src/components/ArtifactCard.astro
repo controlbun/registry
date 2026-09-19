@@ -138,15 +138,18 @@ const elsewhere = Object.entries(absences).filter(([f]) => !beside.includes(f));
     {p ? (
       <>
         <p class="fetch">
-          <span class="mono wrap">registry.load("{ref}").vector()</span>
+          <span class="mono wrap">curl -L -o artifact.safetensors "{p.url}"</span>
+        </p>
+        <p class="fetch">
+          <span class="mono wrap">shasum -a 256 artifact.safetensors</span>
         </p>
         <p class="why">
           The link is the author's own copy at that commit, on their host. This
           registry serves no copy of it and holds no mirror, so what is at the
-          other end is theirs to move and theirs to withdraw. The client call
-          fetches that same commit and compares the bytes that arrive against the
-          sha256 above before it hands back a tensor. Following the link gets you
-          the file and leaves that check to you.
+          other end is theirs to move and theirs to withdraw. The digest above
+          is what these bytes hashed to when this row was written, and the
+          second line is how you check that for yourself. Nothing here checks
+          it on your behalf.
         </p>
       </>
     ) : (
