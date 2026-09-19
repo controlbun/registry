@@ -5,12 +5,29 @@ This product includes software developed by Soham Padia, licensed under the
 Apache License, Version 2.0. See LICENSE.
 
 
-ARTIFACTS ARE NOT COVERED BY THAT LICENSE
+ARTIFACTS ARE A SEPARATE QUESTION, AND AN OPEN ONE
 
-A steering vector is derived from model weights, so what may be done with one
-is constrained by the license of the model its activations were read from, not
-by the license on this code. The two are separate questions and this file keeps
-them apart.
+The Apache-2.0 grant above is over this repository's code and documents.
+
+Whether it reaches the artifacts is not settled, and this file does not settle
+it. The question is whether a steering vector is a derivative work of the model
+its activations were read from, and there is a real case on both sides.
+
+Against: a direction is something its author built. They wrote the contrast
+prompts, chose the layer and the estimator, and did arithmetic on activations
+they elicited. The result contains no weights, cannot reconstruct any, and is
+better described as a measurement of a model than a piece of one. On that
+reading the author holds whatever rights exist and grants them here.
+
+For: the numbers are a function of the weights, and some model licenses define
+derivative works broadly enough to reach things computed from them.
+
+Nobody has litigated it, and whether model weights attract copyright at all is
+itself contested. So: the author licenses what is his under Apache-2.0, and a
+reader who wants to redistribute an artifact should read the source model's
+license themselves rather than rely on this file. `CLAUDE.md` states the
+working rule as "redistributing one **may be** constrained", and that hedge is
+deliberate.
 
 What this repository actually holds, as of 2026-09-19:
 
@@ -19,7 +36,7 @@ What this repository actually holds, as of 2026-09-19:
   artifacts/soham/d_olmo3_lda.safetensors
   artifacts/soham/d_olmo3_L24_logistic.safetensors
 
-      Directions derived from allenai/Olmo-3-1125-32B, which is Apache-2.0.
+      Directions read out of allenai/Olmo-3-1125-32B, which is Apache-2.0,
       Extracted by the author from github.com/soham-padia/steering-arena at
       commit b8b4721. See artifacts/REAL.md.
 
@@ -34,7 +51,7 @@ One artifact in the corpus is not in this repository:
 
   soham/meta-llama/Llama-3.3-70B-Instruct/trauma@d61-diffmeans-expository-L34
 
-      Derived from meta-llama/Llama-3.3-70B-Instruct, which is the Llama 3.3
+      Read out of meta-llama/Llama-3.3-70B-Instruct, which is the Llama 3.3
       Community License and is NOT Apache-2.0. Those bytes are published in
       the author's own Hugging Face namespace and this repository records only
       a pointer to them. Its row carries the author's dated reading of that
@@ -44,4 +61,5 @@ One artifact in the corpus is not in this repository:
 
 The registry points at artifacts and serves none. A pointer is not a
 redistribution, which is why the Llama-derived direction can be indexed here
-while its bytes stay where their author put them.
+while its bytes stay where their author put them, and why the open
+question above is less urgent here than it would be for a host.
