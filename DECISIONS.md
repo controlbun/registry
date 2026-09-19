@@ -2616,6 +2616,24 @@ a claim is still evidence somebody can argue with. What this adds is that the
 one path where identity is already known stops asking a question it can answer.
 Somebody signed in as `qwen-fan` cannot submit under `Qwen`.
 
+**A pre-filled default was considered and is not enough, which is the argument
+that decided this.** Pre-filling the handle and letting it be edited stops
+nobody: a person who has decided to take `meta` clears the field and types
+`meta`. The only version that does anything is the one with no field, so the
+question is whether to take the cost of that or leave squatting unaddressed on
+this path.
+
+**And it inherits a dispute process rather than inventing one.** A namespace
+that is a handle cannot be taken unless the handle is taken, and handles live on
+a platform that already has contested names, rules for them, and somebody to
+appeal to. This registry does not want to be the venue for an argument about who
+is really `allenai`, and this is how it avoids becoming one without asserting
+anything itself. What it does not do is stop `meta` appearing in the corpus at
+all: an indexed entry can carry any author string, because the author of a
+paper's direction never signed up and the entry is about them rather than by
+them. That is the same distinction as everywhere else here, between a name
+somebody claimed and a name somebody was given.
+
 **Two consequences, recorded because neither is obvious.**
 
 The first real claim in this corpus is the first exception. Namespace `soham`,
