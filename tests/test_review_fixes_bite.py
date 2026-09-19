@@ -27,8 +27,8 @@ from safetensors.numpy import save_file
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import client, comparison, db, export  # noqa: E402
-from registry.artifact import UnsafeArtifactPath, local_path  # noqa: E402
+from controlbun import client, comparison, db, export  # noqa: E402
+from controlbun.artifact import UnsafeArtifactPath, local_path  # noqa: E402
 
 
 @pytest.fixture

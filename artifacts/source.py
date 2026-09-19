@@ -19,10 +19,10 @@ COMMIT = "b8b472175b7a2af1b7a7ecd7a784e982a6a7453a"
 # pointer file instead. The media host serves the object, and takes the same
 # commit-pinned path.
 #
-# A template rather than a prefix, because `registry.ingest.PinnedRepoFile`
+# A template rather than a prefix, because `controlbun.ingest.PinnedRepoFile`
 # formats it from the same fields it records as provenance, and since
 # `schema/migrations/007` an intervention row records one and
-# `registry.fetch.pinned_url` formats it from the same four fields on the way
+# `controlbun.fetch.pinned_url` formats it from the same four fields on the way
 # back out. The commit appears once, in COMMIT, so the URL that is fetched and
 # the commit that is written into the file's header cannot come apart.
 #

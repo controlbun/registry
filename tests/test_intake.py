@@ -47,7 +47,7 @@ sys.path.insert(0, str(ROOT / "artifacts"))
 
 import intake  # noqa: E402
 import publish  # noqa: E402
-from registry import artifact, db  # noqa: E402
+from controlbun import artifact, db  # noqa: E402
 
 # Forty hex characters so `fetch.commit_sha` takes it. Not a commit anything made.
 SHA = "b" * 40
@@ -120,7 +120,7 @@ def tool(tmp_path, monkeypatch, hub):
     `artifact_path` against the temp tree, and so the assertion that no artifact
     bytes were left behind has somewhere finite to look.
     """
-    from registry import fetch
+    from controlbun import fetch
 
     tree = tmp_path / "tree"
     tree.mkdir()
@@ -236,7 +236,7 @@ def test_link_mode_records_the_pointer_and_keeps_no_bytes(tool):
         "link mode kept the bytes it fetched. What it records is a pointer; a "
         "copy in the tree is the distributor question arriving sideways."
     )
-    from registry import fetch
+    from controlbun import fetch
     assert not fetch.CACHE.exists(), (
         "the fetch went through the operator's real cache. It is swapped for a "
         "throwaway so the check is a download rather than a reread, and so "
@@ -251,7 +251,7 @@ def test_link_mode_takes_a_row_that_names_its_own_host(tool, hub):
 
     The template below is shaped like GitHub's media host, which serves file
     content from a host the repo does not live on. Nothing in the form, the
-    schema or `registry.fetch` has heard of it; the row carries it.
+    schema or `controlbun.fetch` has heard of it; the row carries it.
     """
     template = "http://{host}/media/{repo}/{commit}/{path}"
     fields = link_fields(link_host=hub.split("//", 1)[1],
@@ -303,7 +303,7 @@ def test_changing_the_template_after_the_check_is_refused(tool, hub):
 
 
 def test_a_template_that_loses_the_commit_is_refused(tool, hub):
-    """`registry.fetch` owns this and the form does not restate it."""
+    """`controlbun.fetch` owns this and the form does not restate it."""
     fields = link_fields(link_host=hub.split("//", 1)[1],
                          link_url_template="http://{host}/media/{repo}/main/{path}")
     code, refused = tool.post_json("/check", {"mode": "link", "fields": fields})
@@ -425,7 +425,7 @@ def test_a_branch_is_not_a_pin(tool):
 
 
 def test_a_pickle_is_refused_with_the_reason_ingest_gives(tool):
-    """The rule lives in `registry.ingest` and is not restated here."""
+    """The rule lives in `controlbun.ingest` and is not restated here."""
     pickle = b"\x80\x04" + b"\x00" * 64
     code, raw = tool.call(
         "/check?mode=bytes&filename=d.pt&fields=" + urllib.parse.quote(
@@ -1037,7 +1037,7 @@ def _library() -> bytes:
 
 
 def test_a_file_of_several_arrays_is_refused_and_the_refusal_names_them(tmp_path):
-    from registry import ingest as ing
+    from controlbun import ingest as ing
     with pytest.raises(ing.RefusedBytes) as refused:
         intake.check_bytes(_library(), "lib.safetensors", "v/d.safetensors",
                            stated={})
@@ -1050,7 +1050,7 @@ def test_a_file_of_several_arrays_is_refused_and_the_refusal_names_them(tmp_path
 def test_naming_a_tensor_that_is_not_there_is_refused_against_the_real_list():
     """No near-match fallback. Writing the wrong tensor under the right name is
     the one failure nothing downstream catches."""
-    from registry import ingest as ing
+    from controlbun import ingest as ing
     with pytest.raises(ing.RefusedBytes) as refused:
         intake.check_bytes(_library(), "lib.safetensors", "v/d.safetensors",
                            stated={}, tensor="dierction")

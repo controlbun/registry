@@ -372,8 +372,8 @@ it.
 
 
 ## 2026-09-13 The Jinja frontend is retired; Astro is the frontend
-**Decided:** `web/templates/` and the HTML-emitting half of `src/registry/render.py`
-are deleted. The shared view logic is `src/registry/views.py`, which shapes a
+**Decided:** `web/templates/` and the HTML-emitting half of `src/controlbun/render.py`
+are deleted. The shared view logic is `src/controlbun/views.py`, which shapes a
 claimant for both `export.py` and `client.py`; the ordering display names moved to
 `order.py` beside the keys they name. `tests/test_render.py` became
 `tests/test_pages.py` and reads the built Astro output. `make verify` builds the
@@ -735,7 +735,7 @@ behavioral interventions.
 ## 2026-09-14 The consumer surface is a package, and it is how this gets used
 **Decided:** The way a researcher touches this registry is
 `pip install controlbun` and a resolve call, not a website. The site is for
-deciding; the package is for using. `src/registry/client.py` and `fetch.py` are
+deciding; the package is for using. `src/controlbun/client.py` and `fetch.py` are
 already that package under a different name and will be renamed and published
 rather than rewritten.
 
@@ -859,7 +859,7 @@ exists. A future comparability rule is added once or not at all.
 **Supersedes:** nothing.
 
 ## 2026-09-15 An artifact path is repo-relative, and leaving the repo is refused
-**Decided:** `registry.artifact.local_path` resolves a database `artifact_path`
+**Decided:** `controlbun.artifact.local_path` resolves a database `artifact_path`
 against the repository root and raises `UnsafeArtifactPath` if the result escapes.
 Used by `fetch.resolve`, `comparison.load_vector` and both falsifier sites. Each
 passes its own module `ROOT`, because three test harnesses redirect the code at a
@@ -1349,7 +1349,7 @@ failures and asserts each check goes red.
 **Supersedes:** nothing.
 
 ## 2026-09-17 A writer states what it claims about an artifact and the bytes confirm it
-**Decided:** `registry.artifact` gains `Claim`, `Facts`, `disagreements` and
+**Decided:** `controlbun.artifact` gains `Claim`, `Facts`, `disagreements` and
 `confirmed`. A caller hands over artifact bytes plus whatever it claims about
 them and gets back the facts to record, or a refusal naming both sides of every
 field that does not match. Shape, dtype, L2 norm and sha256 are compared.
@@ -1449,7 +1449,7 @@ what "Fetched bytes are checked against a recorded digest" (2026-09-16) started
 on the read path.
 
 ## 2026-09-17 Ingest takes bytes from anywhere, and the converters are not a permission list
-**Decided:** `registry.ingest` is the general path: a source, a `Claim`, and one
+**Decided:** `controlbun.ingest` is the general path: a source, a `Claim`, and one
 checked safetensors file out. `artifacts/ingest_arena.py` keeps its pinned table
 and its `--check` mode and calls it. The three vendored artifacts are byte
 identical, confirmed by a live refetch from the pinned commit and not only by the
@@ -1506,7 +1506,7 @@ nonzero, and had already replaced the bytes the recorded digest identifies. The
 next `--check` compared the bad file against the record and failed again, which
 is right and far too late. Staging and renaming is not tidiness, it is the fix.
 
-`safetensors` header order is unstable across processes, as `registry.artifact`
+`safetensors` header order is unstable across processes, as `controlbun.artifact`
 already says, but only visibly so with enough keys: with two metadata keys two
 processes agree about half the time. The first version of the reproducibility
 probe used two, and removing `sort_header` altogether slid past it. Twelve keys
@@ -1653,7 +1653,7 @@ the only function that writes those two columns, and both the rebuild and
 **A commit, never a branch, and the rule is not restated.** `record` goes
 through `fetch.commit_sha`, so `--at-head` reads what `main` points at and
 freezes the answer rather than recording the name. Resolving a branch is done
-here and not in `registry.fetch`, which says in its own docstring that it does
+here and not in `controlbun.fetch`, which says in its own docstring that it does
 not resolve one: a helper sitting next to that sentence is one refactor away
 from being wired into the read path.
 
@@ -1722,10 +1722,10 @@ handler; and asserts the view layer does not mention this tool at all.
 a public surface the way a running process can. This is the running process, so
 it pays for the asymmetry with checks the static build does not need.
 
-**Nothing here decides what an artifact may be.** `registry.ingest` owns which
+**Nothing here decides what an artifact may be.** `controlbun.ingest` owns which
 bytes can be read without executing them and answers with an open converter set.
-`registry.artifact` owns the comparison between a claim and the bytes.
-`registry.fetch` owns the rule that a pin is a commit. The form owns a socket,
+`controlbun.artifact` owns the comparison between a claim and the bytes.
+`controlbun.fetch` owns the rule that a pin is a commit. The form owns a socket,
 some HTML and two INSERTs, and every rule it appears to apply is one of those
 three being called, refusal sentence included. Fields are text inputs over
 datalists, which is the precedent `astro/src/data/observed-labels.ts` set: the
@@ -1881,7 +1881,7 @@ can name any host", which is the fix and takes the shape this entry named.
 ## 2026-09-18 The row carries its own URL template, so a pin can name any host
 **Decided:** `intervention` records `artifact_host` and `artifact_url_template`
 beside the repo, commit and path, and `served_host` and `served_url_template`
-beside the served pair. `registry.fetch` formats the row's own template and
+beside the served pair. `controlbun.fetch` formats the row's own template and
 knows no host by name. There is no table mapping hosts to URL layouts and there
 will not be one.
 
@@ -1889,7 +1889,7 @@ will not be one.
 read side had not caught up: "A table of the ones we happen to have met would be
 a list of where an artifact is allowed to come from, which is not ours to
 write." A host nobody here has met now works by construction, with no code
-change and no request to anybody. This is the same argument `registry.ingest`
+change and no request to anybody. This is the same argument `controlbun.ingest`
 makes about file formats and 001 makes about `kind`; the only difference was
 that here the assertion was being made by a missing column rather than by a
 CHECK, which is why it survived the trip-wire list for four days.
@@ -2064,7 +2064,7 @@ closed enumeration wearing a schema hat: the set of fields allowed an
 explanation becomes whatever somebody thought of, and the next person with an
 absence worth explaining has to ask for a migration. `field` is an open string
 with no CHECK and no foreign key onto a column list, which is the argument
-`registry.ingest` makes about file formats and `PinnedRepoFile` makes about
+`controlbun.ingest` makes about file formats and `PinnedRepoFile` makes about
 hosts, applied to the one place it had not been made. A name this repository has
 never seen stores and renders; what it cannot do is contradict a value, because
 there is no value of that name to contradict.
@@ -2284,15 +2284,15 @@ through the site or HF", which stays open on everything else.
 `artifact_host`, `artifact_url_template` and `artifact_sha256`, and the artifact
 page renders the host, the repo, the commit, the digest, a link that resolves to
 the bytes, and the one-line client call. The URL is built by
-`registry.fetch.row_url` and by nothing else. No component assembles one from
+`controlbun.fetch.row_url` and by nothing else. No component assembles one from
 parts.
 
 **Why.** The registry's premise is that it points at artifacts rather than
 serving them, and its pages pointed at nothing. `artifact_path` travelled into
-`astro/src/data/registry.json` and the other five columns did not, so migration
+`astro/src/data/controlbun.json` and the other five columns did not, so migration
 007, the any-host templates, `artifacts/publish.py` and the pin on the one real
 submission were invisible to anybody reading the website.
-`registry.load("soham/trauma@d61-diffmeans-expository-L34").vector()` resolved
+`controlbun.load("soham/trauma@d61-diffmeans-expository-L34").vector()` resolved
 that pin from a cold cache and a person with a browser had nothing. Nothing
 failed, because the pin work went end to end through the Python client and the
 client never touches the export, so the website was never in the loop.
@@ -2359,7 +2359,7 @@ the middle rather than a fixed segment count, so `gpt2` and `bert-base-uncased`
 with no distributor parse as well as `meta-llama/Llama-3.3-70B-Instruct`.
 Nothing requires a slash in a model id and nothing validates its shape; it is an
 open string like every other user-supplied field here. The rule lives in
-`src/registry/ref.py` and in one place, and `views.claimant_view` puts the
+`src/controlbun/ref.py` and in one place, and `views.claimant_view` puts the
 formatted `ref` in the export so no template composes a second copy of it.
 
 **The short form still resolves, and refuses rather than picks.**

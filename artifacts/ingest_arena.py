@@ -23,7 +23,7 @@ without network to confirm the committed copies are the ones this produced.
     .venv/bin/python artifacts/ingest_arena.py --check   # offline, verify only
 
 **What is left in this file and what moved.** All of the machinery is now
-`registry.ingest`, which takes bytes from anywhere and writes one checked
+`controlbun.ingest`, which takes bytes from anywhere and writes one checked
 safetensors file. What stays here is the part that is only true of this corpus:
 where these three came from, that the arena packs a direction as `d` beside a
 `meta` blob, and that a direction is a 1-D float32 array. That last one is a
@@ -46,8 +46,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import ingest  # noqa: E402
-from registry.artifact import Claim, MismatchedArtifact, local_path  # noqa: E402
+from controlbun import ingest  # noqa: E402
+from controlbun.artifact import Claim, MismatchedArtifact, local_path  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -62,7 +62,7 @@ def arena_payload(parsed: ingest.Parsed) -> ingest.Payload:
 
     Everything this returns is read off the file. A provenance header somebody
     retyped is a claim about the file rather than a fact from it, and the four
-    `source_*` fields beside these come from the pin `registry.ingest` fetched
+    `source_*` fields beside these come from the pin `controlbun.ingest` fetched
     against, for the same reason.
     """
     if sorted(parsed.arrays) != ["d", "meta"]:
@@ -155,7 +155,7 @@ def main() -> int:
                 root=ROOT,
             )
         except MismatchedArtifact as drift:
-            # Nothing was written. `registry.ingest` stages the output and moves
+            # Nothing was written. `controlbun.ingest` stages the output and moves
             # it into place only after the check, so a drifted conversion leaves
             # the committed artifact where it was instead of overwriting it with
             # the bytes that failed.

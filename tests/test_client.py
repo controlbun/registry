@@ -16,7 +16,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import BareLabelError, NotFound, claimants, compare, load  # noqa: E402
+from controlbun import BareLabelError, NotFound, claimants, compare, load  # noqa: E402
 
 
 @pytest.fixture(scope="module")

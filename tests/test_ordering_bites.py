@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import ordering_harness as harness  # noqa: E402
 
-from registry import order  # noqa: E402
+from controlbun import order  # noqa: E402
 
 NOW_MS = int(datetime(2027, 1, 1, tzinfo=timezone.utc).timestamp() * 1000)
 CHOICES = [order.ORDER_RECENT, order.ORDER_TRENDING]

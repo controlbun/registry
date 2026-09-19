@@ -36,7 +36,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import client, comparison, db, order, ref, views  # noqa: E402
+from controlbun import client, comparison, db, order, ref, views  # noqa: E402
 
 # The two placeholder models `fixtures/build.py` writes. Neither resolves to
 # anything and both say so in their own name.

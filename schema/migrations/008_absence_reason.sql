@@ -33,7 +33,7 @@
 -- would have to ask. `field` here is an open string. Nothing enumerates which
 -- names it may take, there is no CHECK, and no foreign key onto a column list,
 -- because a list of the fields we happen to have met is the same object
--- `registry.ingest` refuses to write about file formats and `PinnedRepoFile`
+-- `controlbun.ingest` refuses to write about file formats and `PinnedRepoFile`
 -- refuses to write about hosts.
 --
 -- Common values are the intervention's own nullable columns, documented and

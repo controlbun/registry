@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import ordering_harness as harness  # noqa: E402
 
-from registry import order  # noqa: E402
+from controlbun import order  # noqa: E402
 
 # Fixed so the decay denominator is the same on both sides of the comparison. Far
 # enough ahead of the synthetic corpus that every age is positive.

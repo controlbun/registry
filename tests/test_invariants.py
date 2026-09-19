@@ -102,7 +102,7 @@ def scan(pattern: str) -> list[str]:
 # what got scanned, so forgetting an entry made a scanner inert. This one only
 # asserts, so forgetting an entry costs an assertion and never coverage.
 MUST_REACH = {
-    "src/registry":  "the library",
+    "src/controlbun":  "the library",
     "astro/src":     "the view layer, where a default sort would appear",
     "fixtures":      "writes the synthetic corpus",
     "artifacts":     "writes the real corpus",
@@ -223,7 +223,7 @@ def test_no_check_constraint_enumerates_strings():
     # A closed enum in application code rejects exactly as hard as a CHECK does.
     offenders += scan(r"\b(ALLOWED|PERMITTED|VALID|SUPPORTED)_\w+\s*=")
     offenders += scan(r"\.includes\([^)]*\)\s*\)?\s*(\|\||\?|:)?\s*(throw|raise)")
-    # `format` joined this list when `registry.ingest` arrived, because a file
+    # `format` joined this list when `controlbun.ingest` arrived, because a file
     # format is the same kind of thing `kind` is: nobody here decides which ways
     # of packing a tensor are legitimate. What ingest may decide is which bytes
     # it can read without executing them, and a refusal that says so reads

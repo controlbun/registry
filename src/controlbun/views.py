@@ -123,7 +123,7 @@ def published_at(iv: sqlite3.Row | None) -> dict | None:
     a lesser state than the tenth. Nothing here invents a URL for a row that
     has none, and nothing orders on whether this came back None.
 
-    The URL is built by `registry.fetch.row_url` and not here, and not in a
+    The URL is built by `controlbun.fetch.row_url` and not here, and not in a
     template. That function owns the rule that turns host, repo, commit, path
     and template into a URL, including the refusals: a template that drops the
     commit is not a pin, a scheme that is not a network fetch cannot be checked
@@ -328,7 +328,7 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "artifact_path": iv["artifact_path"] if iv else None,
         # The digest of the file as published, which is a fact about the bytes
         # rather than about where they are, so it travels whether or not
-        # anything is pinned. `registry.artifact.confirmed` checks bytes that
+        # anything is pinned. `controlbun.artifact.confirmed` checks bytes that
         # arrive against it; printing it is what lets a reader who fetched the
         # file by hand do the same check without a database.
         "artifact_sha256": iv["artifact_sha256"] if iv else None,

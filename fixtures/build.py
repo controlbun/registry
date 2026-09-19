@@ -20,8 +20,8 @@ from safetensors.numpy import save_file
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import artifact, db  # noqa: E402
-from registry.artifact import sort_header  # noqa: E402
+from controlbun import artifact, db  # noqa: E402
+from controlbun.artifact import sort_header  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 DIM = 8

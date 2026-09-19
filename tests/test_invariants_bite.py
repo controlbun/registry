@@ -47,12 +47,12 @@ VIOLATIONS = {
         "if (!kinds.includes(kind)) throw new Error('bad');\n",
         "test_no_check_constraint_enumerates_strings",
     ),
-    # `registry.ingest` has a dict of converters, which is one rename away from
+    # `controlbun.ingest` has a dict of converters, which is one rename away from
     # being a list of the formats an author is allowed to publish in. The
     # refusal it writes today says nothing can read these bytes and where a
     # converter goes. This is the sentence it must not start saying instead.
     "refusing a format for not being on the list": (
-        "src/registry/probe.py",
+        "src/controlbun/probe.py",
         "def read(blob):\n    raise ValueError('unsupported format')\n",
         "test_no_check_constraint_enumerates_strings",
     ),
@@ -67,7 +67,7 @@ VIOLATIONS = {
         "test_nothing_resolves_a_label_to_one_artifact",
     ),
     "resolving a label by indexing": (
-        "src/registry/probe.py",
+        "src/controlbun/probe.py",
         "def only(conn, label):\n    return _submissions(conn, label)[0]\n",
         "test_nothing_resolves_a_label_to_one_artifact",
     ),
@@ -92,7 +92,7 @@ VIOLATIONS = {
         "test_no_ordering_is_derived_from_whether_an_artifact_is_published",
     ),
     "ordering on whether an artifact is published, in Python": (
-        "src/registry/probe.py",
+        "src/controlbun/probe.py",
         "rows = sorted(rows, key=lambda r: r['artifact_url'] is None)\n",
         "test_no_ordering_is_derived_from_whether_an_artifact_is_published",
     ),
@@ -107,7 +107,7 @@ VIOLATIONS = {
         "test_no_ordering_is_derived_from_whether_an_artifact_is_published",
     ),
     "absent eval coerced to zero": (
-        "src/registry/probe.py",
+        "src/controlbun/probe.py",
         "value = report.trait_score or 0\n",
         "test_absent_eval_is_not_an_error",
     ),
@@ -122,7 +122,7 @@ VIOLATIONS = {
         "test_cosine_is_never_evidence_of_disagreement",
     ),
     "similarity read as disagreement": (
-        "src/registry/probe.py",
+        "src/controlbun/probe.py",
         "disagreement = angle_similarity(a, b)\n",
         "test_cosine_is_never_evidence_of_disagreement",
     ),
@@ -156,7 +156,7 @@ VIOLATIONS = {
     # remembered. The spellings are ones the tree does not use, so a scanner
     # that only catches today's wording is caught here rather than in a year.
     "ordering namespaces by claim status in SQL": (
-        "src/registry/probe.py",
+        "src/controlbun/probe.py",
         'q = "SELECT * FROM owner ORDER BY is_claimed DESC"\n',
         "test_no_ordering_is_derived_from_a_namespace_claim",
     ),
@@ -166,7 +166,7 @@ VIOLATIONS = {
         "test_no_ordering_is_derived_from_a_namespace_claim",
     ),
     "ordering namespaces by when they were claimed": (
-        "src/registry/probe.py",
+        "src/controlbun/probe.py",
         "ranked = sorted(owners, key=lambda o: o.claimed_at)\n",
         "test_no_ordering_is_derived_from_a_namespace_claim",
     ),
@@ -192,7 +192,7 @@ VIOLATIONS = {
         "test_a_claim_is_bound_to_a_subject_and_never_to_a_handle",
     ),
     "a claim looked up by handle": (
-        "src/registry/probe.py",
+        "src/controlbun/probe.py",
         'row = ex("SELECT * FROM namespace_claim WHERE handle = ?", (name,))\n',
         "test_a_claim_is_bound_to_a_subject_and_never_to_a_handle",
     ),
@@ -203,7 +203,7 @@ VIOLATIONS = {
         "test_org_membership_is_an_observation_and_never_a_stored_fact",
     ),
     "an observation overwritten instead of appended": (
-        "src/registry/probe.py",
+        "src/controlbun/probe.py",
         'ex("UPDATE namespace_membership_observation SET org = ?", (org,))\n',
         "test_org_membership_is_an_observation_and_never_a_stored_fact",
     ),

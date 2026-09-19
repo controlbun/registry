@@ -49,8 +49,8 @@ from functools import lru_cache
 from safetensors.numpy import load_file
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from registry import artifact  # noqa: E402
-from registry.artifact import UnsafeArtifactPath, local_path  # noqa: E402
+from controlbun import artifact  # noqa: E402
+from controlbun.artifact import UnsafeArtifactPath, local_path  # noqa: E402
 
 
 @lru_cache(maxsize=None)
@@ -61,7 +61,7 @@ def _vector(path: str):
 
 ROOT = Path(__file__).resolve().parents[1]
 DB = ROOT / "registry.db"
-EXPORT = ROOT / "astro" / "src" / "data" / "registry.json"
+EXPORT = ROOT / "astro" / "src" / "data" / "controlbun.json"
 DIST = ROOT / "astro" / "dist"
 
 # Every measurement on every page renders through .toFixed(4). Anything matching
@@ -146,7 +146,7 @@ def _pinned(row) -> bool:
 def check_artifacts_match_their_metadata(conn: sqlite3.Connection) -> None:
     """Shape, dtype and L2 norm recomputed from the tensor on disk.
 
-    The comparison itself is `registry.artifact.disagreements`, which is also
+    The comparison itself is `controlbun.artifact.disagreements`, which is also
     what the client applies to bytes it fetched and what both seed scripts apply
     before they write a row. Three callers, one rule, one tolerance on the norm:
     this used to hold its own copy, and a gate that disagrees with the write
@@ -565,7 +565,7 @@ def main() -> int:
         print("no registry.db; run fixtures/build.py first", file=sys.stderr)
         return 1
     if not EXPORT.exists():
-        print("no export; run registry.export first", file=sys.stderr)
+        print("no export; run controlbun.export first", file=sys.stderr)
         return 1
 
     conn = sqlite3.connect(DB)
@@ -600,7 +600,7 @@ def main() -> int:
     print("falsifier: every published number re-derives or traces to its source")
     if elsewhere:
         print(f"falsifier: {elsewhere} row(s) pinned to bytes outside this "
-              "checkout, recorded rather than rechecked; `registry.fetch` "
+              "checkout, recorded rather than rechecked; `controlbun.fetch` "
               "verifies those against their digest when anybody loads one")
     return 0
 

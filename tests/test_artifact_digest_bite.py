@@ -36,8 +36,8 @@ from safetensors.numpy import load_file, save, save_file
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import client, db, fetch  # noqa: E402
-from registry.artifact import sort_header  # noqa: E402
+from controlbun import client, db, fetch  # noqa: E402
+from controlbun.artifact import sort_header  # noqa: E402
 
 # alice's fixture is `np.arange(1, 9)` normalized, eight float32 elements. This is
 # eight float32 elements that are not those. Same shape, same dtype, different
@@ -196,7 +196,7 @@ def _load_falsifier(root: Path):
     spec.loader.exec_module(module)
     module.ROOT = root
     module.DB = root / "registry.db"
-    module.EXPORT = root / "astro" / "src" / "data" / "registry.json"
+    module.EXPORT = root / "astro" / "src" / "data" / "controlbun.json"
     module.DIST = root / "astro" / "dist"
     # Reloaded per call rather than reused: `_vector` is lru_cached, so a module
     # kept across a mutation would recheck the tensor it read before it.
@@ -221,16 +221,16 @@ def tree(tmp_path_factory):
         check=True, capture_output=True,
     )
     subprocess.run(
-        [sys.executable, "-m", "registry.export",
+        [sys.executable, "-m", "controlbun.export",
          "--db", str(dest / "registry.db"),
-         "--out", str(dest / "astro" / "src" / "data" / "registry.json")],
+         "--out", str(dest / "astro" / "src" / "data" / "controlbun.json")],
         check=True, capture_output=True,
         env={"PYTHONPATH": str(dest / "src"), "PATH": "/usr/bin:/bin"},
         cwd=dest,
     )
 
     payload = json.loads(
-        (dest / "astro" / "src" / "data" / "registry.json").read_text()
+        (dest / "astro" / "src" / "data" / "controlbun.json").read_text()
     )
     trait = payload["labels"][0]["claimants"][0]["trait_score"]
     page = dest / "astro" / "dist" / "probe"

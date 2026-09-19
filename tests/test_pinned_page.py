@@ -5,7 +5,7 @@ and for a while its pages pointed at nothing. `artifact_path` travelled into the
 export and `artifact_repo`, `artifact_commit`, `artifact_host`,
 `artifact_url_template` and `artifact_sha256` did not, so migration 007, the
 any-host templates and `artifacts/publish.py` were all invisible to anybody
-reading the website. `registry.load(...).vector()` resolved the one real pin
+reading the website. `controlbun.load(...).vector()` resolved the one real pin
 from a cold cache; a person with a browser had a page naming an artifact and no
 way to get it. Nothing failed, because the pin work went end to end through the
 Python client and the client never touches the export.
@@ -15,7 +15,7 @@ honest.
 
 **The pin reaches the page.** Host, repo, commit, digest and a link.
 
-**The URL is built once, in Python.** `registry.fetch.row_url` owns the rule
+**The URL is built once, in Python.** `controlbun.fetch.row_url` owns the rule
 that turns host, repo, commit, path and template into a URL, including the three
 refusals: a template that drops the commit is not a pin, a scheme that is not a
 network fetch cannot be checked by anybody else, and a placeholder carrying a
@@ -45,10 +45,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import fetch, views  # noqa: E402
+from controlbun import fetch, views  # noqa: E402
 
 DIST = ROOT / "astro" / "dist"
-EXPORT = ROOT / "astro" / "src" / "data" / "registry.json"
+EXPORT = ROOT / "astro" / "src" / "data" / "controlbun.json"
 
 # The one real pin in the corpus, and the only thing in this file that names a
 # specific row. Recorded in `artifacts/intake.jsonl` and confirmed against the
@@ -117,7 +117,7 @@ def test_the_export_carries_where_the_artifact_is():
 def test_the_exported_url_is_the_one_the_client_would_fetch():
     """Not "a URL for this row". The URL, from the function that owns the rule.
 
-    `registry.fetch.row_url` is what `from_repo` resolves through, so this
+    `controlbun.fetch.row_url` is what `from_repo` resolves through, so this
     asserts the reader and the client are sent to the same bytes.
     """
     c = pinned_claimant()
@@ -405,13 +405,19 @@ def test_a_scheme_nobody_can_fetch_over_refuses_rather_than_linking():
 def test_the_page_never_tells_a_reader_to_run_code_they_cannot_install():
     """Every instruction on a public page has to work for the public.
 
-    The page carried `registry.load("author/label@version").vector()`, which
-    runs from a checkout of this repository with `PYTHONPATH=src` and nowhere
-    else. `controlbun` is unpublished, so there is nothing to install; and
-    `registry` on PyPI is taken, by an unrelated Windows registry library, so
-    the obvious next step lands a reader on somebody else's package and an
-    AttributeError. An instruction that is wrong in that particular direction
-    is worse than no instruction.
+    The page carried a one-line client call, which runs from a checkout of this
+    repository with `PYTHONPATH=src` and nowhere else. `controlbun` is
+    unpublished on PyPI, checked 2026-09-19, so there is nothing to install.
+
+    It said `registry.load(...)` when this was written, and that was worse than
+    merely unrunnable: `registry` on PyPI is taken by an unrelated Windows
+    registry library, so the obvious next step landed a reader on somebody
+    else's package and an AttributeError. The package has since been renamed,
+    which removes that trap and leaves the plain one.
+
+    Both names are checked below, because the old one is what a stale page, an
+    old note or a copied snippet would carry, and the reason it was wrong has
+    not expired.
 
     `curl` and `shasum` are on the machine of anybody who would want this, and
     they are what the page says now. This test can be deleted the day the
@@ -423,7 +429,9 @@ def test_the_page_never_tells_a_reader_to_run_code_they_cannot_install():
     for path in sorted(DIST.rglob("*.html")):
         text = path.read_text(errors="ignore")
         for pattern in (r"\bregistry\.load\s*\(", r"\bimport\s+registry\b",
-                        r"pip\s+install\s+registry\b"):
+                        r"pip\s+install\s+registry\b",
+                        r"\bcontrolbun\.load\s*\(", r"\bimport\s+controlbun\b",
+                        r"pip\s+install\s+controlbun\b"):
             if re.search(pattern, text):
                 offenders.append(f"{path.relative_to(DIST)}: {pattern}")
     assert not offenders, (

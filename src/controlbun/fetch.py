@@ -8,7 +8,7 @@ own URL template now, so a host nobody here has met works by construction.
 
 Four things this deliberately does not do.
 
-**It does not keep a table of hosts it knows.** `registry.ingest.PinnedRepoFile`
+**It does not keep a table of hosts it knows.** `controlbun.ingest.PinnedRepoFile`
 settled the principle on the write side: "A table of the ones we happen to have
 met would be a list of where an artifact is allowed to come from, which is not
 ours to write." The read side takes the same fields. The one host named below is
@@ -87,7 +87,7 @@ class FetchError(RuntimeError):
 def commit_sha(value: str) -> str:
     """Forty hex characters, or a refusal. One rule, stated once.
 
-    `registry.ingest` pins a repo file the same way and against a different
+    `controlbun.ingest` pins a repo file the same way and against a different
     host, and two copies of this would be two chances for one of them to start
     accepting a tag.
     """
@@ -172,7 +172,7 @@ def pinned_url(*, host: str, repo: str, commit: str, path: str,
                url_template: str) -> str:
     """The URL a pinned artifact lives at, built from the row's own template.
 
-    The same four fields `registry.ingest.PinnedRepoFile` formats on the way in,
+    The same four fields `controlbun.ingest.PinnedRepoFile` formats on the way in,
     so the URL a row is fetched from and the provenance written into the file's
     header come from one set of values rather than two that can drift.
 
@@ -266,7 +266,7 @@ def _cache_path(url: str, path: str) -> Path:
 def get_url(url: str, *, timeout: int = 60, not_found: str | None = None) -> bytes:
     """One GET, with the failures named rather than surfacing as HTTP internals.
 
-    Shared with `registry.ingest`, which fetches a digest-pinned URL that is
+    Shared with `controlbun.ingest`, which fetches a digest-pinned URL that is
     not always a Hub URL. A second copy of this would be a second place to
     forget that a redirect is the normal case here rather than the exception,
     which is the one thing in it that is not obvious.
@@ -301,7 +301,7 @@ def row_url(*, repo: str, commit: str, path: str, host: str | None = None,
     """The URL a row resolves to, with the row's absences filled the way
     `from_repo` fills them, and without fetching anything.
 
-    Two callers and one rule. `from_repo` fetches it; `registry.views` prints
+    Two callers and one rule. `from_repo` fetches it; `controlbun.views` prints
     it, so a reader with a browser gets the same URL the client gets rather
     than one a template assembled from parts beside it. The website was outside
     this loop for as long as there was no function to call: `artifact_path`

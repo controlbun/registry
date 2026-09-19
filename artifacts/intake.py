@@ -36,10 +36,10 @@ on this form, on this machine, because it holds the whole file in memory to chec
 it before anything is written. It is not a statement about the artifact, and link
 mode takes any size.
 
-**Nothing in this file decides what an artifact may be.** `registry.ingest` owns
+**Nothing in this file decides what an artifact may be.** `controlbun.ingest` owns
 the question of which bytes can be read without executing them and answers it with
-an open converter set. `registry.artifact` owns the comparison between a claim and
-the bytes. `registry.fetch` owns the rule that a pin is a commit. This file owns a
+an open converter set. `controlbun.artifact` owns the comparison between a claim and
+the bytes. `controlbun.fetch` owns the rule that a pin is a commit. This file owns a
 form, a socket and two INSERTs, and every rule it appears to apply is one of those
 three being called.
 
@@ -82,10 +82,10 @@ ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(HERE))
 
-from registry import artifact, db, fetch, ingest  # noqa: E402
+from controlbun import artifact, db, fetch, ingest  # noqa: E402
 # Aliased because `ref` is a local name all over this module, for the string one
 # entry resolves to. This is the module that knows how to build it.
-from registry import ref as registry_ref  # noqa: E402
+from controlbun import ref as registry_ref  # noqa: E402
 import agent_handoff  # noqa: E402
 import publish  # noqa: E402
 import source  # noqa: E402
@@ -329,7 +329,7 @@ class Checked:
 def _claim(stated: dict[str, str]) -> artifact.Claim:
     """What the operator said about the bytes, as the one type that gets compared.
 
-    Every field optional, which is `registry.artifact.Claim`'s design and not a
+    Every field optional, which is `controlbun.artifact.Claim`'s design and not a
     concession: somebody who says nothing about a norm has not made a wrong claim
     about it, and the row records what the bytes say instead.
     """
@@ -358,7 +358,7 @@ def check_link(repo: str, commit: str, path: str, stated: dict[str, str],
     stated one for would be a provenance claim that reads like a checked fact.
     Nothing here validates either, either. Which hosts exist and what their URLs
     look like is not this form's question, and the refusals that do apply are
-    `registry.fetch`'s: forty hex characters, a commit that survives into the
+    `controlbun.fetch`'s: forty hex characters, a commit that survives into the
     URL, and a scheme a fetch can happen over.
     """
     commit = fetch.commit_sha(commit)
@@ -388,7 +388,7 @@ def check_link(repo: str, commit: str, path: str, stated: dict[str, str],
 
     with tempfile.TemporaryDirectory(prefix="registry-intake-") as tmp:
         # Serialized by the caller's lock: this is a module global in
-        # `registry.fetch` and two requests swapping it at once would restore
+        # `controlbun.fetch` and two requests swapping it at once would restore
         # each other's value.
         was, fetch.CACHE = fetch.CACHE, Path(tmp)
         try:
@@ -465,13 +465,13 @@ def check_bytes(blob: bytes, filename: str, path: str,
                 stated: dict[str, str], tensor: str = "") -> Checked:
     """Convert and check a dropped file, outside this repository.
 
-    `root=` points `registry.ingest` at a temporary directory, so the checked
+    `root=` points `controlbun.ingest` at a temporary directory, so the checked
     safetensors lands there rather than in the tree. The containment rule still
     applies inside it, which is why the argument is a root and not a bypass: a
     `path` with a `..` in it is refused against the staging directory exactly as
     it would be against the repository.
 
-    Everything about which bytes are readable is `registry.ingest`'s, including
+    Everything about which bytes are readable is `controlbun.ingest`'s, including
     the refusals. Nothing is re-decided here.
 
     `tensor` is empty for a file holding one array, which is most of them. A
@@ -722,7 +722,7 @@ SUGGEST = {
 # The corpus is the source for everything above and cannot be the source for
 # these two on the day the column is added, because no row carries one yet. So
 # these are seeded, and the seed is read out of code that already holds the
-# value rather than typed here: `registry.fetch` for the Hub's layout, which is
+# value rather than typed here: `controlbun.fetch` for the Hub's layout, which is
 # the one a row recording nothing resolves under, and `artifacts/source.py` for
 # GitHub's two, which is where all four real directions in this corpus came
 # from and which records when each was last checked against the live host.
@@ -1312,7 +1312,7 @@ q('agent-fill').addEventListener('click', async () => {
 
 # Every sentence here comes from whatever owns the rule, and names it, so the
 # reader can go and check rather than take this page's word: the comments in
-# `schema/migrations`, the module docstrings under `src/registry`, `BRIEF.md`, and
+# `schema/migrations`, the module docstrings under `src/controlbun`, `BRIEF.md`, and
 # this file's own refusals. Nothing below is a fresh explanation of a column. A
 # second explanation is a second thing to go stale, and the one written next to
 # the column is the one the person who made it meant.
@@ -1336,12 +1336,12 @@ WHY = {
         "<code>{host}</code> at all, and it needs two of them because the media "
         "host serves LFS objects and 404s on everything else. May be empty, and "
         "empty means the layout the Hub serves. What is checked is not which "
-        "host this names: <code>registry.fetch</code> requires the commit to "
+        "host this names: <code>controlbun.fetch</code> requires the commit to "
         "survive into the URL, because that is what a pin is, and refuses a "
         "scheme a fetch cannot happen over, because a pin that resolves only on "
         "the machine that wrote it is not one anybody else can check.",
     "link_commit":
-        "Forty hex characters. <code>registry.fetch</code> resolves by commit "
+        "Forty hex characters. <code>controlbun.fetch</code> resolves by commit "
         "only: a tag is movable by whoever owns the repo, so a pin to one is a "
         "pin to whatever is there today, which is the opposite of what "
         "<code>author/label@version</code> promises.",
@@ -1352,7 +1352,7 @@ WHY = {
         "same string or the fetch is a 404.",
     "file":
         "Converted to safetensors here and checked outside this repository. "
-        "<code>registry.ingest</code> owns which bytes can be read without "
+        "<code>controlbun.ingest</code> owns which bytes can be read without "
         "running them; a format nobody has written a converter for is refused "
         "with a sentence naming what has one and where another goes, which is "
         "not a statement that the format is illegitimate.",
@@ -1470,13 +1470,13 @@ SOURCE = {
     "link_repo": "artifacts/INTAKE.md",
     "link_host": "schema/migrations/007_any_host.sql",
     "link_url_template": "schema/migrations/007_any_host.sql",
-    "link_commit": "src/registry/fetch.py",
+    "link_commit": "src/controlbun/fetch.py",
     "link_path": "artifacts/intake.py",
-    "file": "src/registry/ingest.py",
+    "file": "src/controlbun/ingest.py",
     "bytes_repo": "artifacts/publish.py",
     "bytes_path": "artifacts/intake.py",
-    "bytes_tensor": "src/registry/ingest.py",
-    "shape": "src/registry/artifact.py",
+    "bytes_tensor": "src/controlbun/ingest.py",
+    "shape": "src/controlbun/artifact.py",
     "sha256": "schema/migrations/006_artifact_digest.sql",
     "label": "BRIEF.md, the object graph",
     "definition": "schema/migrations/001_init.sql",
@@ -1764,7 +1764,7 @@ def page(conn: sqlite3.Connection, *, token: str, repo: str, origin: str) -> byt
 class Intake:
     """Everything one run of the server holds. One lock over all of it.
 
-    `registry.fetch.CACHE` is a module global that `check_link` swaps and
+    `controlbun.fetch.CACHE` is a module global that `check_link` swaps and
     restores, and the staging map is shared, so requests are serialized rather
     than interleaved. An operator tool serving one person does not need
     concurrency, and the two ways of getting this wrong both end with one

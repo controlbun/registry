@@ -45,7 +45,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "astro" / "dist"
-EXPORT = ROOT / "astro" / "src" / "data" / "registry.json"
+EXPORT = ROOT / "astro" / "src" / "data" / "controlbun.json"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 

@@ -41,7 +41,7 @@ site:
 # once. This was a manual step for exactly as long as the falsifier failed any
 # row with no local file, which every row from the form is.
 	$(PY) artifacts/intake.py replay
-	PYTHONPATH=src $(PY) -m registry.export
+	PYTHONPATH=src $(PY) -m controlbun.export
 	cd astro && npm ci --silent && npm run build
 
 licenses:

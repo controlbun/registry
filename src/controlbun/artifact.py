@@ -9,7 +9,7 @@ acceptable: the sha256 in the ingest record would be a number that means nothing
 
 Every writer needs the same guarantee, which is why `sort_header` is here rather
 than in any of them. `fixtures/build.py` writes the synthetic corpus and
-`registry.ingest` writes whatever arrives from anywhere else, including the real
+`controlbun.ingest` writes whatever arrives from anywhere else, including the real
 directions `artifacts/ingest_arena.py` converts.
 
 `local_path` is here for the mirror-image reason: four callers turn a database
@@ -196,7 +196,7 @@ def tensor_names(blob: bytes) -> list[str]:
 
     Displayed, never compared. `confirmed` already refuses a file carrying more
     than one tensor, and which name the author gave theirs is carried through
-    rather than assigned, which is the point `registry.ingest.Payload` makes.
+    rather than assigned, which is the point `controlbun.ingest.Payload` makes.
     """
     return sorted(k for k in _split(blob)[0] if k != "__metadata__")
 

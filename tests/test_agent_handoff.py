@@ -34,7 +34,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "artifacts"))
 
 import agent_handoff as handoff  # noqa: E402
-from registry import db  # noqa: E402
+from controlbun import db  # noqa: E402
 
 # Forty hex characters so `fetch.commit_sha` takes it. Not a commit anything made.
 SHA = "b" * 40
@@ -458,7 +458,7 @@ def test_a_coefficient_that_is_not_a_number_is_refused():
 
 
 def test_a_branch_name_where_the_commit_goes_is_refused_by_the_one_rule():
-    """`registry.fetch.commit_sha`, not a second copy of it living here."""
+    """`controlbun.fetch.commit_sha`, not a second copy of it living here."""
     said = refusal(block(CORE + "artifact_commit: main\n"))
     assert "not a commit SHA" in said
     assert "moved by whoever owns the repo" in said
@@ -549,7 +549,7 @@ def test_the_corpus_section_uses_the_names_the_template_uses():
 def test_the_prompt_does_not_promise_a_template_can_drop_the_commit():
     """`fetch.pinned_url` refuses a template whose URL does not carry the
     commit, so a prompt saying otherwise sends an agent to a refusal."""
-    from registry import fetch
+    from controlbun import fetch
     text = handoff.prompt()
     assert "commit has to end up in the url" in text.lower()
     assert "any of the four or none" not in text

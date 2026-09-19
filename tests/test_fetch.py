@@ -31,7 +31,7 @@ from safetensors.numpy import save
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import client, db, fetch  # noqa: E402
+from controlbun import client, db, fetch  # noqa: E402
 
 SHA = "c1e0da3fb595874da299e783c7ad9c08a95ce7e9"
 BLOB = save({"t": np.arange(8, dtype=np.float32)})
@@ -166,7 +166,7 @@ def test_a_row_recording_no_host_resolves_where_it_always_did():
 def test_a_github_shaped_pin_resolves_through_its_own_template(server):
     """The read path stops knowing any host by name.
 
-    Nothing in `registry.fetch` has heard of this layout. The row carries it,
+    Nothing in `controlbun.fetch` has heard of this layout. The row carries it,
     and that is the whole mechanism.
     """
     assert fetch.from_repo(
@@ -474,7 +474,7 @@ def test_the_schema_puts_no_check_on_either_column(tmp_path):
         "SELECT artifact_host FROM intervention").fetchone()[0]
     assert stored == "a-host-nobody-has-met.invalid", (
         "the column stored it, which is the point. Whether a fetch can happen "
-        "over that scheme is `registry.fetch`'s question and it answers it at "
+        "over that scheme is `controlbun.fetch`'s question and it answers it at "
         "fetch time, with a sentence, rather than by refusing the row."
     )
 

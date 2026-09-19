@@ -262,7 +262,7 @@ def test_the_ordering_bar_does_not_quote_an_uninterpretable_threshold():
     reader a figure they could not interpret and a question with no answer, on
     every list page. The corpus size is a fact and stays.
     """
-    from registry import order
+    from controlbun import order
 
     for path in every_page():
         body = text_of(path.read_text())
@@ -283,7 +283,7 @@ def test_every_definition_is_marked_as_the_authors_words():
     marking is a test and not a convention.
     """
     payload = json.loads(
-        (ROOT / "astro" / "src" / "data" / "registry.json").read_text())
+        (ROOT / "astro" / "src" / "data" / "controlbun.json").read_text())
     definitions = [
         " ".join((c.get("definition") or "").split())
         for entry in payload["labels"] for c in entry["claimants"]
@@ -315,7 +315,7 @@ def test_a_reason_for_an_absence_renders_beside_the_absence_and_is_marked():
     reason exist would be the required field arriving through the suite.
     """
     payload = json.loads(
-        (ROOT / "astro" / "src" / "data" / "registry.json").read_text())
+        (ROOT / "astro" / "src" / "data" / "controlbun.json").read_text())
     accounted = [
         (c, field, reason)
         for entry in payload["labels"] for c in entry["claimants"]

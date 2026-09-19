@@ -23,10 +23,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import client, db, export, views  # noqa: E402
+from controlbun import client, db, export, views  # noqa: E402
 
 DIST = ROOT / "astro" / "dist"
-EXPORT = ROOT / "astro" / "src" / "data" / "registry.json"
+EXPORT = ROOT / "astro" / "src" / "data" / "controlbun.json"
 
 # Obviously not a person. Nothing below is an identity any provider issued, and
 # the only real one in this project is recorded in `V2.md` and is not here.

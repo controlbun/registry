@@ -24,8 +24,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import db  # noqa: E402
-from registry.comparison import similarity_matrix  # noqa: E402
+from controlbun import db  # noqa: E402
+from controlbun.comparison import similarity_matrix  # noqa: E402
 
 
 @pytest.fixture

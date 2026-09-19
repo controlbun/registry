@@ -38,7 +38,7 @@ empty.*
 
 **There is no API and no bulk fetch.** A static build with no server behind it.
 No endpoint returns a list of artifacts and no machine-readable dump is
-published. `src/registry/fetch.py` resolves one artifact at a time from an
+published. `src/controlbun/fetch.py` resolves one artifact at a time from an
 explicit `author/model_id/label@version` reference, by commit SHA, sending no
 credentials.
 

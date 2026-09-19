@@ -32,7 +32,7 @@ def _load_falsifier(root: Path):
 
     module.ROOT = root
     module.DB = root / "registry.db"
-    module.EXPORT = root / "astro" / "src" / "data" / "registry.json"
+    module.EXPORT = root / "astro" / "src" / "data" / "controlbun.json"
     module.DIST = root / "astro" / "dist"
     module.failures = []
     return module
@@ -54,9 +54,9 @@ def tree(tmp_path_factory):
         check=True, capture_output=True,
     )
     subprocess.run(
-        [sys.executable, "-m", "registry.export",
+        [sys.executable, "-m", "controlbun.export",
          "--db", str(dest / "registry.db"),
-         "--out", str(dest / "astro" / "src" / "data" / "registry.json")],
+         "--out", str(dest / "astro" / "src" / "data" / "controlbun.json")],
         check=True, capture_output=True,
         env={"PYTHONPATH": str(dest / "src"), "PATH": "/usr/bin:/bin"},
         cwd=dest,
@@ -64,7 +64,7 @@ def tree(tmp_path_factory):
 
     # A built page is needed for the rendered-number checks. One page carrying a
     # published figure and the synthetic marker is enough to exercise both.
-    payload = json.loads((dest / "astro" / "src" / "data" / "registry.json").read_text())
+    payload = json.loads((dest / "astro" / "src" / "data" / "controlbun.json").read_text())
     trait = payload["labels"][0]["claimants"][0]["trait_score"]
     page = dest / "astro" / "dist" / "probe"
     page.mkdir(parents=True)
@@ -100,7 +100,7 @@ def test_a_stored_norm_that_no_longer_matches_the_tensor(tree):
 
 
 def test_a_published_angle_that_does_not_recompute(tree):
-    path = tree / "astro" / "src" / "data" / "registry.json"
+    path = tree / "astro" / "src" / "data" / "controlbun.json"
     original = path.read_text()
     payload = json.loads(original)
     for entry in payload["labels"]:
@@ -126,7 +126,7 @@ def test_a_number_on_a_page_that_exists_nowhere_upstream(tree):
 
 
 def test_an_export_that_drifted_from_the_database(tree):
-    path = tree / "astro" / "src" / "data" / "registry.json"
+    path = tree / "astro" / "src" / "data" / "controlbun.json"
     original = path.read_text()
     payload = json.loads(original)
     for entry in payload["labels"]:
@@ -163,7 +163,7 @@ def test_a_reason_beside_an_absence_that_renders_unmarked(tree):
     it says so: `fixtures/SYNTHETIC.md` covers invented prose as much as
     invented numbers.
     """
-    path = tree / "astro" / "src" / "data" / "registry.json"
+    path = tree / "astro" / "src" / "data" / "controlbun.json"
     original = path.read_text()
     payload = json.loads(original)
     claimant = payload["labels"][0]["claimants"][0]
@@ -218,7 +218,7 @@ def test_claim_evidence_that_renders_unmarked(tree):
     says so, because `fixtures/SYNTHETIC.md` covers invented prose as much as
     invented numbers.
     """
-    path = tree / "astro" / "src" / "data" / "registry.json"
+    path = tree / "astro" / "src" / "data" / "controlbun.json"
     original = path.read_text()
     payload = json.loads(original)
     owner = payload["owner_index"][0]

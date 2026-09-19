@@ -28,7 +28,7 @@ answered is a refusal naming it.
 fences, preamble, bullets, bold keys, blockquote markers and typographic quotes
 around it, because that is what agents emit. All of that is peeled. What is passed
 on is checked: an integer that is an integer, a commit that is forty hex through
-`registry.fetch.commit_sha` rather than a second copy of that rule, and no value
+`controlbun.fetch.commit_sha` rather than a second copy of that rule, and no value
 that is still a placeholder out of the template.
 
 Two entry points for the form, and this module owns no socket, no route and no
@@ -62,7 +62,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import fetch  # noqa: E402
+from controlbun import fetch  # noqa: E402
 
 # The markers. Long enough that nothing in ordinary prose is one, and plain ASCII
 # so a chat window has nothing to prettify. Matched case-insensitively and with

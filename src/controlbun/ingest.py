@@ -190,7 +190,7 @@ class PinnedRepoFile:
 
 
 # Arrays are out of equality and repr wherever they sit in a record here, for
-# the reason `registry.artifact.Facts` gives about its own tensor: an ndarray has
+# the reason `controlbun.artifact.Facts` gives about its own tensor: an ndarray has
 # no scalar `==`, so a generated `__eq__` that touched one would raise rather
 # than answer, and a generated `__repr__` would put five thousand floats in an
 # error message.
@@ -374,7 +374,7 @@ def read_arrays(blob: bytes) -> Parsed:
         "nothing here knows how to read these bytes. What has a converter "
         f"today: {known}. That is a description of what is written, not of "
         "what may be published: a converter is an entry in "
-        "`registry.ingest.FORMATS` and adding one needs nobody's agreement. "
+        "`controlbun.ingest.FORMATS` and adding one needs nobody's agreement. "
         "The only thing that cannot be added is a format this path would have "
         "to execute in order to read."
     )
@@ -451,7 +451,7 @@ def confirmed_file(path: str | Path, claim: Claim = Claim(), *,
     Thin on purpose, and it exists so that the check `ingest` runs on the file
     it just wrote and an offline recheck of a file written months ago are the
     same call. Two spellings of that would be two answers to one question,
-    which is the failure `registry.artifact` was consolidated to end.
+    which is the failure `controlbun.artifact` was consolidated to end.
     """
     return confirmed(Path(path).read_bytes(), claim, subject=subject)
 
@@ -521,7 +521,7 @@ def ingest(
         save_file({chosen.name: tensor}, staged, metadata=header)
         # safetensors serializes its header out of a hash map whose iteration
         # order is seeded per process, so without this the same tensor written
-        # twice is two files. See `registry.artifact`.
+        # twice is two files. See `controlbun.artifact`.
         sort_header(staged)
         facts = confirmed_file(staged, claim, subject=subject)
         staged.replace(destination)

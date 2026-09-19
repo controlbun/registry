@@ -37,8 +37,8 @@ ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(HERE))
 
-from registry import artifact, db, ref  # noqa: E402
-from registry.artifact import local_path  # noqa: E402
+from controlbun import artifact, db, ref  # noqa: E402
+from controlbun.artifact import local_path  # noqa: E402
 from publish import PinError, apply_pins  # noqa: E402
 from source import COMMIT, DIRECTIONS, REPO  # noqa: E402
 
@@ -96,7 +96,7 @@ INGESTED = {
 #            it. 1.0 is the cited value, not a rounding of a measurement made
 #            here: read as float64 the file norms to 1.0000000000683045, and
 #            which of those two the column should hold is exactly the question
-#            `registry.artifact.L2_TOLERANCE` answers.
+#            `controlbun.artifact.L2_TOLERANCE` answers.
 #
 # Kept as a claim rather than replaced by a recomputation, because a citation
 # that the bytes agree with is worth more than a number derived from the bytes

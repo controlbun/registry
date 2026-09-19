@@ -43,7 +43,7 @@ exist is a listener anyone but the operator can reach.
 
 Every field name carries its own explanation, taken from whatever owns the rule
 and citing it: the migration comments in `schema/migrations`, the module
-docstrings under `src/registry`, `BRIEF.md`. Point at a name, or tab into the
+docstrings under `src/controlbun`, `BRIEF.md`. Point at a name, or tab into the
 field, and it opens. It is not a `title` attribute: the input points at the text
 with `aria-describedby`, so a screen reader reads it on focus and a keyboard
 opens it without a pointer. `tests/test_intake.py` checks that every field has
@@ -75,10 +75,10 @@ limit, because nothing is held.
 Two further fields say which host that repo is on and how the four values become
 a URL, and both may be empty. Empty means the Hub, which is where every row
 written before `schema/migrations/007` resolves. They are free text with
-suggestions rather than a menu, for the reason `registry.ingest.PinnedRepoFile`
+suggestions rather than a menu, for the reason `controlbun.ingest.PinnedRepoFile`
 gives: a table of the hosts we happen to have met would be a list of where an
 artifact is allowed to come from. What is checked is not which host they name.
-`registry.fetch` requires the commit to survive into the URL, because that is
+`controlbun.fetch` requires the commit to survive into the URL, because that is
 what a pin is, and refuses a scheme a fetch cannot happen over, because a pin
 that resolves only on the machine that wrote it is not one anybody else can
 check.
@@ -102,9 +102,9 @@ your own, the bytes are held to it and the row keeps what you said; if you state
 nothing, the row records what the bytes say. Saying nothing is not a wrong claim.
 
 Every refusal is a sentence with the reason in it, from whichever module owns the
-rule. A pickle is refused by `registry.ingest` and says so. A branch name is
-refused by `registry.fetch.commit_sha`. A digest that disagrees is refused by
-`registry.artifact`. Nothing is re-decided in the form.
+rule. A pickle is refused by `controlbun.ingest` and says so. A branch name is
+refused by `controlbun.fetch.commit_sha`. A digest that disagrees is refused by
+`controlbun.artifact`. Nothing is re-decided in the form.
 
 No eval is written. A submission with none is a normal state.
 

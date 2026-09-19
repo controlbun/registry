@@ -53,8 +53,8 @@ from safetensors.numpy import load_file, save, save_file
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import artifact, fetch, ingest  # noqa: E402
-from registry.artifact import Claim, sort_header  # noqa: E402
+from controlbun import artifact, fetch, ingest  # noqa: E402
+from controlbun.artifact import Claim, sort_header  # noqa: E402
 
 sys.path.insert(0, str(ROOT / "artifacts"))
 
@@ -398,7 +398,7 @@ def test_the_flag_is_written_down_rather_than_left_to_the_default():
     asserts the flag rather than assuming it, and this is what makes that
     sentence checkable.
     """
-    text = (ROOT / "src" / "registry" / "ingest.py").read_text()
+    text = (ROOT / "src" / "controlbun" / "ingest.py").read_text()
     start = text.index("def _read_npz")
     body = text[start:text.index("\ndef ", start + 1)]
     assert "allow_pickle=False" in body, (
@@ -695,7 +695,7 @@ def test_processes_writing_one_input_produce_one_file(tmp_path):
         f"sys.path.insert(0, {str(ROOT / 'src')!r})\n"
         "import numpy as np\n"
         "from safetensors.numpy import save_file\n"
-        "from registry import ingest\n"
+        "from controlbun import ingest\n"
         f"KEYS = {{f'synthetic_key_{{i}}': str(i) for i in range({HEADER_KEYS})}}\n"
         "def payload(parsed):\n"
         "    return ingest.Payload(name='direction',\n"

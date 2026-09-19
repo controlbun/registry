@@ -1,5 +1,5 @@
 [project]
-name = "registry"
+name = "controlbun"
 version = "0.0.0"
 description = "A registry for activation-steering artifacts. Plurality is the product."
 requires-python = ">=3.13"
@@ -12,7 +12,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest==8.4.2"]
-# The author's own upload step, and nothing else. `registry.fetch` reads the Hub
+# The author's own upload step, and nothing else. `controlbun.fetch` reads the Hub
 # over plain HTTP and says in its docstring why: a pinned download is a GET at a
 # documented URL, and the library earns its nine transitive packages only where
 # there is upload and auth to do. That is exactly here, and it stays optional so

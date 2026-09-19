@@ -6,7 +6,7 @@
 -- every other one: the registry never designates. That applies to hosts.
 --
 -- **The asymmetry this closes.** The write path has been host-agnostic since
--- `registry.ingest` existed: `PinnedRepoFile` takes a `host` and a
+-- `controlbun.ingest` existed: `PinnedRepoFile` takes a `host` and a
 -- `url_template` and all four real directions in this corpus came in through it
 -- with `host` github.com, because that is where the arena publishes. The read
 -- path was not. `fetch.resolve` sent both of its remote branches to one URL
@@ -22,7 +22,7 @@
 -- have met would be a list of where an artifact is allowed to come from, which
 -- is not ours to write." A host nobody here has met works by construction, with
 -- no code change and nobody's agreement. This is the same argument
--- `registry.ingest` makes about file formats and 001 makes about `kind`, applied
+-- `controlbun.ingest` makes about file formats and 001 makes about `kind`, applied
 -- to the one field where it was still being made by a missing column rather than
 -- by a CHECK.
 --
@@ -58,7 +58,7 @@
 --
 -- **Nullable, and that is the load-bearing half.** Every row in this database
 -- today records no host, because there was nowhere to record one. Those rows are
--- not broken and are not backfilled: `registry.fetch.hub_pin` is the default a
+-- not broken and are not backfilled: `controlbun.fetch.hub_pin` is the default a
 -- row with no host of its own resolves under, so an existing row resolves after
 -- this migration exactly where it resolved before it. Absence renders as its own
 -- state, the same as an unmeasured eval and the same as `model_revision` in 005.
@@ -72,7 +72,7 @@
 -- **No CHECK on either.** A constraint listing the hosts a pin may name is the
 -- trip-wire case, and a constraint listing the URL layouts it may use is the
 -- same thing one level down. What keeps a template honest is not a list of
--- permitted ones: `registry.fetch.pinned_url` requires the commit to survive
+-- permitted ones: `controlbun.fetch.pinned_url` requires the commit to survive
 -- into the URL it builds, which is the property a pin actually is, and refuses a
 -- scheme that is not a network fetch, which is refusing what cannot be verified.
 -- Both are checks on the pin and neither is a check on the host.

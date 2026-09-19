@@ -51,7 +51,7 @@ one you mean instead.
 
 ## What `verify` does
 
-Fetches every pinned artifact back through `registry.fetch` into a fresh cache
+Fetches every pinned artifact back through `controlbun.fetch` into a fresh cache
 directory, so it is a real download and not a reread of bytes this machine
 already has. Then three checks: the bytes are byte identical to the file in this
 tree, they satisfy the row's sha256, shape and dtype, and

@@ -1,6 +1,6 @@
 """A registry for activation-steering artifacts.
 
-    from registry import load, compare, claimants, namespace
+    from controlbun import load, compare, claimants, namespace
 
 A submission is `author/model_id/label@version`, and the model is part of what it
 is rather than an attribute of it: one author holding one label on two models

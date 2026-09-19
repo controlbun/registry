@@ -6,7 +6,7 @@ a score is reportable or uninterpretable or simply absent, and what each pair of
 claimants does and does not share. A template that receives `score_state` cannot
 accidentally print a bare number, because it never receives the number.
 
-    .venv/bin/python -m registry.export --db registry.db
+    .venv/bin/python -m controlbun.export --db registry.db
 """
 
 from __future__ import annotations
@@ -456,7 +456,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", default=str(ROOT / "registry.db"))
     ap.add_argument(
-        "--out", default=str(ROOT / "astro" / "src" / "data" / "registry.json")
+        "--out", default=str(ROOT / "astro" / "src" / "data" / "controlbun.json")
     )
     args = ap.parse_args()
 

@@ -30,7 +30,7 @@
 --
 -- **What the column holds.** The digest of the whole file, header included, not
 -- of the tensor payload. The file is what gets fetched, cached and handed to a
--- parser, so the file is what has to be identified. `registry.artifact.sort_header`
+-- parser, so the file is what has to be identified. `controlbun.artifact.sort_header`
 -- exists so that is a stable quantity: safetensors serializes its header out of a
 -- randomly seeded HashMap, and without the rewrite the same tensor written twice
 -- produces two digests.

@@ -17,8 +17,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import db
-from registry import comparison, views  # noqa: E402
+from controlbun import db
+from controlbun import comparison, views  # noqa: E402
 
 
 @pytest.fixture(scope="module")

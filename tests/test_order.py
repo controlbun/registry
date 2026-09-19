@@ -17,7 +17,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import db, order  # noqa: E402
+from controlbun import db, order  # noqa: E402
 
 NOW = datetime(2026, 9, 12, 12, 0, tzinfo=timezone.utc)
 
@@ -121,7 +121,7 @@ def test_unknown_ordering_leaves_rows_alone_rather_than_raising(conn):
 
 def test_ordering_reads_no_eval_result():
     """Invariant 4, at the level of this module rather than by grep."""
-    source = (ROOT / "src" / "registry" / "order.py").read_text()
+    source = (ROOT / "src" / "controlbun" / "order.py").read_text()
     code = "\n".join(
         line for line in source.splitlines()
         if not line.lstrip().startswith("#")

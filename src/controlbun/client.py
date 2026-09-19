@@ -50,7 +50,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = ROOT / "registry.db"
 
 
-# A bare label handed to `load`. Defined in `registry.ref`, next to the split
+# A bare label handed to `load`. Defined in `controlbun.ref`, next to the split
 # that raises it, and re-exported here unchanged: it was this module's name
 # first, `registry/__init__.py` publishes it, and the tests catch
 # `client.BareLabelError`. One class, two spellings of the same import.
@@ -221,7 +221,7 @@ class Submission:
         """What arrived against what was recorded, then the tensor it holds.
 
         One line of work now, because the comparison moved to
-        `registry.artifact` where the write path can reach it too. It used to be
+        `controlbun.artifact` where the write path can reach it too. It used to be
         written out here, and a second copy of it appeared on the write path the
         moment there was one, which is how `pairwise` and the two `<head>`
         blocks went. What this method still owns is the question only the reader
@@ -323,7 +323,7 @@ class ClaimEvidence:
 class NamespaceClaim:
     """An account bound to a namespace, on dated evidence.
 
-    Named in full rather than `Claim`, because `registry.artifact.Claim` is
+    Named in full rather than `Claim`, because `controlbun.artifact.Claim` is
     already what a writer asserts about a tensor and the two have nothing to do
     with each other.
 
@@ -394,7 +394,7 @@ def _connect(database: str | Path | None) -> sqlite3.Connection:
 def _parse(ref: str) -> _ref.Parsed:
     """Split `author/model_id/label@version`, or the short form without a model.
 
-    The rule is in `registry.ref` and not repeated here: first segment is the
+    The rule is in `controlbun.ref` and not repeated here: first segment is the
     author, last is the label, everything between is the model. A bare label is
     refused at the split rather than later, because there is nothing downstream
     that could answer it.

@@ -9,7 +9,7 @@ author runs himself and the other three are not.
     record   write `artifact_repo`, `artifact_commit`, `artifact_host` and
              `artifact_url_template` onto the rows, so `fetch.resolve` takes the
              remote branch instead of the local file.
-    verify   fetch it back through `registry.fetch` with an empty cache and
+    verify   fetch it back through `controlbun.fetch` with an empty cache and
              check the bytes against the local file and against the row.
 
 **The author's namespace, never `controlbun/*`.** `artifact_repo` records where
@@ -45,7 +45,7 @@ pushes to the Hub, and they are defaults rather than knowledge: `--host` and
 `--url-template` record a pin on GitHub, or anywhere else, without a line of
 code changing.
 
-**Resolving a branch to a commit lives here rather than in `registry.fetch`.**
+**Resolving a branch to a commit lives here rather than in `controlbun.fetch`.**
 That module says in its own docstring that it does not resolve a branch or a
 tag, and a helper sitting next to it that did would be one refactor away from
 being wired into the read path. Asking the Hub what `main` points at right now,
@@ -69,10 +69,10 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import artifact, client, db, fetch  # noqa: E402
+from controlbun import artifact, client, db, fetch  # noqa: E402
 # Aliased because `ref` is already a field name on `Item` in this module.
-from registry import ref as registry_ref  # noqa: E402
-from registry.artifact import local_path  # noqa: E402
+from controlbun import ref as registry_ref  # noqa: E402
+from controlbun.artifact import local_path  # noqa: E402
 
 # The pin record. Tracked, because it is the only durable copy of the commit.
 PINS = HERE / "published.json"
@@ -151,7 +151,7 @@ def apply_pins(conn, path: Path = PINS) -> list[tuple[str, str, str]]:
     written: list[tuple[str, str, str]] = []
     for rel, pin in sorted(read_pins(path).items()):
         repo = pin["repo"]
-        # The one rule about what a pin may be, stated in `registry.fetch` and
+        # The one rule about what a pin may be, stated in `controlbun.fetch` and
         # reused here rather than restated. A branch name in this file is
         # refused at build time, which is the earliest anything reads it.
         commit = fetch.commit_sha(pin["commit"])
