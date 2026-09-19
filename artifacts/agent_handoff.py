@@ -385,12 +385,26 @@ author's own namespace and records the commit it made.
 Hub.
 
 **artifact_url_template** How `{host}`, `{repo}`, `{commit}` and `{path}` become
-a URL that returns the file's bytes. A template may use any of the four or none
-of them. Do not guess this: fetch the URL you are about to give and check that
+a URL that returns the file's bytes. Droppable, and dropping it means the Hub's
+layout.
+
+**The commit has to end up in the URL, and that is the only shape rule.** A
+template that resolves to a URL not containing the commit is refused, because
+such a URL returns whatever is at that address today, and a pin to whatever is
+there today is the thing `author/label@version` promises not to be. You can
+leave out any of the other three: hard-coding the host in the template is
+normal, and the GitHub media layout below does exactly that. Two further
+mechanical rules, so they do not surprise you: the scheme has to be http or
+https, and each placeholder has to be a bare `{name}` with no format spec and
+no attribute access.
+
+Do not guess the rest of it: fetch the URL you are about to give and check that
 what comes back is the artifact rather than a redirect page or a git-LFS pointer
 file, and say that you checked. GitHub needs two different layouts depending on
-whether the file is LFS-tracked, and the wrong one returns 404 or a 130-byte
-pointer rather than an error. Droppable, and dropping it means the Hub's layout.
+whether the file is LFS-tracked. For one repo, one commit and one path, the
+media host returns the object and `raw` returns a small text pointer beginning
+`version http`, and neither is an error, so only fetching tells you which layout
+your author's file needs.
 
 The file itself goes in as safetensors, holding exactly one tensor. A file
 holding several is refused, because nothing can tell which one is the artifact.
@@ -475,10 +489,17 @@ def prompt(observed: dict[str, list[str]] | None = None) -> str:
     is autocomplete in prose, and every field is open with or without it.
     """
     parts = [_HEAD]
-    lines = [
-        f"{field}: " + ", ".join(values)
-        for field, values in sorted((observed or {}).items()) if values
-    ]
+    # `observed` is keyed by the form's `data-field` names, and this document
+    # asks for the schema's. They differ for everything the form splits across
+    # link and bytes mode, so `link_host` would appear here under a name that
+    # appears nowhere else in the prompt and that the template does not use. One
+    # field with two spellings in one document is a question somebody has to
+    # stop and resolve, so it is translated back here rather than explained.
+    said_as = {form: spec.name for spec in SPECS for form in spec.form}
+    lines = sorted(
+        f"{said_as.get(field, field)}: " + ", ".join(values)
+        for field, values in (observed or {}).items() if values
+    )
     if lines:
         parts.append(_OBSERVED_HEAD + "\n" + "\n".join(lines) + "\n")
     # The template goes last and nothing follows it, because the thing being

@@ -501,3 +501,32 @@ def test_the_prompt_warns_that_artifact_path_is_not_a_local_path():
     template = text.split("=== BEGIN CONTROLBUN SUBMISSION ===")[1]
     line = [l for l in template.splitlines() if l.startswith("artifact_path:")]
     assert line and "not a local path" in line[0]
+
+
+def test_the_corpus_section_uses_the_names_the_template_uses():
+    """One field, one spelling, in one document.
+
+    `intake.suggestions` is keyed by the form's `data-field` names, and the
+    prompt asks for the schema's. They differ wherever the form splits a field
+    across link and bytes mode, so passing the query through raw put `link_host`
+    in a document whose template says `artifact_host`.
+    """
+    observed = {"link_host": ["github.com"],
+                "link_url_template": ["https://{host}/{repo}/{commit}/{path}"],
+                "kind": ["direction"]}
+    text = handoff.prompt(observed)
+    assert "artifact_host: github.com" in text
+    assert not [l for l in text.splitlines() if l.startswith("link_")]
+
+
+def test_the_prompt_does_not_promise_a_template_can_drop_the_commit():
+    """`fetch.pinned_url` refuses a template whose URL does not carry the
+    commit, so a prompt saying otherwise sends an agent to a refusal."""
+    from registry import fetch
+    text = handoff.prompt()
+    assert "commit has to end up in the url" in text.lower()
+    assert "any of the four or none" not in text
+    # And the rule the prompt now states is the one the code applies.
+    with pytest.raises(fetch.FetchError):
+        fetch.pinned_url(host="h", repo="a/b", commit="b" * 40, path="p",
+                         url_template="https://{host}/{repo}/{path}")
