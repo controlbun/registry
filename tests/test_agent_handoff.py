@@ -530,3 +530,45 @@ def test_the_prompt_does_not_promise_a_template_can_drop_the_commit():
     with pytest.raises(fetch.FetchError):
         fetch.pinned_url(host="h", repo="a/b", commit="b" * 40, path="p",
                          url_template="https://{host}/{repo}/{path}")
+
+
+def test_an_unclosed_block_is_named_as_the_cause_not_the_symptom():
+    """A `<<<` with no `>>>` eats every field after it.
+
+    That arrived as "the schema cannot write a row without intervention_id,
+    kind, model_id, ...", which is true, useless, and points at the wrong end
+    of the paste: the agent wrote all seven and one missing marker ate them.
+    """
+    body = (
+        "author: a\nlabel: l\nversion: v\n"
+        "created_at: 2026-01-01T00:00:00+00:00\n"
+        "definition: <<<\n"
+        "Prose with a colon in it. Estimator: something.\n"
+        "intervention_id: iv1\nkind: direction\nmodel_id: m/x\n"
+        "layer: 3\nlayer_convention: block-0indexed\nhook_point: resid_post\n"
+        "artifact_path: v/d.safetensors\n"
+    )
+    with pytest.raises(handoff.Refused) as refused:
+        handoff.received(block(body))
+    said = str(refused.value)
+    assert "nothing closed it" in said
+    assert ">>>" in said, "the fix has to be in the sentence"
+    assert "intervention_id" in said and "hook_point" in said
+    # The author's own prose is not reported back as a missing field.
+    assert "Estimator" not in said
+    # And it is the cause, not the downstream count.
+    assert "schema cannot write a row" not in said
+
+
+def test_closing_the_block_is_all_it_takes():
+    body = (
+        "author: a\nlabel: l\nversion: v\n"
+        "created_at: 2026-01-01T00:00:00+00:00\n"
+        "definition: <<<\nProse with a colon in it. Estimator: something.\n>>>\n"
+        "intervention_id: iv1\nkind: direction\nmodel_id: m/x\n"
+        "layer: 3\nlayer_convention: block-0indexed\nhook_point: resid_post\n"
+        "artifact_path: v/d.safetensors\n"
+    )
+    out = handoff.received(block(body))
+    assert out["fields"]["intervention_id"] == "iv1"
+    assert "Estimator: something." in out["fields"]["definition"]

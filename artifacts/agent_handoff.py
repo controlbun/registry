@@ -654,7 +654,7 @@ def _pairs(lines: list[str]) -> tuple[list[tuple[str, str]], list[str]]:
             if not value:
                 n += 1
                 value = OPEN_BLOCK
-            body, n = _gather(lines, n, fenced=value == OPEN_BLOCK)
+            body, n = _gather(lines, n, fenced=value == OPEN_BLOCK, key=key)
             pairs.append((key, body))
             continue
 
@@ -689,12 +689,21 @@ def _unquote(key: str, value: str) -> tuple[str, str]:
     return key, value.strip()
 
 
-def _gather(lines: list[str], n: int, *, fenced: bool) -> tuple[str, int]:
+def _gather(lines: list[str], n: int, *, fenced: bool, key: str = "") -> tuple[str, int]:
     """A multi-line value from `n` on: to the closing marker, or while indented.
 
     Nothing is peeled inside a fenced body. A definition is prose and its
     asterisks, backticks and leading dashes are the author's.
+
+    **An unclosed block is refused here rather than downstream.** A `<<<` with
+    no `>>>` runs to the end of the submission and eats every field after it,
+    and what arrives at the caller is a row missing everything below the
+    definition. That reported as seven required fields being absent, which is
+    true, useless, and points at the wrong end of the paste: the author's agent
+    wrote all seven and one missing marker ate them. Said here because this is
+    the only place that knows the block never closed.
     """
+    opened = n
     body: list[str] = []
     while n < len(lines):
         raw = lines[n]
@@ -714,6 +723,28 @@ def _gather(lines: list[str], n: int, *, fenced: bool) -> tuple[str, int]:
             break
         body.append(_peel(raw).strip())
         n += 1
+    else:
+        if fenced:
+            # Only names this form knows. A definition is prose and its prose
+            # has colons in it, so every "Estimator:" and "On verdicts:" inside
+            # the swallowed block matches the key pattern too. Listing those
+            # back would bury the seven that matter in the author's own
+            # sentences.
+            known = {spec.name for spec in SPECS}
+            known.update(alias for spec in SPECS for alias in spec.aliases)
+            known.add("not-found")
+            eaten = sorted({
+                m.group(1) for line in lines[opened:]
+                if (m := _KEY_RX.match(line)) and m.group(1) in known
+            })
+            raise Refused(
+                f"{key or 'a value'} opened with {OPEN_BLOCK} and nothing "
+                f"closed it, so it ran to the end of the submission and took "
+                f"everything after it with it"
+                + (f", including {', '.join(eaten)}" if eaten else "")
+                + f". Put {CLOSE_BLOCK} on a line of its own where the value "
+                "ends. Nothing else about the paste is wrong."
+            )
     return "\n".join(body).strip("\n").rstrip(), n
 
 
