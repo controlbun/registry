@@ -7,6 +7,7 @@ that nobody edited the fixture file.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -17,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from registry import db
-from registry import comparison  # noqa: E402
+from registry import comparison, views  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -99,3 +100,48 @@ def test_everything_in_the_corpus_is_flagged_synthetic(conn):
             f"{table} holds a row not marked synthetic; fixtures must never be "
             "mistakable for measurements"
         )
+
+
+def test_confound_axes_belong_to_the_artifact_not_to_its_author():
+    """A page may not claim a measurement that was taken on something else.
+
+    Two real faults, one inside the other. `claimant_view` read confound axes
+    with `SELECT ... FROM eval_suite WHERE author = ?`, so every submission by
+    an author inherited the axes of every suite that author had ever written:
+    `soham/trauma`, which has no confound data of any kind, rendered four axes
+    borrowed from `soham/pro-human` on another label and another model.
+
+    Joining through `eval_report` fixed the borrowing and left the subtler one.
+    A suite declares a battery and a report says what was run, and
+    `soham/pro-human@L24` has a report from a four-axis suite with a null
+    `confound_json`, because that battery was only ever run at layer 32. So an
+    axis counts as checked when this artifact's own report carries a number
+    for it, and not before.
+    """
+    conn = db.connect(ROOT / "registry.db")
+    try:
+        rows = conn.execute(
+            "SELECT * FROM submission").fetchall()
+        for row in rows:
+            view = views.claimant_view(conn, row)
+            measured: set[str] = set()
+            iv = conn.execute(
+                "SELECT id FROM intervention WHERE author=? AND label=? AND version=?",
+                (row["author"], row["label"], row["version"]),
+            ).fetchone()
+            if iv:
+                for r in conn.execute(
+                    "SELECT e.confound_json FROM eval_report e"
+                    " JOIN eval_suite s ON s.id = e.eval_suite_id"
+                    " WHERE e.intervention_id=? AND s.author=?",
+                    (iv["id"], row["author"]),
+                ):
+                    if r["confound_json"]:
+                        measured.update(json.loads(r["confound_json"]))
+            assert set(view["axes"]) == measured, (
+                f"{row['author']}/{row['label']}@{row['version']} lists axes "
+                f"{sorted(view['axes'])} and its own reports measured "
+                f"{sorted(measured)}"
+            )
+    finally:
+        conn.close()

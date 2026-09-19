@@ -63,12 +63,78 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         for r in reports
         if r["evaluator"] != row["author"]
     ]
+    # Which axes were checked **on this artifact**, reached through the reports
+    # that actually point at it.
+    #
+    # This selected on `author` alone, which is a different question and a
+    # damaging one to answer by accident: it handed every submission by an
+    # author the axes from every suite that author had ever written. A real
+    # submission with no confound data at all rendered "Confound axes checked:
+    # approach, approach_probe, length_independent, valence", borrowed from the
+    # same author's unrelated work on another label and another model, two
+    # lines above a caption correctly saying no axes were checked.
+    #
+    # A page claiming a measurement nobody took is the one failure this project
+    # cannot absorb, and an author's own name is the last join anybody would
+    # think to distrust. `eval_report` is what ties a suite to an intervention,
+    # so that is the path, and an artifact nobody evaluated gets an empty list
+    # rather than somebody else's.
+    # **A suite declares a battery; a report says what was actually run.** So
+    # the axes read off the results, not off the suite: an axis is checked for
+    # this artifact when this artifact's own report carries a number for it.
+    #
+    # Two ways the old query was wrong and the second survived the first fix.
+    # It selected on `author` alone, so every submission by an author borrowed
+    # the axes of every suite that author had ever written, and a real
+    # submission with no confound data rendered four axes lifted from the same
+    # author's unrelated work on another label and another model. Joining
+    # through `eval_report` fixed that and left this: `soham/pro-human@L24` has
+    # a report from a suite declaring four axes and a `confound_json` of null,
+    # because the arena ran that battery on the layer-32 directions only. The
+    # suite's declaration is a statement of intent and reading it as a result
+    # is the same fabrication one step further in.
+    #
+    # An author's own name is the last join anybody thinks to distrust, and a
+    # page claiming a measurement nobody took is the one failure this project
+    # cannot absorb.
+    #
+    # **The author filter is the third correction and it is not the first one
+    # in reverse.** `BRIEF.md` says the informative cell is the asymmetry in
+    # which axes *each author checked*, so somebody else's independent report
+    # on this artifact is not this author's diligence and does not belong in
+    # this list. Carol measuring `length` on alice's vector is a real
+    # measurement, it belongs on the page, and it belongs under carol's name in
+    # `verifications` where it already is. Counting it here would say alice
+    # checked an axis she did not, which is the same sentence as the bug above
+    # with a friendlier cause.
     axes: list[str] = []
-    for r in conn.execute(
-        "SELECT confound_axes_json FROM eval_suite WHERE author=?", (row["author"],)
-    ):
-        if r["confound_axes_json"]:
-            axes.extend(json.loads(r["confound_axes_json"]))
+    if iv:
+        for r in conn.execute(
+            "SELECT e.confound_json FROM eval_report e"
+            " JOIN eval_suite s ON s.id = e.eval_suite_id"
+            " WHERE e.intervention_id = ? AND s.author = ?",
+            (iv["id"], row["author"]),
+        ):
+            if r["confound_json"]:
+                axes.extend(json.loads(r["confound_json"]))
+
+    # Why a field has no value, in the words of whoever looked for it. Keyed by
+    # the column it is about, an open string with nothing enumerating which
+    # names it may take: see `schema/migrations/008`.
+    #
+    # Empty for almost every row and that is not a lesser state. No reason
+    # recorded renders exactly as it rendered before 008 existed, which is the
+    # field saying absent and saying nothing else. What this carries is the
+    # other case: an absence somebody looked for and accounted for, which is
+    # the difference between a cell a reader can act on and an empty one.
+    absences = {
+        r["field"]: r["reason"]
+        for r in conn.execute(
+            "SELECT field, reason FROM intervention_absence"
+            " WHERE intervention_id = ? ORDER BY field",
+            (iv["id"],),
+        )
+    } if iv else {}
 
     # Optional by design. A published vector whose procedure was never written down
     # is still a submission, and its absence renders as absence rather than as a
