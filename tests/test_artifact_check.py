@@ -29,7 +29,7 @@ from safetensors.numpy import save
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from registry import client, db, fetch  # noqa: E402
+from registry import artifact, client, db, fetch  # noqa: E402
 
 
 @pytest.fixture
@@ -137,3 +137,26 @@ def test_a_submission_with_nothing_recorded_says_so(conn, monkeypatch):
     object.__setattr__(sub, "_served_repo", None)
     with pytest.raises(client.NotFound, match="no artifact attached"):
         sub.vector()
+
+
+def test_shape_notation_is_not_a_disagreement():
+    """`[8192]` and `(8192,)` are one shape written two ways.
+
+    `Facts` spells it the way safetensors does and a person reading their own
+    record spells it the way numpy does. Comparing the strings made bracket
+    style produce the sentence "the artifact and the record have come apart",
+    which is a serious claim to make about a comma.
+    """
+    facts = artifact.Facts(shape="[8192]", dtype="float32", l2_norm=1.0,
+                           sha256="0" * 64, size=1)
+    for same in ("[8192]", "(8192,)", "8192", " [ 8192 ] "):
+        assert artifact.disagreements(artifact.Claim(shape=same), facts) == [], \
+            f"{same!r} is the same shape as [8192]"
+
+
+def test_a_real_shape_difference_still_disagrees():
+    facts = artifact.Facts(shape="[8192]", dtype="float32", l2_norm=1.0,
+                           sha256="0" * 64, size=1)
+    for different in ("[4096]", "(8192, 2)", "[]", "not a shape"):
+        assert artifact.disagreements(artifact.Claim(shape=different), facts), \
+            f"{different!r} is not the same shape as [8192]"

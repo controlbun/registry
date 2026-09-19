@@ -325,7 +325,20 @@ held to it and the row keeps what you said, which is worth more than a number
 derived from the bytes it is being compared against: state them when they are
 cited from your author's own record, the paper, or the extraction output. State
 nothing and the row records what the file says. Saying nothing is not a wrong
-claim. `sha256` is the digest of the whole file, header included.
+claim, and for a first submission it is usually the better answer.
+
+`shape` is compared as the numbers in it, so `[8192]` and `(8192,)` are the
+same answer and neither is wrong.
+
+**`sha256` is the one to leave out unless you know it survives.** It is the
+digest of the whole file, header included, and the intake tool rewrites the
+header with its keys sorted before it records anything, because safetensors
+seeds its header order per process and a file that does not reproduce byte for
+byte makes every digest in this registry meaningless. So the digest the row
+ends up with is of the file the tool wrote, and the digest your author recorded
+for the file they exported will not match it unless their export was already
+sorted. That is a difference in byte order, not in the tensor, and stating a
+digest is the one way to turn it into a refusal.
 
 **activation_norm** The typical residual norm at that layer, and only if the
 author's coefficients are expressed as a fraction of activation magnitude. If

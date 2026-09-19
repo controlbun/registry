@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -253,6 +254,25 @@ def facts_of(tensor, *, sha256: str | None = None,
     )
 
 
+def _dims(shape: str) -> tuple[int, ...] | str:
+    """A shape string as the numbers in it, so notation is not a disagreement.
+
+    A shape is a list of integers and every way of writing one down means the
+    same thing. `Facts` records `[8192]`, because that is how safetensors spells
+    it, and a person reading their own record types `(8192,)`, because that is
+    how Python and numpy spell it. Comparing those as strings makes bracket
+    style a mismatch, and the sentence a mismatch produces says the artifact
+    and the record have come apart, which is a serious claim to make about a
+    comma.
+
+    Unparseable input is returned as the original string rather than coerced,
+    so two things that are not shapes still compare as themselves and nothing
+    is quietly treated as equal to nothing.
+    """
+    found = re.findall(r"-?\d+", shape)
+    return tuple(int(n) for n in found) if found else shape
+
+
 def disagreements(claim: Claim, facts: Facts) -> list[str]:
     """Every field where a claim and a derived fact do not match.
 
@@ -279,7 +299,7 @@ def disagreements(claim: Claim, facts: Facts) -> list[str]:
         )
 
     if claim.shape is not None and facts.shape is not None \
-            and claim.shape != facts.shape:
+            and _dims(claim.shape) != _dims(facts.shape):
         out.append(
             f"recorded as shape {claim.shape} and the bytes hold {facts.shape}. "
             "The artifact and the record have come apart; nothing that reads "
