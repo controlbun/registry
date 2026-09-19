@@ -42,23 +42,34 @@ def _add(conn, author, label, kind, shape, *, layer=12, hook="resid_pre",
          model="placeholder/other-architecture-7b", revision="1" * 40,
          path="fixtures/dana_refusal_v1.safetensors"):
     conn.execute(
-        "INSERT INTO submission (author,label,version,definition,created_at,"
-        "is_synthetic) VALUES (?,?,?,?,?,1)",
-        (author, label, "v1", "d", "2026-09-12T00:00:00Z"),
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
+        (author, model, label, "v1", "d", "2026-09-12T00:00:00Z"),
     )
     conn.execute(
-        "INSERT INTO intervention (id,author,label,version,kind,model_id,"
+        "INSERT INTO intervention (id,author,model_id,label,version,kind,"
         "model_revision,layer,layer_convention,hook_point,shape,dtype,"
         "artifact_path,is_synthetic) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
-        (f"iv_{author}", author, label, "v1", kind, model, revision, layer,
+        (f"iv_{author}", author, model, label, "v1", kind, revision, layer,
          "block-0indexed", hook, shape, "float32", path),
     )
     conn.commit()
 
 
 def cell(conn, label, a, b):
+    """One cell of the matrix, found by whose row and whose column it is.
+
+    The key is a four-part reference since `schema/migrations/010` and this
+    does not spell it out, because one of the cases below is deliberately two
+    authors on two different models and a helper that assumed one model could
+    not ask for it.
+    """
     m = similarity_matrix(conn, label)
-    return m[f"{a}/{label}@v1"][f"{b}/{label}@v1"]
+    def ref_of(author):
+        found = [k for k in m if k.startswith(f"{author}/")]
+        assert len(found) == 1, f"{author} has {len(found)} rows on {label}"
+        return found[0]
+    return m[ref_of(a)][ref_of(b)]
 
 
 def test_a_matrix_shaped_artifact_gets_no_angle(conn):

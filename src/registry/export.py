@@ -16,7 +16,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from . import db, order, views
+from . import db, order, ref, views
 from .comparison import pairwise, similarity_matrix
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -124,6 +124,7 @@ def build(conn: sqlite3.Connection) -> dict:
                     "author": c["author"],
                     "label": c["label"],
                     "version": c["version"],
+                    "ref": c["ref"],
                     "created_at": c["created_at"],
                     "kind": c["kind"],
                     "model_id": c["model_id"],
@@ -157,8 +158,11 @@ def build(conn: sqlite3.Connection) -> dict:
             "pinned_by": r["pinned_by"],
             "pinned_at": r["pinned_at"],
             "purpose": r["purpose"],
-            "target": f"{r['author']}/{r['label']}@{r['version']}",
+            "target": ref.format(
+                r["author"], r["model_id"], r["label"], r["version"]
+            ),
             "author": r["author"],
+            "model_id": r["model_id"],
             "label": r["label"],
             "version": r["version"],
             "alternatives": json.loads(r["alternatives_json"]),
@@ -209,6 +213,7 @@ def build(conn: sqlite3.Connection) -> dict:
             o["submissions"].append({
                 "label": c["label"],
                 "version": c["version"],
+                "ref": c["ref"],
                 "created_at": c["created_at"],
                 "kind": c["kind"],
                 "model_id": c["model_id"],
@@ -268,7 +273,9 @@ def build(conn: sqlite3.Connection) -> dict:
         " WHERE s.author != i.author"
     ):
         owner(r["evaluator"])["evaluations"].append({
-            "subject": f"{r['subject_author']}/{r['label']}@{r['version']}",
+            "subject": ref.format(
+                r["subject_author"], r["model_id"], r["label"], r["version"]
+            ),
             "subject_author": r["subject_author"],
             "label": r["label"],
             "version": r["version"],
@@ -284,7 +291,9 @@ def build(conn: sqlite3.Connection) -> dict:
         " JOIN intervention i ON i.id = a.intervention_id"
     ):
         owner(r["attacker"])["attacks_made"].append({
-            "subject": f"{r['subject_author']}/{r['label']}@{r['version']}",
+            "subject": ref.format(
+                r["subject_author"], r["model_id"], r["label"], r["version"]
+            ),
             "subject_author": r["subject_author"],
             "label": r["label"],
             "version": r["version"],
@@ -295,14 +304,22 @@ def build(conn: sqlite3.Connection) -> dict:
             "disposition": r["attacker_disposition"],
         })
 
+    # `model_id` off the card and not off the artifact since
+    # `schema/migrations/010`: the card names which submission it is about, and
+    # the join is a left join precisely because the artifact row may not be
+    # there. Reading the model through the join would have rendered a card about
+    # a submission with no artifact as a card about no model.
     for r in conn.execute(
-        "SELECT c.*, i.model_id, i.is_synthetic AS subject_synthetic"
+        "SELECT c.*, i.is_synthetic AS subject_synthetic"
         " FROM support_card c"
         " LEFT JOIN intervention i"
-        " ON i.author = c.author AND i.label = c.label AND i.version = c.version"
+        " ON i.author = c.author AND i.model_id = c.model_id"
+        " AND i.label = c.label AND i.version = c.version"
     ):
         owner(r["reporter"])["support_given"].append({
-            "subject": f"{r['author']}/{r['label']}@{r['version']}",
+            "subject": ref.format(
+                r["author"], r["model_id"], r["label"], r["version"]
+            ),
             "subject_author": r["author"],
             "label": r["label"],
             "version": r["version"],

@@ -25,10 +25,13 @@ interface Props {
 }
 const { claimants, modelId, similarity } = Astro.props;
 
-const refOf = (c) => `${c.author}/${c.label}@${c.version}`;
-
+// The reference comes off the payload. It is built in `registry/views.py`
+// through the one module that owns the format, because a fourth spelling of
+// `author/model/label@version` in a template is a fourth chance to print a
+// reference that does not resolve, and the similarity matrix is keyed by the
+// Python one.
 const rows = claimants.map((c) => ({
-  ref: refOf(c),
+  ref: c.ref,
   author: c.author,
   label: c.label,
   version: c.version,

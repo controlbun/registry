@@ -37,7 +37,7 @@ ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(HERE))
 
-from registry import artifact, db  # noqa: E402
+from registry import artifact, db, ref  # noqa: E402
 from registry.artifact import local_path  # noqa: E402
 from publish import PinError, apply_pins  # noqa: E402
 from source import COMMIT, DIRECTIONS, REPO  # noqa: E402
@@ -225,20 +225,20 @@ def seed(conn) -> None:
         facts = confirmed_facts(rel)
 
         ex(
-            "INSERT INTO submission (author,label,version,definition,created_at,"
-            "is_synthetic) VALUES (?,?,?,?,?,0)",
-            (AUTHOR, LABEL, version, DEFINITION, EXTRACTED[version]),
+            "INSERT INTO submission (author,model_id,label,version,definition,"
+            "created_at,is_synthetic) VALUES (?,?,?,?,?,?,0)",
+            (AUTHOR, MODEL, LABEL, version, DEFINITION, EXTRACTED[version]),
         )
 
         ex(
-            "INSERT INTO intervention (id,author,label,version,kind,model_id,"
+            "INSERT INTO intervention (id,author,model_id,label,version,kind,"
             "model_revision,layer,layer_convention,hook_point,shape,dtype,"
             "l2_norm,activation_norm,coeff_low,coeff_high,steering_position,"
             "license_status,chat_template_hash,artifact_path,artifact_sha256,"
             "is_synthetic)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)",
             (
-                f"iv_soham_{version}", AUTHOR, LABEL, version, "direction", MODEL,
+                f"iv_soham_{version}", AUTHOR, MODEL, LABEL, version, "direction",
                 # Not recorded. The extraction ran against whatever NDIF was
                 # serving and the script captured an empty model_build. See
                 # schema/migrations/005.
@@ -269,11 +269,11 @@ def seed(conn) -> None:
         )
 
         ex(
-            "INSERT INTO recipe (id,author,label,version,profile,payload_json,"
-            "entrypoint_library,entrypoint_version,container_digest,theory)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO recipe (id,author,model_id,label,version,profile,"
+            "payload_json,entrypoint_library,entrypoint_version,"
+            "container_digest,theory) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
-                f"rc_soham_{version}", AUTHOR, LABEL, version,
+                f"rc_soham_{version}", AUTHOR, MODEL, LABEL, version,
                 "soham/arena-contrast-v1",
                 json.dumps({
                     "estimator": version,
@@ -361,13 +361,19 @@ def seed(conn) -> None:
     # within the season stayed commensurable, which is the textbook case for
     # pinning and the opposite of designation as long as it stays visible.
     ex(
-        "INSERT INTO pin (id,pinned_by,pinned_at,purpose,author,label,version,"
-        "alternatives_json,rationale) VALUES (?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO pin (id,pinned_by,pinned_at,purpose,author,model_id,label,"
+        "version,alternatives_json,rationale) VALUES (?,?,?,?,?,?,?,?,?,?)",
         ("pin_arena_s2", "steering-arena", EXTRACTED["L24"],
          "Season 2 scoring target, frozen so player scores within the season are "
          "commensurable",
-         AUTHOR, LABEL, "L24",
-         json.dumps([f"{AUTHOR}/{LABEL}@{v}" for v in VERSIONS if v != "L24"]),
+         AUTHOR, MODEL, LABEL, "L24",
+         # Each alternative names its model, because the choice was made between
+         # four takes on one model and a reference that omits the model does not
+         # say that.
+         json.dumps([
+             ref.format(AUTHOR, MODEL, LABEL, v)
+             for v in VERSIONS if v != "L24"
+         ]),
          "Chosen at the time from a five-layer sweep whose held-out separation "
          "was 1.000 at every layer, so separation could not pick one. Not a "
          "claim that layer 24 is the right layer; a claim that the season needed "

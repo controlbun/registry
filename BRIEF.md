@@ -148,11 +148,11 @@ premise sound more radical than it is.
 The arena needs the second and must not claim the first. It freezes a `d` per
 season because scores across players have to be commensurable, the same way one
 pins a model revision or a judge model. Every season should declare
-`d = author/label@version`, immutable for the season, chosen and cited, with the
-alternatives it was picked over visible. A season page saying "the pro-human
-direction" is doing the thing the premise rejects. A season page saying "this
-season uses `soham/pro-human@v2`, over these three alternatives, for these reasons"
-is doing the registry's work.
+`d = author/model_id/label@version`, immutable for the season, chosen and cited,
+with the alternatives it was picked over visible. A season page saying "the
+pro-human direction" is doing the thing the premise rejects. A season page saying
+"this season uses `soham/allenai/Olmo-3-1125-32B/pro-human@meandiff`, over these
+three alternatives, for these reasons" is doing the registry's work.
 
 So, precisely:
 
@@ -194,12 +194,28 @@ A submission is self-contained and internally consistent. It does not have to be
 consistent with anyone else's. What it must be is *legible*: enough declared
 metadata that another submission can be compared against it mechanically.
 
+**A submission is identified by author, model, label and version, in that
+order.** `soham/allenai/Olmo-3-1125-32B/pro-human@meandiff`. The model is part of
+what a submission *is* rather than an attribute hanging off it, because a vector
+is a tensor in one model's residual basis and a `kindness` direction for one model
+does nothing for another. One author holding one label on several models holds
+several submissions; none supersedes the others and none is the real one. The
+model id is the full distributor-and-name string the extraction loaded, and is an
+open string like everything else here: a model with no distributor is a single
+segment and parsing recovers the model as everything between the author and the
+label rather than by counting them.
+
+**This widens an identity and adds nothing else.** Not a filter, not an ordering,
+not a facet that ranks. The same label on two models is two submissions that both
+stand, exactly like two authors on one label.
+
 **Submissions are versioned and immutable, and the version is what a pin targets.**
-`soham/kindness@v2` resolves to exactly one frozen submission forever. An author
-revising after an attack publishes `@v3`; `@v2` stays fetchable, because a season
-or a paper that pinned it must keep resolving. Without this, pinning is not
-possible and every citation rots. Superseded versions stay visible and link
-forward, since the revision history is part of the evidence.
+`soham/allenai/Olmo-3-1125-32B/pro-human@meandiff` resolves to exactly one frozen
+submission forever. An author revising after an attack publishes a new version;
+the old one stays fetchable, because a season or a paper that pinned it must keep
+resolving. Without this, pinning is not possible and every citation rots.
+Superseded versions stay visible and link forward, since the revision history is
+part of the evidence. A take on another model is not a revision of this one.
 
 **Recipe**, how the intervention was produced. Versioned, belongs to a submission,
 **optional**.
@@ -447,9 +463,12 @@ Deliberately narrow:
   eval chart.
 - **Falsifier from the first artifact.** Port `_falsifier/verify.py`. Every number
   on an artifact page re-derives from raw data or CI fails.
-- **Python client from day one.** `load("soham/kindness", model="olmo-3-32b")`
-  returning an object that plugs into `steering-vectors`, `rotalabs-steer`, and raw
-  `nnsight`/HF hooks. Namespaced, because there is no canonical `kindness` to load.
+- **Python client from day one.**
+  `load("soham/allenai/Olmo-3-1125-32B/pro-human@meandiff")` returning an object
+  that plugs into `steering-vectors`, `rotalabs-steer`, and raw `nnsight`/HF
+  hooks. The model is in the reference rather than a keyword argument, because it
+  is part of what the submission is. Namespaced, because there is no canonical
+  `kindness` to load.
   A `compare("kindness")` call returning every claimant is the client-side version
   of the label view. If integration is friction nobody uses it: the client is the
   product, the website is discovery. nnsight first, since that is the stack already

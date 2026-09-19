@@ -62,15 +62,23 @@ def age_hours(created_at: str, now: datetime) -> float:
     return max(delta.total_seconds() / 3600.0, 0.0)
 
 
-def engagement(conn: sqlite3.Connection, author: str, label: str, version: str) -> int:
+def engagement(
+    conn: sqlite3.Connection, author: str, model_id: str, label: str, version: str
+) -> int:
     """How many people other than the author have engaged with this submission.
 
     Evaluations run by someone else plus attacks against it. A real count of real
     rows; when nobody has engaged it is zero, which is a fact rather than a gap.
+
+    Keyed on all four identity columns since `schema/migrations/010`. Without the
+    model this looked up an artifact by three quarters of its key, which returns
+    the first row the database happens to hold when an author claims one label on
+    two models: the wrong artifact's scrutiny, attributed silently.
     """
     iv = conn.execute(
-        "SELECT id FROM intervention WHERE author=? AND label=? AND version=?",
-        (author, label, version),
+        "SELECT id FROM intervention"
+        " WHERE author=? AND model_id=? AND label=? AND version=?",
+        (author, model_id, label, version),
     ).fetchone()
     if iv is None:
         return 0
@@ -128,7 +136,9 @@ def apply_order(
     if key == ORDER_TRENDING:
         def weight(r: sqlite3.Row) -> float:
             return trending_score(
-                engagement(conn, r["author"], r["label"], r["version"]),
+                engagement(
+                    conn, r["author"], r["model_id"], r["label"], r["version"]
+                ),
                 age_hours(r["created_at"], now),
             )
         return sorted(rows, key=weight, reverse=True)

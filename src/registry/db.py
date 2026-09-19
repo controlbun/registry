@@ -50,11 +50,16 @@ def claimants(conn: sqlite3.Connection, label: str) -> list[sqlite3.Row]:
     Returns all of them, in insertion order, with no sort applied. A bare label is
     a view across everyone claiming it, not a lookup that yields one answer, so
     ordering is the caller's explicit choice and never this function's default.
+
+    Across models, and `model_id` comes back on every row because it is part of
+    what each submission is since `schema/migrations/010`. Not filtered by model
+    here: a label narrowed to one model is a different view and the caller asks
+    for it by name, on the model's own page.
     """
     return list(
         conn.execute(
-            "SELECT author, label, version, definition, created_at, superseded_by,"
-            " is_synthetic FROM submission WHERE label = ?",
+            "SELECT author, model_id, label, version, definition, created_at,"
+            " superseded_by, is_synthetic FROM submission WHERE label = ?",
             (label,),
         )
     )

@@ -25,9 +25,9 @@ it.
 Separate the two senses of "canonical" before flagging anything:
 
 - **Designating** is the registry asserting one entry is the right one. Rejected.
-- **Pinning** is a consumer freezing `author/label@version` for one purpose so its
-  own numbers are comparable. Ordinary experimental control. Fine, and required.
-  Arena seasons pin. Model revisions and judge models pin.
+- **Pinning** is a consumer freezing `author/model_id/label@version` for one
+  purpose so its own numbers are comparable. Ordinary experimental control. Fine,
+  and required. Arena seasons pin. Model revisions and judge models pin.
 
 A pin must be named, cited and contestable. If the pin is invisible or presented as
 the answer rather than a choice, it has become a designation.
@@ -100,6 +100,8 @@ design. Tests that fail the build:
   ordering is ever derived from an eval result: trait, coherence, transfer and
   necessity scores are never sort keys
 - Any label namespace permits an unlimited number of claimants
+- A submission's key names its model, and no ordering is ever derived from
+  `model_id`. The model is identity, not a rank of model families
 - No ordering derives from whether an artifact is published anywhere. Having a
   URL is a fact about what the author did with the bytes, not a quality of the
   submission, and most rows will not have one. It is a filter a reader applies,
@@ -147,8 +149,18 @@ reading explicitly, as a role rather than as a disclaimer.
 - **Label**, namespaced `author/label`, free to claim, carries the author's own
   definition. A bare label is a computed view across claimants, owned by nobody.
   `interprets:` and `distinguishes-from:` pointers let taxonomy emerge from claims.
-- **Submission**, the primary object. One author's complete take, versioned and
-  immutable. `author/label@version` resolves to one frozen submission forever.
+- **Submission**, the primary object. One author's complete take **on one
+  model**, versioned and immutable. `author/model_id/label@version` resolves to
+  one frozen submission forever: `soham/allenai/Olmo-3-1125-32B/pro-human@meandiff`.
+  The model is part of the identity because an intervention is a tensor in one
+  model's residual basis, so one author holding one label on several models holds
+  several submissions and all of them stand. Parsing takes the first segment as
+  the author and the last as the label, so a model id of any depth sits in the
+  middle and `gpt2` with no distributor works. The short `author/label@version`
+  still resolves while it names one submission and raises naming the alternatives
+  when it names more. **This is identity and nothing else.** It is not a filter,
+  not an ordering and not a facet that ranks, and nothing may read as one model's
+  directions being the real ones.
 - **Recipe**, optional. Declares a namespaced versioned `profile` plus a payload,
   plus a pinned entrypoint and container digest. Never a method list.
 - **Intervention**, the artifact. Open `kind`, model id plus revision, layer with

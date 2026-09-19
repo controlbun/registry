@@ -77,9 +77,20 @@ def test_compare_applies_no_ordering(database):
 
 
 def test_a_pinned_reference_resolves_to_exactly_one(database):
+    """And the reference it hands back names the model.
+
+    Four parts since `schema/migrations/010`. `alice/kindness@v1` is the
+    short form and still resolves, because alice claims that label on one
+    model; what comes back is the full reference, which is what a reader
+    should paste into a paper.
+    """
     sub = load("alice/kindness@v1", database=database)
-    assert sub.ref == "alice/kindness@v1"
+    assert sub.ref == "alice/placeholder/does-not-resolve-1b/kindness@v1"
     assert sub.author == "alice" and sub.version == "v1"
+    assert sub.model_id == "placeholder/does-not-resolve-1b"
+
+    # And the full form resolves to the same row.
+    assert load(sub.ref, database=database).ref == sub.ref
 
 
 def test_an_unpinned_reference_takes_that_authors_newest(database):

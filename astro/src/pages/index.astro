@@ -519,7 +519,13 @@ const DEFAULT_NEED = "cannot tell whether to trust it";
           <ol>
             {recent.map((s) => (
               <li>
-                <a href={`/${s.author}/${s.model_id}/${s.label}/${s.version}/`}>
+                {/* The link text is the short form because this rail is
+                    narrow and the model is printed under it. The full
+                    four-part reference is the title, so the thing you would
+                    paste into `load()` is one hover away rather than
+                    reconstructed. */}
+                <a href={`/${s.author}/${s.model_id}/${s.label}/${s.version}/`}
+                   title={s.ref}>
                   {s.author}/{s.label}
                 </a>
                 <span class="meta mono">{s.kind} · {s.model_id}</span>

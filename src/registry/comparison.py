@@ -25,9 +25,17 @@ from pathlib import Path
 import numpy as np
 from safetensors.numpy import load_file
 
+from . import ref as _refs
 from .artifact import local_path
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _ref(row) -> str:
+    """One row's reference, through the module that owns the format."""
+    return _refs.format(
+        row["author"], row["model_id"], row["label"], row["version"]
+    )
 
 # A trait score with no coherence measure beside it is not a small effect, it is a
 # broken instrument. Judge-human agreement ran 81% where text held together and 42%
@@ -83,15 +91,26 @@ def _axes(conn: sqlite3.Connection, author: str) -> set[str]:
 def _submissions(conn: sqlite3.Connection, label: str) -> list[sqlite3.Row]:
     return list(
         conn.execute(
-            "SELECT author, label, version FROM submission WHERE label = ?", (label,)
+            "SELECT author, model_id, label, version FROM submission"
+            " WHERE label = ?",
+            (label,),
         )
     )
 
 
-def _intervention(conn: sqlite3.Connection, author: str, label: str, version: str):
+def _intervention(conn: sqlite3.Connection, row: sqlite3.Row):
+    """The artifact for one submission, keyed on all four identity columns.
+
+    Three of the four used to be enough and stopped being enough in
+    `schema/migrations/010`. An author holding one label on two models has two
+    artifacts under the old key, and this returned whichever the database
+    reached first, which is a pair of vectors from different residual bases
+    handed to `np.dot` with nothing saying so.
+    """
     return conn.execute(
-        "SELECT * FROM intervention WHERE author=? AND label=? AND version=?",
-        (author, label, version),
+        "SELECT * FROM intervention"
+        " WHERE author=? AND model_id=? AND label=? AND version=?",
+        (row["author"], row["model_id"], row["label"], row["version"]),
     ).fetchone()
 
 
@@ -112,8 +131,8 @@ def pairwise(conn: sqlite3.Connection, label: str) -> list[dict]:
     pairs = []
     for i, a in enumerate(subs):
         for b in subs[i + 1:]:
-            iv_a = _intervention(conn, a["author"], a["label"], a["version"])
-            iv_b = _intervention(conn, b["author"], b["label"], b["version"])
+            iv_a = _intervention(conn, a)
+            iv_b = _intervention(conn, b)
 
             # One comparability rule, shared with `similarity_matrix`. It used to
             # be two: this loop checked model, revision, layer and hook point,
@@ -138,8 +157,8 @@ def pairwise(conn: sqlite3.Connection, label: str) -> list[dict]:
             rep_b = _report(conn, iv_b["id"]) if iv_b else None
 
             pairs.append({
-                "a": f"{a['author']}/{a['label']}@{a['version']}",
-                "b": f"{b['author']}/{b['label']}@{b['version']}",
+                "a": _ref(a),
+                "b": _ref(b),
                 # Geometry only, and meaningless unless both sit on the same model,
                 # revision, layer and hook point, and both are vectors of the same
                 # length. `angle_why` names which of those failed, because "not
@@ -187,14 +206,15 @@ def similarity_matrix(conn: sqlite3.Connection, label: str) -> dict:
     against is the reader's choice, and rows do not reorder when they make it.
     """
     rows = list(conn.execute(
-        "SELECT s.author, s.label, s.version, i.artifact_path, i.model_id,"
+        "SELECT s.author, s.model_id, s.label, s.version, i.artifact_path,"
         " i.model_revision, i.layer, i.hook_point, i.kind, i.shape"
         " FROM submission s JOIN intervention i"
-        " ON i.author=s.author AND i.label=s.label AND i.version=s.version"
+        " ON i.author=s.author AND i.model_id=s.model_id"
+        " AND i.label=s.label AND i.version=s.version"
         " WHERE s.label = ?",
         (label,),
     ))
-    refs = [f"{r['author']}/{r['label']}@{r['version']}" for r in rows]
+    refs = [_ref(r) for r in rows]
     matrix: dict[str, dict] = {ref: {} for ref in refs}
 
     for i, a in enumerate(rows):

@@ -9,6 +9,11 @@ Three things it refuses to do, because the registry refuses to do them:
   `compare("kindness")`. There is no canonical kindness to load, so a client that
   answered would be inventing one. This is the single behavior most likely to be
   "fixed" by a future convenience patch.
+- **A short reference that names several submissions does not resolve either.**
+  A submission is `author/model_id/label@version`. `author/label` is a
+  convenience that works while the author holds that label on one model, and
+  raises `Ambiguous` naming the models when they hold it on more. Same rule one
+  level down: it is the caller's question, not the registry's.
 - **Nothing is ordered by a measured result.** `compare()` returns claimants in
   storage order. A direction that also moves sentiment feels more effective in
   use, so ranking on measured effect favors the confounded one.
@@ -39,14 +44,17 @@ from pathlib import Path
 
 import numpy as np
 
-from . import artifact, db, fetch
+from . import artifact, db, fetch, ref as _ref
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = ROOT / "registry.db"
 
 
-class BareLabelError(LookupError):
-    """Raised when a bare label is handed to `load`."""
+# A bare label handed to `load`. Defined in `registry.ref`, next to the split
+# that raises it, and re-exported here unchanged: it was this module's name
+# first, `registry/__init__.py` publishes it, and the tests catch
+# `client.BareLabelError`. One class, two spellings of the same import.
+BareLabelError = _ref.BareLabelError
 
 
 # The bytes that arrived are not what the submission says they are. Defined in
@@ -62,13 +70,22 @@ class NotFound(LookupError):
 
 
 class Ambiguous(LookupError):
-    """One author has several current versions and the reference names none.
+    """A short reference that names more than one submission.
 
     A sibling of `BareLabelError`, one level down. That one refuses to turn a bare
     label into an artifact because several authors claim it; this refuses to turn
-    a bare `author/label` into an artifact because that author published several
-    takes and none supersedes the others. Both are the registry declining to pick,
-    and in both cases the caller's own reference is the fix.
+    a short `author/label` into an artifact because the author's own corpus holds
+    several answers to it. Two shapes of that, and both are the registry declining
+    to pick:
+
+    - **The author holds that label on several models.** An intervention is a
+      tensor in one model's residual basis, so these are different artifacts and
+      not versions of one. Name the model.
+    - **The author has several current versions on that model**, none superseding
+      the others. Pin a version.
+
+    In both cases the caller's own reference is the fix, and the message names the
+    alternatives so that writing it does not need a second lookup.
     """
 
 
@@ -124,6 +141,17 @@ class Evidence:
 @dataclass(frozen=True)
 class Submission:
     author: str
+    # Part of what this submission is, not a property of it. The same label by
+    # the same author on another model is another submission and both stand, the
+    # same way two authors on one label are two submissions and both stand.
+    #
+    # `contract.model_id` holds the same string and is not redundant with this
+    # one: the contract is what an application reads to apply the tensor
+    # correctly, and this is what identifies the row. They are equal today
+    # because the schema keys the intervention on the submission, and reading the
+    # identity off the contract would make every caller that wants to name a
+    # submission depend on it having an artifact attached.
+    model_id: str
     label: str
     version: str
     definition: str
@@ -162,7 +190,8 @@ class Submission:
 
     @property
     def ref(self) -> str:
-        return f"{self.author}/{self.label}@{self.version}"
+        """`author/model_id/label@version`, which resolves to this row forever."""
+        return _ref.format(self.author, self.model_id, self.label, self.version)
 
     def vector(self) -> np.ndarray:
         """The tensor itself, as numpy.
@@ -362,20 +391,15 @@ def _connect(database: str | Path | None) -> sqlite3.Connection:
     return db.connect(database or DEFAULT_DB)
 
 
-def _parse(ref: str) -> tuple[str, str, str | None]:
-    """Split `author/label@version`. A bare label is refused here, not later."""
-    if "/" not in ref:
-        raise BareLabelError(
-            f"{ref!r} is a bare label and does not resolve to an artifact. "
-            f"Several people may claim it and mean different things. "
-            f'Use compare("{ref}") to see every claimant, then load a specific '
-            f'one as "author/{ref}" or pin a version as "author/{ref}@v1".'
-        )
-    owner, rest = ref.split("/", 1)
-    if "@" in rest:
-        label, version = rest.split("@", 1)
-        return owner, label, version
-    return owner, rest, None
+def _parse(ref: str) -> _ref.Parsed:
+    """Split `author/model_id/label@version`, or the short form without a model.
+
+    The rule is in `registry.ref` and not repeated here: first segment is the
+    author, last is the label, everything between is the model. A bare label is
+    refused at the split rather than later, because there is nothing downstream
+    that could answer it.
+    """
+    return _ref.parse(ref)
 
 
 def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
@@ -388,17 +412,18 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
         # both where the author published it and where we serve a copy from, in
         # 006 to carry the digest those bytes are checked against, and in 007 to
         # carry the host each pair is on and the template that turns it into a
-        # URL.
+        # URL. Keyed on all four identity columns since 010.
         "SELECT artifact_path, artifact_repo, artifact_commit,"
         " artifact_host, artifact_url_template,"
         " served_repo, served_commit, served_host, served_url_template,"
         " artifact_sha256 FROM intervention"
-        " WHERE author=? AND label=? AND version=?",
-        (row["author"], row["label"], row["version"]),
+        " WHERE author=? AND model_id=? AND label=? AND version=?",
+        (row["author"], row["model_id"], row["label"], row["version"]),
     ).fetchone()
 
     return Submission(
         author=view["author"],
+        model_id=view["model_id"],
         label=view["label"],
         version=view["version"],
         definition=view["definition"],
@@ -449,13 +474,26 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
 
 
 def load(ref: str, *, database: str | Path | None = None) -> Submission:
-    """Load one submission by `author/label` or `author/label@version`.
+    """Load one submission by `author/model_id/label@version`.
 
-    Without a version this resolves the head of that author's revision chain: the
-    version nothing supersedes. That is the author's own history, not the registry
-    choosing between authors. Pin the version when the number needs to stay
-    comparable later; a pinned reference resolves to the same frozen submission
-    permanently.
+    Three parts of that reference may be left out and each one is answered
+    differently.
+
+    **The label alone does not resolve, ever.** Several people claim one word on
+    several models and mean different things by it. That is refused at the split.
+
+    **The model may be left out**, and `author/label` resolves when that author
+    holds that label on exactly one model. When they hold it on more, this raises
+    `Ambiguous` naming them, because an intervention is a tensor in one model's
+    residual basis and picking between two would be the registry answering a
+    question the caller has to answer. The short form is a convenience over the
+    author's own corpus, not a default model.
+
+    **The version may be left out**, and this resolves the head of that author's
+    revision chain on that model: the version nothing supersedes. That is the
+    author's own history, not the registry choosing between authors. Pin the
+    version when the number needs to stay comparable later; a pinned reference
+    resolves to the same frozen submission permanently.
 
     **An author with several current versions gets an error, not a pick.** This
     used to be `max(version_strings)`, which reads a revision order off text that
@@ -467,14 +505,40 @@ def load(ref: str, *, database: str | Path | None = None) -> Submission:
     `superseded_by` is the field that records a revision chain, so that is what
     gets read.
     """
-    owner, label, version = _parse(ref)
+    parsed = _parse(ref)
+    owner, label, version = parsed.author, parsed.label, parsed.version
     conn = _connect(database)
+
+    model = parsed.model
+    if model is None:
+        models = [
+            r["model_id"] for r in conn.execute(
+                "SELECT DISTINCT model_id FROM submission"
+                " WHERE author=? AND label=? ORDER BY model_id",
+                (owner, label),
+            )
+        ]
+        if not models:
+            raise NotFound(f"{ref!r} is not in this registry")
+        if len(models) > 1:
+            raise Ambiguous(
+                f"{_ref.short(owner, label)} is published on {len(models)} "
+                "models, and a direction extracted against one says nothing "
+                "about another, so picking one would be this registry choosing "
+                "on your behalf. Name the model you mean: "
+                + ", ".join(
+                    _ref.format(owner, m, label, version) if version
+                    else f"{owner}/{m}/{label}"
+                    for m in models
+                )
+            )
+        model = models[0]
 
     if version is None:
         rows = list(conn.execute(
             "SELECT version, superseded_by FROM submission"
-            " WHERE author=? AND label=?",
-            (owner, label),
+            " WHERE author=? AND model_id=? AND label=?",
+            (owner, model, label),
         ))
         if not rows:
             raise NotFound(f"{ref!r} is not in this registry")
@@ -484,24 +548,32 @@ def load(ref: str, *, database: str | Path | None = None) -> Submission:
             version = heads[0]
         elif not heads:
             raise Ambiguous(
-                f"every version of {owner}/{label} is superseded by another, so "
-                "the revision chain is a cycle and there is no head. Pin one: "
-                + ", ".join(f"{owner}/{label}@{r['version']}" for r in rows)
+                f"every version of {owner}/{model}/{label} is superseded by "
+                "another, so the revision chain is a cycle and there is no head. "
+                "Pin one: "
+                + ", ".join(
+                    _ref.format(owner, model, label, r["version"]) for r in rows
+                )
             )
         else:
             raise Ambiguous(
-                f"{owner}/{label} has {len(heads)} current versions and nothing "
-                "orders them, so picking one would be this registry choosing on "
-                "your behalf. Pin the one you mean: "
-                + ", ".join(f"{owner}/{label}@{v}" for v in sorted(heads))
+                f"{owner}/{model}/{label} has {len(heads)} current versions and "
+                "nothing orders them, so picking one would be this registry "
+                "choosing on your behalf. Pin the one you mean: "
+                + ", ".join(
+                    _ref.format(owner, model, label, v) for v in sorted(heads)
+                )
             )
 
     row = conn.execute(
-        "SELECT * FROM submission WHERE author=? AND label=? AND version=?",
-        (owner, label, version),
+        "SELECT * FROM submission"
+        " WHERE author=? AND model_id=? AND label=? AND version=?",
+        (owner, model, label, version),
     ).fetchone()
     if row is None:
-        raise NotFound(f"{owner}/{label}@{version} is not in this registry")
+        raise NotFound(
+            f"{_ref.format(owner, model, label, version)} is not in this registry"
+        )
     return _build(conn, row)
 
 
@@ -542,6 +614,12 @@ def namespace(name: str, *, database: str | Path | None = None) -> Namespace:
 
 def claimants(label: str, *, database: str | Path | None = None) -> list[Submission]:
     """Everyone claiming a label, in storage order.
+
+    Across models, deliberately. A bare label is a view across everybody claiming
+    the word and nobody owns it, so narrowing this to one model would make the
+    view a statement about which model the word belongs to. What the model does
+    here is show up in each `Submission.ref`, where the reader can see that two
+    claimants are not on the same basis.
 
     No ordering is applied here on purpose. Sorting is the caller's explicit
     choice, and no measured result may decide it.

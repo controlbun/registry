@@ -70,6 +70,8 @@ ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from registry import artifact, client, db, fetch  # noqa: E402
+# Aliased because `ref` is already a field name on `Item` in this module.
+from registry import ref as registry_ref  # noqa: E402
 from registry.artifact import local_path  # noqa: E402
 
 # The pin record. Tracked, because it is the only durable copy of the commit.
@@ -222,7 +224,8 @@ def select(conn, only: list[str] | None = None) -> list[Item]:
     account, which is the worst place to find out.
     """
     rows = conn.execute(
-        "SELECT author, label, version, artifact_path, artifact_sha256, shape,"
+        "SELECT author, model_id, label, version, artifact_path, artifact_sha256,"
+        " shape,"
         " dtype, artifact_repo, artifact_commit, artifact_host,"
         " artifact_url_template FROM intervention"
         " WHERE is_synthetic=0 AND artifact_path IS NOT NULL"
@@ -246,7 +249,9 @@ def select(conn, only: list[str] | None = None) -> list[Item]:
             subject=rel,
         )
         items.append(Item(
-            ref=f"{row['author']}/{row['label']}@{row['version']}",
+            ref=registry_ref.format(
+                row['author'], row['model_id'], row['label'], row['version']
+            ),
             path=rel,
             local=path,
             size=len(blob),

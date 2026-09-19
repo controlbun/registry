@@ -83,6 +83,9 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(HERE))
 
 from registry import artifact, db, fetch, ingest  # noqa: E402
+# Aliased because `ref` is a local name all over this module, for the string one
+# entry resolves to. This is the module that knows how to build it.
+from registry import ref as registry_ref  # noqa: E402
 import agent_handoff  # noqa: E402
 import publish  # noqa: E402
 import source  # noqa: E402
@@ -202,23 +205,28 @@ def insert(conn: sqlite3.Connection, entry: dict) -> None:
             f"tell which was meant, so neither is written. Drop whichever is "
             "wrong from the record and replay."
         )
+    # The model is part of what the submission is since `schema/migrations/010`,
+    # and it is read off the intervention the form just filled in rather than
+    # asked for twice. One field, one answer: the form has exactly one
+    # `model_id` box and a second copy on the submission side would be a second
+    # place for it to disagree with itself.
     conn.execute(
-        "INSERT INTO submission (author,label,version,definition,created_at,"
-        "is_synthetic) VALUES (?,?,?,?,?,0)",
-        (entry["author"], entry["label"], entry["version"], entry["definition"],
-         entry["created_at"]),
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES (?,?,?,?,?,?,0)",
+        (entry["author"], iv.get("model_id"), entry["label"], entry["version"],
+         entry["definition"], entry["created_at"]),
     )
     columns = (
-        "id", "kind", "model_id", "model_revision", "layer", "layer_convention",
+        "id", "kind", "model_revision", "layer", "layer_convention",
         "hook_point", "chat_template_hash", "shape", "dtype", "l2_norm",
         "activation_norm", "coeff_low", "coeff_high", "steering_position",
         "license_status", "artifact_repo", "artifact_commit", "artifact_host",
         "artifact_url_template", "artifact_path", "artifact_sha256",
     )
     conn.execute(
-        "INSERT INTO intervention (author,label,version,is_synthetic,"
-        + ",".join(columns) + ") VALUES (?,?,?,0," + ",".join("?" * len(columns)) + ")",
-        (entry["author"], entry["label"], entry["version"],
+        "INSERT INTO intervention (author,model_id,label,version,is_synthetic,"
+        + ",".join(columns) + ") VALUES (?,?,?,?,0," + ",".join("?" * len(columns)) + ")",
+        (entry["author"], iv.get("model_id"), entry["label"], entry["version"],
          *(iv.get(c) for c in columns)),
     )
     # One row per field somebody accounted for, and no rows at all is the
@@ -244,7 +252,10 @@ def replay(conn: sqlite3.Connection, path: Path | None = None) -> list[str]:
     path = path or RECORD
     written = []
     for entry in read_record(path):
-        ref = f"{entry['author']}/{entry['label']}@{entry['version']}"
+        ref = registry_ref.format(
+            entry["author"], entry["intervention"].get("model_id"),
+            entry["label"], entry["version"],
+        )
         try:
             insert(conn, entry)
         except sqlite3.IntegrityError as clash:

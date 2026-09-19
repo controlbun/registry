@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from . import fetch
+from . import fetch, ref
 
 # The name, not the module: the package exposes a public `compare()` function,
 # which shadows the `compare` submodule for anything reaching for it by attribute.
@@ -174,9 +174,11 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
     Every measurement is passed through as None when it was not taken. Nothing here
     substitutes a zero, and every view renders absence as its own state.
     """
+    key = (row["author"], row["model_id"], row["label"], row["version"])
     iv = conn.execute(
-        "SELECT * FROM intervention WHERE author=? AND label=? AND version=?",
-        (row["author"], row["label"], row["version"]),
+        "SELECT * FROM intervention"
+        " WHERE author=? AND model_id=? AND label=? AND version=?",
+        key,
     ).fetchone()
     # An eval whose suite belongs to someone other than the submission's author is
     # the thing this registry is actually for. Pointing your evaluation at someone
@@ -269,8 +271,8 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
     # is still a submission, and its absence renders as absence rather than as a
     # gap to apologize for.
     rec = conn.execute(
-        "SELECT * FROM recipe WHERE author=? AND label=? AND version=?",
-        (row["author"], row["label"], row["version"]),
+        "SELECT * FROM recipe WHERE author=? AND model_id=? AND label=? AND version=?",
+        key,
     ).fetchone()
     recipe = None
     if rec is not None:
@@ -299,8 +301,9 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
             "author_response": r["author_response"],
         }
         for r in conn.execute(
-            "SELECT * FROM support_card WHERE author=? AND label=? AND version=?",
-            (row["author"], row["label"], row["version"]),
+            "SELECT * FROM support_card"
+            " WHERE author=? AND model_id=? AND label=? AND version=?",
+            key,
         )
     ]
 
@@ -333,8 +336,23 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         # None where nobody published these bytes, which is most rows.
         "published": published_at(iv),
         "author": row["author"],
+        # Off the submission and not off the intervention, since
+        # `schema/migrations/010`. The two hold the same string, and which one
+        # is read matters: a submission whose artifact row is missing still has
+        # an identity, and reading the model off the artifact would make it
+        # render as a claimant with no model rather than as a claimant with no
+        # artifact.
+        "model_id": row["model_id"],
         "label": row["label"],
         "version": row["version"],
+        # The four parts as the one string every surface prints. Built here
+        # rather than in each template for the reason `published_at` gives about
+        # URLs: a second copy of the format is a second chance to print a
+        # reference that does not resolve, in the half nobody runs the tests
+        # against.
+        "ref": ref.format(
+            row["author"], row["model_id"], row["label"], row["version"]
+        ),
         "definition": row["definition"],
         "created_at": row["created_at"],
         "score_state": score_state(report),
@@ -357,7 +375,6 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         # place that can be said is beside it.
         "notes": report["notes"] if report else None,
         "kind": iv["kind"] if iv else None,
-        "model_id": iv["model_id"] if iv else None,
         # Truncated for display, and None when nobody recorded which revision
         # the activations were read from. See schema/migrations/005.
         "model_revision": (iv["model_revision"] or "")[:12] or None if iv else None,

@@ -102,8 +102,10 @@ def test_several_current_versions_refuse_to_resolve(conn, tmp_path):
     """Three parallel takes have no order, so picking one is designating one."""
     for version in ("alpha", "beta"):
         conn.execute(
-            "INSERT INTO submission (author,label,version,definition,created_at,"
-            "is_synthetic) VALUES ('alice','kindness',?,'another take','2026-09-14',1)",
+            "INSERT INTO submission (author,model_id,label,version,definition,"
+            "created_at,is_synthetic)"
+            " VALUES ('alice','placeholder/does-not-resolve-1b','kindness',?,'another take',"
+            "'2026-09-14',1)",
             (version,),
         )
     conn.commit()
@@ -116,16 +118,20 @@ def test_several_current_versions_refuse_to_resolve(conn, tmp_path):
 
     with pytest.raises(client.Ambiguous) as caught:
         client.load("alice/kindness", database=conn_path(conn))
-    # The alternatives are named, or the error is a dead end.
+    # The alternatives are named in full, or the error is a dead end: a
+    # reference the reader has to add the model back into is not one they can
+    # paste.
     for version in ("v1", "alpha", "beta"):
-        assert f"alice/kindness@{version}" in str(caught.value)
+        assert (f"alice/placeholder/does-not-resolve-1b/kindness@{version}"
+                in str(caught.value))
 
 
 def test_a_revision_chain_still_resolves_to_its_head(conn):
     """Superseding is the author's own history and must keep working."""
     conn.execute(
-        "INSERT INTO submission (author,label,version,definition,created_at,"
-        "is_synthetic) VALUES ('alice','kindness','v2','revised','2026-09-14',1)"
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic)"
+        " VALUES ('alice','placeholder/does-not-resolve-1b','kindness','v2','revised','2026-09-14',1)"
     )
     conn.execute(
         "UPDATE submission SET superseded_by='v2'"
@@ -174,14 +180,16 @@ def _add_lora(conn, shape: str, path: Path, array: np.ndarray):
     save_file({"w": array}, str(path))
     iv = conn.execute("SELECT * FROM intervention WHERE id='iv_dana'").fetchone()
     conn.execute(
-        "INSERT INTO submission (author,label,version,definition,created_at,"
-        "is_synthetic) VALUES ('mira','refusal','v1','a low-rank edit','2026-09-14',1)"
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic)"
+        " VALUES ('mira',?,'refusal','v1','a low-rank edit','2026-09-14',1)",
+        (iv["model_id"],)
     )
     conn.execute(
-        "INSERT INTO intervention (id,author,label,version,kind,model_id,"
+        "INSERT INTO intervention (id,author,model_id,label,version,kind,"
         "model_revision,layer,layer_convention,hook_point,shape,dtype,"
-        "artifact_path,is_synthetic) VALUES ('iv_mira','mira','refusal','v1',"
-        "'lora',?,?,?,?,?,?,'float32',?,1)",
+        "artifact_path,is_synthetic) VALUES ('iv_mira','mira',?,'refusal',"
+        "'v1','lora',?,?,?,?,?,'float32',?,1)",
         (iv["model_id"], iv["model_revision"], iv["layer"], iv["layer_convention"],
          iv["hook_point"], shape, str(path.relative_to(ROOT))),
     )

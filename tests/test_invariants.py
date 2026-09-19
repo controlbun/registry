@@ -428,6 +428,75 @@ def test_no_ordering_is_derived_from_whether_an_artifact_is_published():
 
 
 # --------------------------------------------------------------------------- #
+# 5b. The model is part of a submission's identity, and nothing else.
+
+
+def test_no_ordering_is_derived_from_the_model():
+    """A model is what a submission is about, never where it ranks.
+
+    `schema/migrations/010` put `model_id` into the primary key. Widening an
+    identity is the whole of that change, and the way it stops being the whole
+    of it is one sort: `ORDER BY model_id` puts `allenai/...` above
+    `meta-llama/...` with nothing on screen saying why, and a reader sees a
+    league table of model families that nobody decided to publish. The step
+    after that is a default, and a default reads as the registry's own judgment.
+
+    **What the constraint makes impossible to express** is a list whose order
+    groups submissions by model. That is a real want and it is grouping rather
+    than ordering: `/models/<model>/` already is the grouped view, reached by
+    naming the model, and every claimant in the export carries `model_id` for a
+    reader to select on.
+
+    Same `SELECT DISTINCT` exemption as the pin columns, and for the same
+    reason: `artifacts/intake.py` alphabetizes the model ids already in use so
+    the form can offer them, which is sorting a list of strings rather than
+    ordering submissions.
+    """
+    offenders = [
+        hit for hit in scan(r"ORDER\s+BY[^;]*\bmodel_id\b")
+        if not _orders_a_distinct_value_list(hit, "model_id")
+    ]
+    offenders += scan(r"sorted\s*\([^)]*\bmodel_id\b")
+    offenders += scan(r"key\s*=\s*[^,)]*\bmodel_id\b")
+    offenders += scan(r"\b(sort|rank|order)\w*\s*[=(][^)]*\bmodel_id\b")
+    offenders += scan(r"\.sort\([^;]*\bmodel_id\b")
+    assert not offenders, (
+        "Ordering on the model turns an identity into a ranking of model "
+        "families. The same label on two models is two submissions that both "
+        "stand:\n" + "\n".join(offenders)
+    )
+
+
+def test_the_submission_key_names_the_model():
+    """Four columns, or `author/model_id/label@version` is not an identity.
+
+    The failure this stops is a later migration rebuilding `submission` and
+    dropping `model_id` back out of the key, which reads as a tidy-up and makes
+    one author's two models collide again.
+
+    Read off the last `CREATE TABLE submission...` in migration order, because
+    the migrations are the schema and the current shape is whatever the last one
+    that rebuilt the table declared.
+    """
+    ddl = strip_sql_comments(sql_text())
+    keys = []
+    for table in re.finditer(
+        r"CREATE TABLE submission\w*\s*\((.*?)\n\);", ddl, re.S | re.I
+    ):
+        key = re.search(r"PRIMARY KEY\s*\(([^)]*)\)", table.group(1), re.I)
+        if key:
+            keys.append([c.strip().strip('"') for c in key.group(1).split(",")])
+
+    assert keys, "no submission table declares a primary key"
+    assert keys[-1] == ["author", "model_id", "label", "version"], (
+        "the submission key is " + ", ".join(keys[-1]) + ". It has to name the "
+        "model: a direction is a tensor in one model's residual basis, so a "
+        "submission that does not name the model is not identified, and one "
+        "author's takes on two models collide."
+    )
+
+
+# --------------------------------------------------------------------------- #
 # 6. Absence of an eval renders as its own state, not as an error.
 
 

@@ -22,6 +22,11 @@ from registry import db, order  # noqa: E402
 NOW = datetime(2026, 9, 12, 12, 0, tzinfo=timezone.utc)
 
 
+# The model the fixtures put `kindness` on. Part of the identity since
+# `schema/migrations/010`, so a lookup by three columns no longer names a row.
+MODEL_A = "placeholder/does-not-resolve-1b"
+
+
 @pytest.fixture
 def conn(tmp_path):
     path = tmp_path / "fixture.db"
@@ -40,9 +45,10 @@ def test_small_corpus_defaults_to_recency(conn):
 def test_threshold_switches_to_trending(conn):
     for i in range(order.CORPUS_THRESHOLD):
         conn.execute(
-            "INSERT INTO submission (author,label,version,definition,created_at,"
-            "is_synthetic) VALUES (?,?,?,?,?,1)",
-            (f"filler{i}", "kindness", "v1", "filler", "2026-09-12T00:00:00Z"),
+            "INSERT INTO submission (author,model_id,label,version,definition,"
+            "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
+            (f"filler{i}", "placeholder/does-not-resolve-1b", "kindness",
+             "v1", "filler", "2026-09-12T00:00:00Z"),
         )
     conn.commit()
     assert order.corpus_size(conn) >= order.CORPUS_THRESHOLD
@@ -75,7 +81,7 @@ def test_engagement_outweighs_age_only_up_to_a_point():
 
 def test_engagement_counts_only_other_peoples_work(conn):
     """An author cannot lift their own submission by evaluating it again."""
-    before = order.engagement(conn, "alice", "kindness", "v1")
+    before = order.engagement(conn, "alice", MODEL_A, "kindness", "v1")
 
     conn.execute(
         "INSERT INTO eval_suite (id,author,name,version) VALUES (?,?,?,?)",
@@ -88,15 +94,15 @@ def test_engagement_counts_only_other_peoples_work(conn):
     )
     conn.commit()
 
-    assert order.engagement(conn, "alice", "kindness", "v1") == before, (
+    assert order.engagement(conn, "alice", MODEL_A, "kindness", "v1") == before, (
         "self-evaluation must not register as scrutiny"
     )
 
 
 def test_attack_registers_as_engagement(conn):
     """Alice carries an attack in the fixtures; bob carries none."""
-    assert order.engagement(conn, "alice", "kindness", "v1") > 0
-    assert order.engagement(conn, "bob", "kindness", "v1") == 0
+    assert order.engagement(conn, "alice", MODEL_A, "kindness", "v1") > 0
+    assert order.engagement(conn, "bob", MODEL_A, "kindness", "v1") == 0
 
 
 def test_caller_can_always_override_the_default(conn):

@@ -683,7 +683,8 @@ def test_a_record_written_before_008_replays_untouched(tool):
     conn = db.connect(tool.database)
     db.migrate(conn)
     try:
-        assert intake.replay(conn, tool.record) == ["probe/kindness@v1"]
+        assert intake.replay(conn, tool.record) == [
+                "probe/placeholder/does-not-resolve-1b/kindness@v1"]
     finally:
         conn.close()
 
@@ -926,7 +927,8 @@ def test_the_record_replays_into_a_rebuilt_database(tool):
     conn = db.connect(tool.database)
     db.migrate(conn)
     try:
-        assert intake.replay(conn, tool.record) == ["probe/kindness@v1"]
+        assert intake.replay(conn, tool.record) == [
+                "probe/placeholder/does-not-resolve-1b/kindness@v1"]
     finally:
         conn.close()
     row, = tool.rows()

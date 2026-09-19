@@ -278,9 +278,11 @@ def check_angles_recompute(payload: dict) -> None:
     paths: dict[str, str] = {}
     for entry in payload["labels"]:
         for claimant in entry["claimants"]:
-            paths[f"{claimant['author']}/{claimant['label']}@{claimant['version']}"] = (
-                claimant.get("artifact_path")
-            )
+            # The exported `ref`, not a fourth spelling of the format. A
+            # falsifier that builds the key itself checks the pairs against a
+            # dictionary keyed the way the falsifier writes refs rather than
+            # the way the site does, which is a lookup that silently misses.
+            paths[claimant["ref"]] = claimant.get("artifact_path")
 
     checked = 0
     for entry in payload["labels"]:
@@ -427,9 +429,13 @@ def check_authored_regions_are_marked(payload: dict) -> None:
     unmarked = " ".join(" ".join(text_of(page).split()) for page in pages)
     for claimant, text in authored:
         if text[:60] in unmarked:
+            # The exported `ref` where there is one. The namespace subjects
+            # below are not submissions and carry none, so they fall back to
+            # the three parts they do have.
+            named = claimant.get("ref") or (
+                f"{claimant['author']}/{claimant['label']}@{claimant['version']}")
             fail("authored",
-                 f"{claimant['author']}/{claimant['label']}@"
-                 f"{claimant['version']}: {text[:60]!r} renders outside any "
+                 f"{named}: {text[:60]!r} renders outside any "
                  "`data-authored` region, so its numbers are scanned as the "
                  "registry's own and a figure the author is quoting reads as "
                  "one this registry derived")
@@ -451,11 +457,12 @@ def check_export_matches_the_database(conn: sqlite3.Connection, payload: dict) -
     # three takes by one person on one label all hashed to the same key, so two of
     # them were never checked and the third was checked against whichever row the
     # dict happened to keep. An identity the schema does not promise is not an
-    # identity.
+    # identity, which is the same argument `schema/migrations/010` makes one step
+    # further out: the key here is all four columns because the schema's is.
     stored = {
-        (row["author"], row["label"], row["version"]): row
+        (row["author"], row["model_id"], row["label"], row["version"]): row
         for row in conn.execute(
-            "SELECT i.author, i.label, i.version, r.trait_score,"
+            "SELECT i.author, i.model_id, i.label, i.version, r.trait_score,"
             " r.coherence_score, r.transfer_score FROM eval_report r"
             " JOIN eval_suite s ON s.id = r.eval_suite_id"
             " JOIN intervention i ON i.id = r.intervention_id"
@@ -466,7 +473,8 @@ def check_export_matches_the_database(conn: sqlite3.Connection, payload: dict) -
     checked = 0
     for entry in payload["labels"]:
         for claimant in entry["claimants"]:
-            key = (claimant["author"], claimant["label"], claimant["version"])
+            key = (claimant["author"], claimant["model_id"],
+                   claimant["label"], claimant["version"])
             row = stored.get(key)
             if row is None:
                 continue

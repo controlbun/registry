@@ -151,6 +151,9 @@ requiring a recipe would exclude exactly the historical artifacts the registry
 should be able to compare against.
 
 ## 2026-09-11 Submissions are versioned and immutable
+**Superseded by:** A submission is identified by author, model, label and
+version. Versioning and immutability survive unchanged; what is wrong below is
+the reference form, which is now `author/model_id/label@version`.
 **Decided:** `author/label@version` resolves to one frozen submission permanently.
 Revisions publish a new version; old versions stay fetchable and link forward.
 **Why:** Pinning is impossible without it, and any season or paper that cited a
@@ -811,6 +814,10 @@ next to it, and doing that to anything in `MUST_REACH` fails the build.
 **Supersedes:** nothing.
 
 ## 2026-09-15 A bare `author/label` refuses when the author has several current versions
+**Amended by:** A submission is identified by author, model, label and version.
+The rule below is unchanged and gains a sibling one level up: `author/label`
+now also raises `Ambiguous` when the author holds that label on several
+models, before any version question is reached.
 **Decided:** `client.load("author/label")` resolves the head of that author's
 revision chain, the version nothing supersedes. Several heads raises `Ambiguous`
 and names them. It no longer picks.
@@ -2329,3 +2336,82 @@ as the registry's own judgment.
 **Supersedes:** nothing. It closes the gap the 2026-09-18 entry "The row carries
 its own URL template, so a pin can name any host" left on the read path, which
 that entry settled for the client and not for the site.
+
+
+## 2026-09-19 A submission is identified by author, model, label and version
+**Decided:** a submission's primary key becomes `(author, model_id, label,
+version)` and its reference form becomes
+`soham/allenai/Olmo-3-1125-32B/pro-human@meandiff`. `model_id` is the full
+distributor-and-name string the extraction loaded and moves onto `submission`,
+into its primary key, and onto the four tables that reference it:
+`intervention`, `recipe`, `pin` and `support_card`. `schema/migrations/010`.
+
+**Why.** One author holds one label on several models, and those are different
+artifacts rather than one artifact with an attribute. `soham/pro-human` on
+Olmo 3 and `soham/trauma` on Llama 3.3 already coexist only because the labels
+differ; the same author's second take on a word he already holds collided with
+the first under the old key. `BRIEF.md` has said since the first draft that a
+vector is a tensor in one model's residual basis, so a submission that does not
+name the model in its identity was not identified. The old key made "one author,
+one label, one version" a fact about the world and it never was.
+
+**Parsing, which looks impossible and is not.** Split on `@` for the version,
+then split the rest on `/`: first segment is the author, last is the label,
+everything between is the model. Any model id depth works because the model is
+the middle rather than a fixed segment count, so `gpt2` and `bert-base-uncased`
+with no distributor parse as well as `meta-llama/Llama-3.3-70B-Instruct`.
+Nothing requires a slash in a model id and nothing validates its shape; it is an
+open string like every other user-supplied field here. The rule lives in
+`src/registry/ref.py` and in one place, and `views.claimant_view` puts the
+formatted `ref` in the export so no template composes a second copy of it.
+
+**The short form still resolves, and refuses rather than picks.**
+`author/label@version` resolves while that author holds that label on exactly
+one model. On more than one it raises `Ambiguous` naming each alternative in
+full, which is the same shape as the 2026-09-15 rule one level up: that one
+refuses to choose a version, this one refuses to choose a model. A short form
+that silently picked would be the registry choosing, and convenience here is
+designation wearing a different hat.
+
+**This is identity and nothing else.** Not a filter, not an ordering, not a
+facet that ranks. Nothing on any page reads as one model's directions being the
+real ones. The same label on two models is two submissions that both stand,
+exactly like two authors on one label. `claimants()` and `compare()` still take
+a bare label and still return claimants across every model, because a bare label
+is a view owned by nobody and narrowing it to one model would make the view a
+statement about which model the word belongs to.
+
+**What this makes impossible to express.** One submission whose artifact spans
+several models. That shape was already unwritable: `intervention.model_id` is
+singular and NOT NULL, so a submission claiming two models was two intervention
+rows sharing one key with nothing to say which recipe, pin or support card was
+about which. What is lost is a hypothetical. A recipe that fans out across models
+is still expressible, as one recipe published as several submissions, which is
+what fanning out is.
+
+**Existing rows carry their model rather than being given one.** Every
+submission in the corpus has exactly one intervention carrying exactly one
+`model_id`, checked before the migration was written to rely on it. The
+migration reads the value across and a `CHECK` constraint fails the build if the
+rebuilt table does not hold exactly as many rows as the old one, which is what a
+submission with no artifact, or with two on different models, would produce. A
+migration that quietly dropped somebody's submission for having no artifact
+attached is the failure this makes loud.
+
+**`pin.alternatives_json` is carried across verbatim.** It is what a consumer
+wrote about their own choice, and expanding each string into a four-part
+reference would be inferring which model they meant and recording the inference
+in their words. The seeders write the full form.
+
+**RAISED, NOT DECIDED: whether a relation is model-scoped.** `label_relation` is
+keyed `(from_author, from_label, relation, to_author, to_label)` with no version
+and no model, and 010 leaves it alone. `interprets:` and `distinguishes-from:`
+are pointers between labels, and a bare label is a view across claimants owned by
+nobody, so a relation is not obviously a statement about one model's artifact.
+The case for scoping it: "erik's refusal is topic sensitivity" is a reading of a
+particular vector and may not hold for erik's take on another model. The case
+against: a relation is how taxonomy emerges from claims, and a taxonomy that
+forks per model is a taxonomy nobody can read. Adding the column in this
+migration would have answered it by accident. Open.
+
+**Supersedes:** Submissions are versioned and immutable.

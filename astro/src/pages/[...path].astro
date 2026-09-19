@@ -97,6 +97,15 @@ const crumbs = {
     : null,
 };
 
+// Pins of exactly this submission, keyed on all four identity columns. Keyed
+// on three, a pin of one model's artifact showed up on another model's page
+// the moment one author claimed one label on two models.
+const pinsHere = claimant
+  ? data.pins.filter(
+      (p) => p.author === claimant.author && p.model_id === claimant.model_id
+             && p.label === claimant.label && p.version === claimant.version)
+  : [];
+
 const released = (iso) =>
   new Date(iso).toLocaleDateString("en-US", {
     year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
@@ -197,9 +206,14 @@ const released = (iso) =>
       />
 
       <h2>Who has pinned one of these</h2>
+      {/* Scoped to this model, because the page is one label on one model.
+          A pin of the same word against another model is a pin of another
+          artifact, and showing it here would read as somebody having pinned
+          one of the rows above. */}
       <Pins
-        pins={data.pins.filter((p) => p.label === block.label)}
-        subject={`A pinned ${block.label}`}
+        pins={data.pins.filter(
+          (p) => p.label === block.label && p.model_id === model.model_id)}
+        subject={`A pinned ${block.label} on ${model.model_id}`}
       />
     </div>
   </Base>
@@ -207,13 +221,14 @@ const released = (iso) =>
 
 {view === "submission" && (
   <Base
-    title={`${claimant.author}/${block.label}@${claimant.version} on ${model.model_id}`}
+    title={`${claimant.ref}`}
     trail={[crumbs.registry, crumbs.models, crumbs.model, crumbs.label]}
     synthetic={claimant.is_synthetic ? "all" : "none"}
   >
-    <h1 slot="heading" class="mono">
-      {claimant.author}/{claimant.label}@{claimant.version}
-    </h1>
+    {/* The four-part reference, which is the identity. Off the payload
+        rather than composed here: `registry/views.py` builds it through the
+        module that owns the format. */}
+    <h1 slot="heading" class="mono">{claimant.ref}</h1>
 
     <p class="lede">
       One owner's complete take on <strong>{block.label}</strong>, against
@@ -229,9 +244,7 @@ const released = (iso) =>
       { id: "measurements", label: "Independent measurements",
         count: claimant.verifications.length },
       { id: "attacks", label: "Attack cards", count: claimant.attacks.length },
-      { id: "pins", label: "Pins", count: data.pins.filter(
-          (p) => p.author === claimant.author && p.label === claimant.label
-                 && p.version === claimant.version).length },
+      { id: "pins", label: "Pins", count: pinsHere.length },
       { id: "comments", label: "Comments", count: null },
     ]} />
 
@@ -262,10 +275,8 @@ const released = (iso) =>
 
       <div data-panel="pins" class="hidden">
         <Pins
-          pins={data.pins.filter(
-            (p) => p.author === claimant.author && p.label === claimant.label
-                   && p.version === claimant.version)}
-          subject={`${claimant.author}/${claimant.label}@${claimant.version}`}
+          pins={pinsHere}
+          subject={claimant.ref}
         />
       </div>
 
@@ -341,7 +352,8 @@ const released = (iso) =>
           {owner.submissions.map((s) => (
             <tr data-created={s.created_at} data-engagement={s.engagement}>
               <td>
-                <a href={`/${owner.owner}/${s.model_id}/${s.label}/${s.version}/`}>
+                <a href={`/${owner.owner}/${s.model_id}/${s.label}/${s.version}/`}
+                   title={s.ref}>
                   {s.label}<span class="meta">@{s.version}</span>
                 </a>
                 <div class="provenance mono">{s.kind} @{s.version}</div>

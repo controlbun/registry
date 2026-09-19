@@ -119,9 +119,12 @@ class Spec:
 
     `form` is the `data-field` name in `artifacts/intake.py`, so a parsed paste
     drops straight into the page's inputs. `cannot_be_absent` marks the columns
-    `schema/migrations/001` and `005` leave NOT NULL: not a bar an artifact has to
-    clear, a shape the row physically has. Everything else is nullable and an
-    absence in it records as an absence.
+    `schema/migrations/001`, `005` and `010` leave NOT NULL: not a bar an artifact
+    has to clear, a shape the row physically has. Four of them are the identity
+    itself since 010, `author`, `model_id`, `label` and `version`, and an absence
+    in one of those is not a recorded absence but the lack of a row to record it
+    against. Everything else is nullable and an absence in it records as an
+    absence.
 
     `column` is the third spelling and exists for one reason: a declared absence
     is stored against the field it is about, and `artifacts/intake.py insert`
@@ -159,6 +162,9 @@ SPECS: tuple[Spec, ...] = (
     Spec("intervention_id", ("intervention_id",), cannot_be_absent=True,
          aliases=("id", "intervention")),
     Spec("kind", ("kind",), cannot_be_absent=True),
+    # Part of the primary key since `schema/migrations/010`, which is why this
+    # cannot be absent: without it there is no submission to write, rather than a
+    # submission with an unrecorded model.
     Spec("model_id", ("model_id",), cannot_be_absent=True, aliases=("model",)),
     Spec("model_revision", ("model_revision",), aliases=("revision",)),
     Spec("layer", ("layer",), cast="integer", cannot_be_absent=True),
@@ -255,9 +261,18 @@ rather than refusing a format for not being on a list.
 ## What the registry needs, and why each one
 
 Two objects get written from your answers. A **submission**, which is one
-author's complete take on a label, frozen forever at `author/label@version`. An
-**intervention**, which is the artifact itself plus everything needed to apply
-it.
+author's complete take on a label against one model, frozen forever at
+`author/model_id/label@version`. An **intervention**, which is the artifact
+itself plus everything needed to apply it.
+
+The model is part of the reference because a direction is a tensor in one
+model's residual basis and does nothing for another one. So
+
+    soham/allenai/Olmo-3-1125-32B/pro-human@meandiff
+
+is one submission, and the same author's take on the same word against another
+model is a different submission with its own reference. Neither supersedes the
+other and neither is the real one.
 
 **author** Your author's own namespace. Free to claim and never assigned.
 
@@ -282,10 +297,14 @@ prompts themselves, use theirs. If you do not, ask them rather than composing
 one.
 
 **version** Whatever distinguishes this take from the author's other takes on
-the same label. `author/label@version` resolves to one frozen submission
-forever, so it is never reused and never edited: a correction is a new version.
-Versions in this registry today name what changed, like the estimator that
-produced the direction or the layer it was read from, rather than counting.
+the same label against the same model. `author/model_id/label@version` resolves
+to one frozen submission forever, so it is never reused and never edited: a
+correction is a new version. Versions in this registry today name what changed,
+like the estimator that produced the direction or the layer it was read from,
+rather than counting.
+
+A take on a different model is not a version. It is another submission, and the
+model in the reference is what keeps the two apart.
 
 **created_at** When the work happened, which is not when it is typed into the
 form. ISO 8601, UTC. The run log, the file's own timestamp or the commit date,
@@ -300,9 +319,15 @@ forever, and your author's to choose.
 and an unrecognized kind is storable and displayable and simply has no apply
 path in the client until somebody writes one.
 
-**model_id** The model the activations were read out of. A direction has no
-meaning apart from it. Base and instruct are different models, so give the exact
-repo id the extraction loaded, not the family name.
+**model_id** The model the activations were read out of, and part of what the
+submission is rather than a property of it. A direction has no meaning apart
+from it. Base and instruct are different models, so give the exact repo id the
+extraction loaded, not the family name.
+
+Give the whole string the way the distributor writes it, distributor included:
+`allenai/Olmo-3-1125-32B`, `Qwen/Qwen3-8B`. A model with no distributor is one
+segment and that is fine, `gpt2` and `bert-base-uncased` among them; nothing here
+requires a slash and nothing checks the shape of what you write.
 
 **model_revision** The exact revision of those weights, if the extraction
 recorded it. A commit on the model repo. If nobody wrote it down, `not-found:`
@@ -401,7 +426,8 @@ GitHub repos and that is not a lesser answer than a Hub one.
 
 **artifact_commit** Forty hex characters. A commit, never a branch and never a
 tag: whoever owns a repo can move a tag, so pinning to one pins to whatever is
-there today, which is the opposite of what `author/label@version` promises. If
+there today, which is the opposite of what `author/model_id/label@version`
+promises. If
 you only have a branch, resolve it to the commit it points at right now and give
 that. If the artifact is not published anywhere yet, `not-found:` the repo and
 the commit and give the path anyway; the intake tool publishes the file to the
@@ -418,7 +444,7 @@ layout.
 **The commit has to end up in the URL, and that is the only shape rule.** A
 template that resolves to a URL not containing the commit is refused, because
 such a URL returns whatever is at that address today, and a pin to whatever is
-there today is the thing `author/label@version` promises not to be. You can
+there today is the thing `author/model_id/label@version` promises not to be. You can
 leave out any of the other three: hard-coding the host in the template is
 normal, and the GitHub media layout below does exactly that. Two further
 mechanical rules, so they do not surprise you: the scheme has to be http or

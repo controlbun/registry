@@ -36,7 +36,8 @@ const absences = c.absences ?? {};
 // not a degraded one. Five are fixtures and four are real directions their
 // author never published at a URL.
 const p = c.published;
-const ref = `${c.author}/${c.label}@${c.version}`;
+// Off the payload, built by `registry/views.py`. See SubmissionRows.
+const ref = c.ref;
 
 // Which of them this card already prints beside the field itself. A layout
 // fact about this card, not a list of the fields allowed a reason: the schema

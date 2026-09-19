@@ -110,6 +110,7 @@
             "profile": "soham/contrastive-v1",
             "theory": "I take affective tone to be the trait itself rather than a proxy for it, so I did not orthogonalize against sentiment. A reader who thinks warmth is a confound on kindness should expect this direction to move both, and should prefer bob's."
           },
+          "ref": "alice/placeholder/does-not-resolve-1b/kindness@v1",
           "score_state": "reportable",
           "shape": "[8]",
           "steering_position": "all-positions",
@@ -219,6 +220,7 @@
             "profile": "soham/contrastive-v1",
             "theory": "Warmth without cost is politeness. I orthogonalized against sentiment and formality so that what is left is the willingness to give something up, which is what I mean by the word."
           },
+          "ref": "bob/placeholder/does-not-resolve-1b/kindness@v1",
           "score_state": "reportable",
           "shape": "[8]",
           "steering_position": "all-positions",
@@ -245,7 +247,7 @@
       "label": "kindness",
       "pairs": [
         {
-          "a": "alice/kindness@v1",
+          "a": "alice/placeholder/does-not-resolve-1b/kindness@v1",
           "angle_comparable": true,
           "angle_similarity": 0.5882353782653809,
           "angle_why": null,
@@ -258,7 +260,7 @@
             "formality",
             "refusal_rate"
           ],
-          "b": "bob/kindness@v1",
+          "b": "bob/placeholder/does-not-resolve-1b/kindness@v1",
           "is_synthetic": true,
           "score_state_a": "reportable",
           "score_state_b": "reportable",
@@ -267,25 +269,25 @@
         }
       ],
       "similarity": {
-        "alice/kindness@v1": {
-          "alice/kindness@v1": {
+        "alice/placeholder/does-not-resolve-1b/kindness@v1": {
+          "alice/placeholder/does-not-resolve-1b/kindness@v1": {
             "note": null,
             "v": 1.0,
             "why": null
           },
-          "bob/kindness@v1": {
+          "bob/placeholder/does-not-resolve-1b/kindness@v1": {
             "note": null,
             "v": 0.5882353782653809,
             "why": null
           }
         },
-        "bob/kindness@v1": {
-          "alice/kindness@v1": {
+        "bob/placeholder/does-not-resolve-1b/kindness@v1": {
+          "alice/placeholder/does-not-resolve-1b/kindness@v1": {
             "note": null,
             "v": 0.5882353782653809,
             "why": null
           },
-          "bob/kindness@v1": {
+          "bob/placeholder/does-not-resolve-1b/kindness@v1": {
             "note": null,
             "v": 1.0,
             "why": null
@@ -331,6 +333,7 @@
           "notes": null,
           "published": null,
           "recipe": null,
+          "ref": "dana/placeholder/other-architecture-7b/refusal@v1",
           "score_state": "reportable",
           "shape": "[8]",
           "steering_position": "all-positions",
@@ -399,6 +402,7 @@
             "profile": "erik/linear-probe-v2",
             "theory": "A decision boundary is not a feature. I train on transcripts rather than selecting a latent, because a latent that fires on declination may be firing on the topics that provoke it."
           },
+          "ref": "erik/placeholder/other-architecture-7b/refusal@v1",
           "score_state": "uninterpretable",
           "shape": "[8]",
           "steering_position": "all-positions",
@@ -451,6 +455,7 @@
             "profile": "neuronpedia/sae-latent-v1",
             "theory": "Selecting a latent is a weaker claim than building a direction: I did not decide what refusal is, I found something in someone else's dictionary that fires on it. If the latent turns out to be polysemantic, that is a fact about the SAE and not about my reading of the word."
           },
+          "ref": "fern/placeholder/other-architecture-7b/refusal@v1",
           "score_state": "absent",
           "shape": "[8]",
           "steering_position": "all-positions",
@@ -464,7 +469,7 @@
       "label": "refusal",
       "pairs": [
         {
-          "a": "dana/refusal@v1",
+          "a": "dana/placeholder/other-architecture-7b/refusal@v1",
           "angle_comparable": true,
           "angle_similarity": 0.8519977331161499,
           "angle_why": null,
@@ -475,7 +480,7 @@
             "verbosity"
           ],
           "axes_only_b_checked": [],
-          "b": "erik/refusal@v1",
+          "b": "erik/placeholder/other-architecture-7b/refusal@v1",
           "is_synthetic": true,
           "score_state_a": "reportable",
           "score_state_b": "uninterpretable",
@@ -483,7 +488,7 @@
           "transfer_b": null
         },
         {
-          "a": "dana/refusal@v1",
+          "a": "dana/placeholder/other-architecture-7b/refusal@v1",
           "angle_comparable": true,
           "angle_similarity": 0.78631591796875,
           "angle_why": null,
@@ -493,7 +498,7 @@
             "verbosity"
           ],
           "axes_only_b_checked": [],
-          "b": "fern/refusal@v1",
+          "b": "fern/placeholder/other-architecture-7b/refusal@v1",
           "is_synthetic": true,
           "score_state_a": "reportable",
           "score_state_b": "absent",
@@ -501,7 +506,7 @@
           "transfer_b": null
         },
         {
-          "a": "erik/refusal@v1",
+          "a": "erik/placeholder/other-architecture-7b/refusal@v1",
           "angle_comparable": true,
           "angle_similarity": 0.8169825077056885,
           "angle_why": null,
@@ -510,7 +515,7 @@
             "topic"
           ],
           "axes_only_b_checked": [],
-          "b": "fern/refusal@v1",
+          "b": "fern/placeholder/other-architecture-7b/refusal@v1",
           "is_synthetic": true,
           "score_state_a": "uninterpretable",
           "score_state_b": "absent",
@@ -519,52 +524,52 @@
         }
       ],
       "similarity": {
-        "dana/refusal@v1": {
-          "dana/refusal@v1": {
+        "dana/placeholder/other-architecture-7b/refusal@v1": {
+          "dana/placeholder/other-architecture-7b/refusal@v1": {
             "note": null,
             "v": 1.0,
             "why": null
           },
-          "erik/refusal@v1": {
+          "erik/placeholder/other-architecture-7b/refusal@v1": {
             "note": "sae-latent against probe: comparing what each would steer with",
             "v": 0.8519977331161499,
             "why": null
           },
-          "fern/refusal@v1": {
+          "fern/placeholder/other-architecture-7b/refusal@v1": {
             "note": null,
             "v": 0.78631591796875,
             "why": null
           }
         },
-        "erik/refusal@v1": {
-          "dana/refusal@v1": {
+        "erik/placeholder/other-architecture-7b/refusal@v1": {
+          "dana/placeholder/other-architecture-7b/refusal@v1": {
             "note": "probe against sae-latent: comparing what each would steer with",
             "v": 0.8519977331161499,
             "why": null
           },
-          "erik/refusal@v1": {
+          "erik/placeholder/other-architecture-7b/refusal@v1": {
             "note": null,
             "v": 1.0000001192092896,
             "why": null
           },
-          "fern/refusal@v1": {
+          "fern/placeholder/other-architecture-7b/refusal@v1": {
             "note": "probe against sae-latent: comparing what each would steer with",
             "v": 0.8169825077056885,
             "why": null
           }
         },
-        "fern/refusal@v1": {
-          "dana/refusal@v1": {
+        "fern/placeholder/other-architecture-7b/refusal@v1": {
+          "dana/placeholder/other-architecture-7b/refusal@v1": {
             "note": null,
             "v": 0.78631591796875,
             "why": null
           },
-          "erik/refusal@v1": {
+          "erik/placeholder/other-architecture-7b/refusal@v1": {
             "note": "sae-latent against probe: comparing what each would steer with",
             "v": 0.8169825077056885,
             "why": null
           },
-          "fern/refusal@v1": {
+          "fern/placeholder/other-architecture-7b/refusal@v1": {
             "note": null,
             "v": 1.0000001192092896,
             "why": null
@@ -625,6 +630,7 @@
             "profile": "soham/arena-contrast-v1",
             "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
           },
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
           "score_state": "absent",
           "shape": "[5120]",
           "steering_position": "all-positions",
@@ -696,6 +702,7 @@
             "profile": "soham/arena-contrast-v1",
             "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
           },
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
           "score_state": "absent",
           "shape": "[5120]",
           "steering_position": "all-positions",
@@ -767,6 +774,7 @@
             "profile": "soham/arena-contrast-v1",
             "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
           },
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@lda",
           "score_state": "absent",
           "shape": "[5120]",
           "steering_position": "all-positions",
@@ -838,6 +846,7 @@
             "profile": "soham/arena-contrast-v1",
             "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
           },
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
           "score_state": "absent",
           "shape": "[5120]",
           "steering_position": "all-positions",
@@ -851,7 +860,7 @@
       "label": "pro-human",
       "pairs": [
         {
-          "a": "soham/pro-human@L24",
+          "a": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
           "angle_comparable": false,
           "angle_similarity": null,
           "angle_why": "different layer or hook point",
@@ -863,7 +872,7 @@
           ],
           "axes_only_a_checked": [],
           "axes_only_b_checked": [],
-          "b": "soham/pro-human@lda",
+          "b": "soham/allenai/Olmo-3-1125-32B/pro-human@lda",
           "is_synthetic": false,
           "score_state_a": "absent",
           "score_state_b": "absent",
@@ -871,7 +880,7 @@
           "transfer_b": 0.685
         },
         {
-          "a": "soham/pro-human@L24",
+          "a": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
           "angle_comparable": false,
           "angle_similarity": null,
           "angle_why": "different layer or hook point",
@@ -883,7 +892,7 @@
           ],
           "axes_only_a_checked": [],
           "axes_only_b_checked": [],
-          "b": "soham/pro-human@logistic",
+          "b": "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
           "is_synthetic": false,
           "score_state_a": "absent",
           "score_state_b": "absent",
@@ -891,7 +900,7 @@
           "transfer_b": 0.716
         },
         {
-          "a": "soham/pro-human@L24",
+          "a": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
           "angle_comparable": false,
           "angle_similarity": null,
           "angle_why": "different layer or hook point",
@@ -903,7 +912,7 @@
           ],
           "axes_only_a_checked": [],
           "axes_only_b_checked": [],
-          "b": "soham/pro-human@meandiff",
+          "b": "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
           "is_synthetic": false,
           "score_state_a": "absent",
           "score_state_b": "absent",
@@ -911,7 +920,7 @@
           "transfer_b": 0.74
         },
         {
-          "a": "soham/pro-human@lda",
+          "a": "soham/allenai/Olmo-3-1125-32B/pro-human@lda",
           "angle_comparable": true,
           "angle_similarity": 0.8317705392837524,
           "angle_why": null,
@@ -923,7 +932,7 @@
           ],
           "axes_only_a_checked": [],
           "axes_only_b_checked": [],
-          "b": "soham/pro-human@logistic",
+          "b": "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
           "is_synthetic": false,
           "score_state_a": "absent",
           "score_state_b": "absent",
@@ -931,7 +940,7 @@
           "transfer_b": 0.716
         },
         {
-          "a": "soham/pro-human@lda",
+          "a": "soham/allenai/Olmo-3-1125-32B/pro-human@lda",
           "angle_comparable": true,
           "angle_similarity": 0.42612743377685547,
           "angle_why": null,
@@ -943,7 +952,7 @@
           ],
           "axes_only_a_checked": [],
           "axes_only_b_checked": [],
-          "b": "soham/pro-human@meandiff",
+          "b": "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
           "is_synthetic": false,
           "score_state_a": "absent",
           "score_state_b": "absent",
@@ -951,7 +960,7 @@
           "transfer_b": 0.74
         },
         {
-          "a": "soham/pro-human@logistic",
+          "a": "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
           "angle_comparable": true,
           "angle_similarity": 0.6965014338493347,
           "angle_why": null,
@@ -963,7 +972,7 @@
           ],
           "axes_only_a_checked": [],
           "axes_only_b_checked": [],
-          "b": "soham/pro-human@meandiff",
+          "b": "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
           "is_synthetic": false,
           "score_state_a": "absent",
           "score_state_b": "absent",
@@ -972,89 +981,89 @@
         }
       ],
       "similarity": {
-        "soham/pro-human@L24": {
-          "soham/pro-human@L24": {
+        "soham/allenai/Olmo-3-1125-32B/pro-human@L24": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@L24": {
             "note": null,
             "v": 1.0,
             "why": null
           },
-          "soham/pro-human@lda": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@lda": {
             "note": null,
             "v": null,
             "why": "different layer or hook point"
           },
-          "soham/pro-human@logistic": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@logistic": {
             "note": null,
             "v": null,
             "why": "different layer or hook point"
           },
-          "soham/pro-human@meandiff": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff": {
             "note": null,
             "v": null,
             "why": "different layer or hook point"
           }
         },
-        "soham/pro-human@lda": {
-          "soham/pro-human@L24": {
+        "soham/allenai/Olmo-3-1125-32B/pro-human@lda": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@L24": {
             "note": null,
             "v": null,
             "why": "different layer or hook point"
           },
-          "soham/pro-human@lda": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@lda": {
             "note": null,
             "v": 1.0,
             "why": null
           },
-          "soham/pro-human@logistic": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@logistic": {
             "note": null,
             "v": 0.8317705392837524,
             "why": null
           },
-          "soham/pro-human@meandiff": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff": {
             "note": null,
             "v": 0.42612743377685547,
             "why": null
           }
         },
-        "soham/pro-human@logistic": {
-          "soham/pro-human@L24": {
+        "soham/allenai/Olmo-3-1125-32B/pro-human@logistic": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@L24": {
             "note": null,
             "v": null,
             "why": "different layer or hook point"
           },
-          "soham/pro-human@lda": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@lda": {
             "note": null,
             "v": 0.8317705392837524,
             "why": null
           },
-          "soham/pro-human@logistic": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@logistic": {
             "note": null,
             "v": 1.0,
             "why": null
           },
-          "soham/pro-human@meandiff": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff": {
             "note": null,
             "v": 0.6965014338493347,
             "why": null
           }
         },
-        "soham/pro-human@meandiff": {
-          "soham/pro-human@L24": {
+        "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@L24": {
             "note": null,
             "v": null,
             "why": "different layer or hook point"
           },
-          "soham/pro-human@lda": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@lda": {
             "note": null,
             "v": 0.42612743377685547,
             "why": null
           },
-          "soham/pro-human@logistic": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@logistic": {
             "note": null,
             "v": 0.6965014338493347,
             "why": null
           },
-          "soham/pro-human@meandiff": {
+          "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff": {
             "note": null,
             "v": 1.0,
             "why": null
@@ -1104,6 +1113,7 @@
             "url_template": "https://{host}/{repo}/resolve/{commit}/{path}"
           },
           "recipe": null,
+          "ref": "soham/meta-llama/Llama-3.3-70B-Instruct/trauma@d61-diffmeans-expository-L34",
           "score_state": "absent",
           "shape": "(8192,)",
           "steering_position": "prefill pass only, applied once to every prompt position, NOT re-applied at each generated token",
@@ -1117,8 +1127,8 @@
       "label": "trauma",
       "pairs": [],
       "similarity": {
-        "soham/trauma@d61-diffmeans-expository-L34": {
-          "soham/trauma@d61-diffmeans-expository-L34": {
+        "soham/meta-llama/Llama-3.3-70B-Instruct/trauma@d61-diffmeans-expository-L34": {
+          "soham/meta-llama/Llama-3.3-70B-Instruct/trauma@d61-diffmeans-expository-L34": {
             "note": null,
             "v": null,
             "why": "not a vector"
@@ -1225,6 +1235,7 @@
                 "profile": "soham/contrastive-v1",
                 "theory": "I take affective tone to be the trait itself rather than a proxy for it, so I did not orthogonalize against sentiment. A reader who thinks warmth is a confound on kindness should expect this direction to move both, and should prefer bob's."
               },
+              "ref": "alice/placeholder/does-not-resolve-1b/kindness@v1",
               "score_state": "reportable",
               "shape": "[8]",
               "steering_position": "all-positions",
@@ -1334,6 +1345,7 @@
                 "profile": "soham/contrastive-v1",
                 "theory": "Warmth without cost is politeness. I orthogonalized against sentiment and formality so that what is left is the willingness to give something up, which is what I mean by the word."
               },
+              "ref": "bob/placeholder/does-not-resolve-1b/kindness@v1",
               "score_state": "reportable",
               "shape": "[8]",
               "steering_position": "all-positions",
@@ -1362,7 +1374,7 @@
           "latest": "2026-09-12T00:00:00Z",
           "pairs": [
             {
-              "a": "alice/kindness@v1",
+              "a": "alice/placeholder/does-not-resolve-1b/kindness@v1",
               "angle_comparable": true,
               "angle_similarity": 0.5882353782653809,
               "angle_why": null,
@@ -1375,7 +1387,7 @@
                 "formality",
                 "refusal_rate"
               ],
-              "b": "bob/kindness@v1",
+              "b": "bob/placeholder/does-not-resolve-1b/kindness@v1",
               "is_synthetic": true,
               "score_state_a": "reportable",
               "score_state_b": "reportable",
@@ -1401,6 +1413,7 @@
           "kind": "direction",
           "label": "kindness",
           "model_id": "placeholder/does-not-resolve-1b",
+          "ref": "alice/placeholder/does-not-resolve-1b/kindness@v1",
           "version": "v1"
         },
         {
@@ -1409,6 +1422,7 @@
           "kind": "direction",
           "label": "kindness",
           "model_id": "placeholder/does-not-resolve-1b",
+          "ref": "bob/placeholder/does-not-resolve-1b/kindness@v1",
           "version": "v1"
         }
       ],
@@ -1464,6 +1478,7 @@
               "notes": null,
               "published": null,
               "recipe": null,
+              "ref": "dana/placeholder/other-architecture-7b/refusal@v1",
               "score_state": "reportable",
               "shape": "[8]",
               "steering_position": "all-positions",
@@ -1532,6 +1547,7 @@
                 "profile": "erik/linear-probe-v2",
                 "theory": "A decision boundary is not a feature. I train on transcripts rather than selecting a latent, because a latent that fires on declination may be firing on the topics that provoke it."
               },
+              "ref": "erik/placeholder/other-architecture-7b/refusal@v1",
               "score_state": "uninterpretable",
               "shape": "[8]",
               "steering_position": "all-positions",
@@ -1584,6 +1600,7 @@
                 "profile": "neuronpedia/sae-latent-v1",
                 "theory": "Selecting a latent is a weaker claim than building a direction: I did not decide what refusal is, I found something in someone else's dictionary that fires on it. If the latent turns out to be polysemantic, that is a fact about the SAE and not about my reading of the word."
               },
+              "ref": "fern/placeholder/other-architecture-7b/refusal@v1",
               "score_state": "absent",
               "shape": "[8]",
               "steering_position": "all-positions",
@@ -1599,7 +1616,7 @@
           "latest": "2026-09-12T00:00:00Z",
           "pairs": [
             {
-              "a": "dana/refusal@v1",
+              "a": "dana/placeholder/other-architecture-7b/refusal@v1",
               "angle_comparable": true,
               "angle_similarity": 0.8519977331161499,
               "angle_why": null,
@@ -1610,7 +1627,7 @@
                 "verbosity"
               ],
               "axes_only_b_checked": [],
-              "b": "erik/refusal@v1",
+              "b": "erik/placeholder/other-architecture-7b/refusal@v1",
               "is_synthetic": true,
               "score_state_a": "reportable",
               "score_state_b": "uninterpretable",
@@ -1618,7 +1635,7 @@
               "transfer_b": null
             },
             {
-              "a": "dana/refusal@v1",
+              "a": "dana/placeholder/other-architecture-7b/refusal@v1",
               "angle_comparable": true,
               "angle_similarity": 0.78631591796875,
               "angle_why": null,
@@ -1628,7 +1645,7 @@
                 "verbosity"
               ],
               "axes_only_b_checked": [],
-              "b": "fern/refusal@v1",
+              "b": "fern/placeholder/other-architecture-7b/refusal@v1",
               "is_synthetic": true,
               "score_state_a": "reportable",
               "score_state_b": "absent",
@@ -1636,7 +1653,7 @@
               "transfer_b": null
             },
             {
-              "a": "erik/refusal@v1",
+              "a": "erik/placeholder/other-architecture-7b/refusal@v1",
               "angle_comparable": true,
               "angle_similarity": 0.8169825077056885,
               "angle_why": null,
@@ -1645,7 +1662,7 @@
                 "topic"
               ],
               "axes_only_b_checked": [],
-              "b": "fern/refusal@v1",
+              "b": "fern/placeholder/other-architecture-7b/refusal@v1",
               "is_synthetic": true,
               "score_state_a": "uninterpretable",
               "score_state_b": "absent",
@@ -1671,6 +1688,7 @@
           "kind": "sae-latent",
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
+          "ref": "dana/placeholder/other-architecture-7b/refusal@v1",
           "version": "v1"
         },
         {
@@ -1679,6 +1697,7 @@
           "kind": "probe",
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
+          "ref": "erik/placeholder/other-architecture-7b/refusal@v1",
           "version": "v1"
         },
         {
@@ -1687,6 +1706,7 @@
           "kind": "sae-latent",
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
+          "ref": "fern/placeholder/other-architecture-7b/refusal@v1",
           "version": "v1"
         }
       ],
@@ -1756,6 +1776,7 @@
                 "profile": "soham/arena-contrast-v1",
                 "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
               },
+              "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
               "score_state": "absent",
               "shape": "[5120]",
               "steering_position": "all-positions",
@@ -1827,6 +1848,7 @@
                 "profile": "soham/arena-contrast-v1",
                 "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
               },
+              "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
               "score_state": "absent",
               "shape": "[5120]",
               "steering_position": "all-positions",
@@ -1898,6 +1920,7 @@
                 "profile": "soham/arena-contrast-v1",
                 "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
               },
+              "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@lda",
               "score_state": "absent",
               "shape": "[5120]",
               "steering_position": "all-positions",
@@ -1969,6 +1992,7 @@
                 "profile": "soham/arena-contrast-v1",
                 "theory": "All three come from the same 135 pairs at the same layer, and differ only in the estimator. Their pairwise cosines are 0.6965 (meandiff-logistic), 0.4261 (meandiff-lda) and 0.8318 (logistic-lda), recomputed here from the shipped tensors. Cosine is a displayed fact and not evidence of disagreement: the informative comparison is what each buys on the evidence below, and on this battery the answer is nothing that separates them."
               },
+              "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
               "score_state": "absent",
               "shape": "[5120]",
               "steering_position": "all-positions",
@@ -1984,7 +2008,7 @@
           "latest": "2026-06-08T23:20:02Z",
           "pairs": [
             {
-              "a": "soham/pro-human@L24",
+              "a": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
               "angle_comparable": false,
               "angle_similarity": null,
               "angle_why": "different layer or hook point",
@@ -1996,7 +2020,7 @@
               ],
               "axes_only_a_checked": [],
               "axes_only_b_checked": [],
-              "b": "soham/pro-human@lda",
+              "b": "soham/allenai/Olmo-3-1125-32B/pro-human@lda",
               "is_synthetic": false,
               "score_state_a": "absent",
               "score_state_b": "absent",
@@ -2004,7 +2028,7 @@
               "transfer_b": 0.685
             },
             {
-              "a": "soham/pro-human@L24",
+              "a": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
               "angle_comparable": false,
               "angle_similarity": null,
               "angle_why": "different layer or hook point",
@@ -2016,7 +2040,7 @@
               ],
               "axes_only_a_checked": [],
               "axes_only_b_checked": [],
-              "b": "soham/pro-human@logistic",
+              "b": "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
               "is_synthetic": false,
               "score_state_a": "absent",
               "score_state_b": "absent",
@@ -2024,7 +2048,7 @@
               "transfer_b": 0.716
             },
             {
-              "a": "soham/pro-human@L24",
+              "a": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
               "angle_comparable": false,
               "angle_similarity": null,
               "angle_why": "different layer or hook point",
@@ -2036,7 +2060,7 @@
               ],
               "axes_only_a_checked": [],
               "axes_only_b_checked": [],
-              "b": "soham/pro-human@meandiff",
+              "b": "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
               "is_synthetic": false,
               "score_state_a": "absent",
               "score_state_b": "absent",
@@ -2044,7 +2068,7 @@
               "transfer_b": 0.74
             },
             {
-              "a": "soham/pro-human@lda",
+              "a": "soham/allenai/Olmo-3-1125-32B/pro-human@lda",
               "angle_comparable": true,
               "angle_similarity": 0.8317705392837524,
               "angle_why": null,
@@ -2056,7 +2080,7 @@
               ],
               "axes_only_a_checked": [],
               "axes_only_b_checked": [],
-              "b": "soham/pro-human@logistic",
+              "b": "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
               "is_synthetic": false,
               "score_state_a": "absent",
               "score_state_b": "absent",
@@ -2064,7 +2088,7 @@
               "transfer_b": 0.716
             },
             {
-              "a": "soham/pro-human@lda",
+              "a": "soham/allenai/Olmo-3-1125-32B/pro-human@lda",
               "angle_comparable": true,
               "angle_similarity": 0.42612743377685547,
               "angle_why": null,
@@ -2076,7 +2100,7 @@
               ],
               "axes_only_a_checked": [],
               "axes_only_b_checked": [],
-              "b": "soham/pro-human@meandiff",
+              "b": "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
               "is_synthetic": false,
               "score_state_a": "absent",
               "score_state_b": "absent",
@@ -2084,7 +2108,7 @@
               "transfer_b": 0.74
             },
             {
-              "a": "soham/pro-human@logistic",
+              "a": "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
               "angle_comparable": true,
               "angle_similarity": 0.6965014338493347,
               "angle_why": null,
@@ -2096,7 +2120,7 @@
               ],
               "axes_only_a_checked": [],
               "axes_only_b_checked": [],
-              "b": "soham/pro-human@meandiff",
+              "b": "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
               "is_synthetic": false,
               "score_state_a": "absent",
               "score_state_b": "absent",
@@ -2123,6 +2147,7 @@
           "kind": "direction",
           "label": "pro-human",
           "model_id": "allenai/Olmo-3-1125-32B",
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
           "version": "L24"
         },
         {
@@ -2131,6 +2156,7 @@
           "kind": "direction",
           "label": "pro-human",
           "model_id": "allenai/Olmo-3-1125-32B",
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
           "version": "logistic"
         },
         {
@@ -2139,6 +2165,7 @@
           "kind": "direction",
           "label": "pro-human",
           "model_id": "allenai/Olmo-3-1125-32B",
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@lda",
           "version": "lda"
         },
         {
@@ -2147,6 +2174,7 @@
           "kind": "direction",
           "label": "pro-human",
           "model_id": "allenai/Olmo-3-1125-32B",
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
           "version": "meandiff"
         }
       ],
@@ -2205,6 +2233,7 @@
                 "url_template": "https://{host}/{repo}/resolve/{commit}/{path}"
               },
               "recipe": null,
+              "ref": "soham/meta-llama/Llama-3.3-70B-Instruct/trauma@d61-diffmeans-expository-L34",
               "score_state": "absent",
               "shape": "(8192,)",
               "steering_position": "prefill pass only, applied once to every prompt position, NOT re-applied at each generated token",
@@ -2237,6 +2266,7 @@
           "kind": "direction",
           "label": "trauma",
           "model_id": "meta-llama/Llama-3.3-70B-Instruct",
+          "ref": "soham/meta-llama/Llama-3.3-70B-Instruct/trauma@d61-diffmeans-expository-L34",
           "version": "d61-diffmeans-expository-L34"
         }
       ],
@@ -2306,6 +2336,7 @@
           "kind": "direction",
           "label": "kindness",
           "model_id": "placeholder/does-not-resolve-1b",
+          "ref": "alice/placeholder/does-not-resolve-1b/kindness@v1",
           "score_state": "reportable",
           "version": "v1"
         }
@@ -2352,6 +2383,7 @@
           "kind": "direction",
           "label": "kindness",
           "model_id": "placeholder/does-not-resolve-1b",
+          "ref": "bob/placeholder/does-not-resolve-1b/kindness@v1",
           "score_state": "reportable",
           "version": "v1"
         }
@@ -2398,6 +2430,7 @@
           "kind": "sae-latent",
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
+          "ref": "dana/placeholder/other-architecture-7b/refusal@v1",
           "score_state": "reportable",
           "version": "v1"
         }
@@ -2427,7 +2460,7 @@
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
           "reported_at": "2026-09-12T00:00:00Z",
-          "subject": "dana/refusal@v1",
+          "subject": "dana/placeholder/other-architecture-7b/refusal@v1",
           "subject_author": "dana",
           "subject_synthetic": true,
           "version": "v1"
@@ -2454,6 +2487,7 @@
           "kind": "probe",
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
+          "ref": "erik/placeholder/other-architecture-7b/refusal@v1",
           "score_state": "uninterpretable",
           "version": "v1"
         }
@@ -2506,6 +2540,7 @@
           "kind": "sae-latent",
           "label": "refusal",
           "model_id": "placeholder/other-architecture-7b",
+          "ref": "fern/placeholder/other-architecture-7b/refusal@v1",
           "score_state": "absent",
           "version": "v1"
         }
@@ -2567,6 +2602,7 @@
           "kind": "direction",
           "label": "trauma",
           "model_id": "meta-llama/Llama-3.3-70B-Instruct",
+          "ref": "soham/meta-llama/Llama-3.3-70B-Instruct/trauma@d61-diffmeans-expository-L34",
           "score_state": "absent",
           "version": "d61-diffmeans-expository-L34"
         },
@@ -2579,6 +2615,7 @@
           "kind": "direction",
           "label": "pro-human",
           "model_id": "allenai/Olmo-3-1125-32B",
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
           "score_state": "absent",
           "version": "L24"
         },
@@ -2591,6 +2628,7 @@
           "kind": "direction",
           "label": "pro-human",
           "model_id": "allenai/Olmo-3-1125-32B",
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
           "score_state": "absent",
           "version": "logistic"
         },
@@ -2603,6 +2641,7 @@
           "kind": "direction",
           "label": "pro-human",
           "model_id": "allenai/Olmo-3-1125-32B",
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@lda",
           "score_state": "absent",
           "version": "lda"
         },
@@ -2615,6 +2654,7 @@
           "kind": "direction",
           "label": "pro-human",
           "model_id": "allenai/Olmo-3-1125-32B",
+          "ref": "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
           "score_state": "absent",
           "version": "meandiff"
         }
@@ -2644,7 +2684,7 @@
           "label": "kindness",
           "method": "alternative-confound-axis",
           "model_id": "placeholder/does-not-resolve-1b",
-          "subject": "alice/kindness@v1",
+          "subject": "alice/placeholder/does-not-resolve-1b/kindness@v1",
           "subject_author": "alice",
           "subject_synthetic": true,
           "version": "v1"
@@ -2658,7 +2698,7 @@
           "label": "kindness",
           "model_id": "placeholder/does-not-resolve-1b",
           "reported_at": "2026-09-12T00:00:00Z",
-          "subject": "alice/kindness@v1",
+          "subject": "alice/placeholder/does-not-resolve-1b/kindness@v1",
           "subject_author": "alice",
           "subject_synthetic": true,
           "version": "v1"
@@ -2705,7 +2745,7 @@
           "predictability": "as-documented",
           "purpose": "Steering a support-desk assistant toward offering concrete help rather than sympathy.",
           "reported_at": "2026-09-12T00:00:00Z",
-          "subject": "bob/kindness@v1",
+          "subject": "bob/placeholder/does-not-resolve-1b/kindness@v1",
           "subject_author": "bob",
           "subject_synthetic": true,
           "version": "v1"
@@ -2733,7 +2773,7 @@
           "predictability": "partial",
           "purpose": "Warming the tone of generated release notes.",
           "reported_at": "2026-09-12T00:00:00Z",
-          "subject": "alice/kindness@v1",
+          "subject": "alice/placeholder/does-not-resolve-1b/kindness@v1",
           "subject_author": "alice",
           "subject_synthetic": true,
           "version": "v1"
@@ -2745,30 +2785,32 @@
   "pins": [
     {
       "alternatives": [
-        "alice/kindness@v1"
+        "alice/placeholder/does-not-resolve-1b/kindness@v1"
       ],
       "author": "bob",
       "label": "kindness",
+      "model_id": "placeholder/does-not-resolve-1b",
       "pinned_at": "2026-09-12T00:00:00Z",
       "pinned_by": "steering-arena",
       "purpose": "Season scoring target, frozen so player scores are commensurable",
       "rationale": "Picked for the costly-help reading because the season's probe set is about action. Not a claim that it is the better direction.",
-      "target": "bob/kindness@v1",
+      "target": "bob/placeholder/does-not-resolve-1b/kindness@v1",
       "version": "v1"
     },
     {
       "alternatives": [
-        "soham/pro-human@meandiff",
-        "soham/pro-human@logistic",
-        "soham/pro-human@lda"
+        "soham/allenai/Olmo-3-1125-32B/pro-human@meandiff",
+        "soham/allenai/Olmo-3-1125-32B/pro-human@logistic",
+        "soham/allenai/Olmo-3-1125-32B/pro-human@lda"
       ],
       "author": "soham",
       "label": "pro-human",
+      "model_id": "allenai/Olmo-3-1125-32B",
       "pinned_at": "2026-06-08T23:20:02Z",
       "pinned_by": "steering-arena",
       "purpose": "Season 2 scoring target, frozen so player scores within the season are commensurable",
       "rationale": "Chosen at the time from a five-layer sweep whose held-out separation was 1.000 at every layer, so separation could not pick one. Not a claim that layer 24 is the right layer; a claim that the season needed one and this was it.",
-      "target": "soham/pro-human@L24",
+      "target": "soham/allenai/Olmo-3-1125-32B/pro-human@L24",
       "version": "L24"
     }
   ],

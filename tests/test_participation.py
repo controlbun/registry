@@ -74,7 +74,10 @@ def test_carols_page_names_what_she_actually_did():
     body = text_of(page("carol"))
     assert "Attacks" in body
     assert "alternative-confound-axis" in body, "her attack method is not shown"
-    assert "alice/kindness@v1" in body, "what she attacked is not named"
+    assert "alice/placeholder/does-not-resolve-1b/kindness@v1" in body, (
+        "what she attacked is not named, in full: a reference without the "
+        "model does not say which artifact she attacked"
+    )
     assert "warmth-adversarial@v1" in body, "her eval suite is not shown"
 
 

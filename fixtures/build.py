@@ -103,17 +103,17 @@ def seed(conn, vectors: dict[str, Path]) -> None:
     # Two people claim `kindness` and mean different things by it. This is the
     # content, not a duplication problem.
     ex(
-        "INSERT INTO submission (author,label,version,definition,created_at,is_synthetic)"
-        " VALUES (?,?,?,?,?,1)",
-        ("alice", "kindness", "v1",
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
+        ("alice", MODEL_A[0], "kindness", "v1",
          "Kindness is warmth in affect: the model sounds like it cares. I take "
          "affective tone to be the trait itself rather than a proxy for it.",
          "2026-09-12T00:00:00Z"),
     )
     ex(
-        "INSERT INTO submission (author,label,version,definition,created_at,is_synthetic)"
-        " VALUES (?,?,?,?,?,1)",
-        ("bob", "kindness", "v1",
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
+        ("bob", MODEL_A[0], "kindness", "v1",
          "Kindness is costly help: the model gives up something to benefit the "
          "user. Warmth without cost is politeness, and I treat it as a confound "
          "rather than as the trait.",
@@ -132,17 +132,17 @@ def seed(conn, vectors: dict[str, Path]) -> None:
     # artifacts being an SAE latent and a probe rather than directions. The registry
     # is not about one trait, one method, or one architecture.
     ex(
-        "INSERT INTO submission (author,label,version,definition,created_at,is_synthetic)"
-        " VALUES (?,?,?,?,?,1)",
-        ("dana", "refusal", "v1",
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
+        ("dana", MODEL_B[0], "refusal", "v1",
          "Refusal is the model declining a request it parsed and understood. I read "
          "it off an SAE latent that fires on declination rather than on topic.",
          "2026-09-12T00:00:00Z"),
     )
     ex(
-        "INSERT INTO submission (author,label,version,definition,created_at,is_synthetic)"
-        " VALUES (?,?,?,?,?,1)",
-        ("erik", "refusal", "v1",
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
+        ("erik", MODEL_B[0], "refusal", "v1",
          "Refusal is a decision boundary, not a feature, so I train a linear probe on "
          "labeled transcripts instead of selecting a latent. Dana's latent looks to "
          "me like topic sensitivity.",
@@ -157,9 +157,9 @@ def seed(conn, vectors: dict[str, Path]) -> None:
     )
 
     ex(
-        "INSERT INTO submission (author,label,version,definition,created_at,is_synthetic)"
-        " VALUES (?,?,?,?,?,1)",
-        ("fern", "refusal", "v1",
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
+        ("fern", MODEL_B[0], "refusal", "v1",
          "Refusal is a dictionary feature, not a direction I constructed. I am not "
          "claiming to have found it; I am claiming this particular latent in this "
          "particular SAE fires on declination, and here is which one so you can "
@@ -186,13 +186,13 @@ def seed(conn, vectors: dict[str, Path]) -> None:
         # the artifact itself can answer.
         facts = confirmed_facts(path)
         ex(
-            "INSERT INTO intervention (id,author,label,version,kind,model_id,"
+            "INSERT INTO intervention (id,author,model_id,label,version,kind,"
             "model_revision,layer,layer_convention,hook_point,shape,dtype,"
             "l2_norm,activation_norm,coeff_low,coeff_high,steering_position,"
             "license_status,chat_template_hash,artifact_path,artifact_sha256,"
             "is_synthetic)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
-            (f"iv_{author}", author, label, "v1", kind, mid, rev, layer,
+            (f"iv_{author}", author, mid, label, "v1", kind, rev, layer,
              "block-0indexed", hook, facts.shape, facts.dtype,
              facts.l2_norm, 11.1111, 0.5, 1.5, "all-positions",
              "unresolved", "sha256:" + "e" * 8, f"fixtures/{path.name}",
@@ -203,10 +203,10 @@ def seed(conn, vectors: dict[str, Path]) -> None:
     # identified by its dictionary and its index, so this is the difference between
     # a checkable claim and a bare vector asserting where it came from.
     ex(
-        "INSERT INTO recipe (id,author,label,version,profile,payload_json,"
-        "entrypoint_library,entrypoint_version,container_digest,theory)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?)",
-        ("rc_fern", "fern", "refusal", "v1", "neuronpedia/sae-latent-v1",
+        "INSERT INTO recipe (id,author,model_id,label,version,profile,"
+        "payload_json,entrypoint_library,entrypoint_version,container_digest,"
+        "theory) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        ("rc_fern", "fern", MODEL_B[0], "refusal", "v1", "neuronpedia/sae-latent-v1",
          json.dumps({
              "sae_repo": "placeholder/other-architecture-7b-saes",
              "sae_revision": "2" * 40,
@@ -229,10 +229,10 @@ def seed(conn, vectors: dict[str, Path]) -> None:
     # there is no list. Whoever invents the seventh way of making a direction
     # publishes their own profile without asking anyone.
     ex(
-        "INSERT INTO recipe (id,author,label,version,profile,payload_json,"
-        "entrypoint_library,entrypoint_version,container_digest,theory)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?)",
-        ("rc_alice", "alice", "kindness", "v1", "soham/contrastive-v1",
+        "INSERT INTO recipe (id,author,model_id,label,version,profile,"
+        "payload_json,entrypoint_library,entrypoint_version,container_digest,"
+        "theory) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        ("rc_alice", "alice", MODEL_A[0], "kindness", "v1", "soham/contrastive-v1",
          json.dumps({
              "contrast_source": "uploaded dataset, 135 length-matched pairs",
              "method": "diffmean",
@@ -247,10 +247,10 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          "should prefer bob's."),
     )
     ex(
-        "INSERT INTO recipe (id,author,label,version,profile,payload_json,"
-        "entrypoint_library,entrypoint_version,container_digest,theory)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?)",
-        ("rc_bob", "bob", "kindness", "v1", "soham/contrastive-v1",
+        "INSERT INTO recipe (id,author,model_id,label,version,profile,"
+        "payload_json,entrypoint_library,entrypoint_version,container_digest,"
+        "theory) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        ("rc_bob", "bob", MODEL_A[0], "kindness", "v1", "soham/contrastive-v1",
          json.dumps({
              "contrast_source": "generator prompt + generator model + seed",
              "method": "caa",
@@ -264,10 +264,10 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          "up, which is what I mean by the word."),
     )
     ex(
-        "INSERT INTO recipe (id,author,label,version,profile,payload_json,"
-        "entrypoint_library,entrypoint_version,container_digest,theory)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?)",
-        ("rc_erik", "erik", "refusal", "v1", "erik/linear-probe-v2",
+        "INSERT INTO recipe (id,author,model_id,label,version,profile,"
+        "payload_json,entrypoint_library,entrypoint_version,container_digest,"
+        "theory) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        ("rc_erik", "erik", MODEL_B[0], "refusal", "v1", "erik/linear-probe-v2",
          json.dumps({
              "training_data": "labeled transcripts, declination vs compliance",
              "method": "logistic probe",
@@ -399,10 +399,11 @@ def seed(conn, vectors: dict[str, Path]) -> None:
     # was wrong, which is a defect report about our metadata that no eval could
     # surface.
     ex(
-        "INSERT INTO support_card (id,author,label,version,reporter,reported_at,"
-        "repo,repo_commit,purpose,expected,observed,predictability,deviations,"
-        "author_response,is_synthetic) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
-        ("sc_gus_on_bob", "bob", "kindness", "v1", "gus",
+        "INSERT INTO support_card (id,author,model_id,label,version,reporter,"
+        "reported_at,repo,repo_commit,purpose,expected,observed,predictability,"
+        "deviations,author_response,is_synthetic)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
+        ("sc_gus_on_bob", "bob", MODEL_A[0], "kindness", "v1", "gus",
          "2026-09-12T00:00:00Z", "placeholder/support-desk-eval", "a" * 40,
          "Steering a support-desk assistant toward offering concrete help rather "
          "than sympathy.",
@@ -416,10 +417,11 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          "this was built for."),
     )
     ex(
-        "INSERT INTO support_card (id,author,label,version,reporter,reported_at,"
-        "repo,repo_commit,purpose,expected,observed,predictability,deviations,"
-        "author_response,is_synthetic) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
-        ("sc_hana_on_alice", "alice", "kindness", "v1", "hana",
+        "INSERT INTO support_card (id,author,model_id,label,version,reporter,"
+        "reported_at,repo,repo_commit,purpose,expected,observed,predictability,"
+        "deviations,author_response,is_synthetic)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
+        ("sc_hana_on_alice", "alice", MODEL_A[0], "kindness", "v1", "hana",
          "2026-09-12T00:00:00Z", "placeholder/tone-experiments", "b" * 40,
          "Warming the tone of generated release notes.",
          "Per the contract: layer 4, resid_post, block-0indexed, coefficient 0.5 "
@@ -438,12 +440,15 @@ def seed(conn, vectors: dict[str, Path]) -> None:
 
     # A consumer freezing one claimant for one purpose, visibly and contestably.
     ex(
-        "INSERT INTO pin (id,pinned_by,pinned_at,purpose,author,label,version,"
-        "alternatives_json,rationale) VALUES (?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO pin (id,pinned_by,pinned_at,purpose,author,model_id,label,"
+        "version,alternatives_json,rationale) VALUES (?,?,?,?,?,?,?,?,?,?)",
         ("pin_season", "steering-arena", "2026-09-12T00:00:00Z",
          "Season scoring target, frozen so player scores are commensurable",
-         "bob", "kindness", "v1",
-         json.dumps(["alice/kindness@v1"]),
+         "bob", MODEL_A[0], "kindness", "v1",
+         # The alternative names its model too. A pin records what it was picked
+         # over, and a reference that leaves the model out does not say which
+         # artifact was passed over.
+         json.dumps([f"alice/{MODEL_A[0]}/kindness@v1"]),
          "Picked for the costly-help reading because the season's probe set is "
          "about action. Not a claim that it is the better direction."),
     )

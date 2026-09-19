@@ -352,13 +352,13 @@ def _row(database: Path, **pin) -> None:
     conn = db.connect(database)
     db.migrate(conn)
     conn.execute(
-        "INSERT INTO submission (author,label,version,definition,created_at,"
-        "is_synthetic) VALUES ('t','pinned','v1','A test row. Not a claim about "
-        "any trait.','2026-09-18T00:00:00Z',1)")
-    columns = ["author", "label", "version", "id", "kind", "model_id", "layer",
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES ('t','m/none','pinned','v1',"
+        "'A test row. Not a claim about any trait.','2026-09-18T00:00:00Z',1)")
+    columns = ["author", "model_id", "label", "version", "id", "kind", "layer",
                "layer_convention", "hook_point", "shape", "dtype",
                "is_synthetic", *pin]
-    values = ["t", "pinned", "v1", "iv-t", "direction", "m/none", 0,
+    values = ["t", "m/none", "pinned", "v1", "iv-t", "direction", 0,
               "block-0indexed", "resid_post", "[8]", "float32", 1, *pin.values()]
     conn.execute(
         f"INSERT INTO intervention ({','.join(columns)}) VALUES "
@@ -425,10 +425,15 @@ def test_a_pre_007_database_upgrades_and_resolves_the_same(server, tmp_path):
             break
         conn.executescript(sql.read_text())
         conn.execute("INSERT INTO _migration VALUES (?, 'before')", (sql.name,))
+    # Written the way a row was written then, which is the point: the
+    # submission carries no `model_id` because 010 had not happened, and the
+    # only record of the model is on the intervention. 010 is what carries it
+    # across, and this is the database that proves it does.
     conn.execute(
-        "INSERT INTO submission (author,label,version,definition,created_at,"
-        "is_synthetic) VALUES ('t','pinned','v1','A row written before there "
-        "was a host column.','2026-09-18T00:00:00Z',1)")
+        "INSERT INTO submission (author,label,version,definition,"
+        "created_at,is_synthetic) VALUES ('t','pinned','v1',"
+        "'A row written before there was a host column.',"
+        "'2026-09-18T00:00:00Z',1)")
     conn.execute(
         "INSERT INTO intervention (author,label,version,id,kind,model_id,layer,"
         "layer_convention,hook_point,shape,dtype,is_synthetic,artifact_path,"

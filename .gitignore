@@ -4,6 +4,11 @@ NOTES-private.md
 
 # private working material, never committed
 _local/
+
+# a sign-in capture is a dated statement about a real person. `artifacts/seed.py`
+# already says this file is ignored; it was not, so the comment was describing an
+# intention rather than a rule. The tracked row carries the same dated facts.
+artifacts/memberships.jsonl
 __pycache__/
 *.pyc
 .DS_Store

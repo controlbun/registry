@@ -95,9 +95,9 @@ def test_the_digest_column_ships_and_is_nullable(conn):
     # And the pointer-only case is writable end to end, not merely permitted by
     # the column definition.
     conn.execute(
-        "INSERT INTO submission (author,label,version,definition,created_at,"
-        "is_synthetic) VALUES ('nadia','kindness','v1','pointed at, not held',"
-        "'2026-09-16',1)"
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES ('nadia','placeholder/does-not-resolve-1b',"
+        "'kindness','v1','pointed at, not held','2026-09-16',1)"
     )
     conn.execute(
         "INSERT INTO intervention (id,author,label,version,kind,model_id,layer,"

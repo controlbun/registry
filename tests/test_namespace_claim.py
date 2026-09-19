@@ -73,9 +73,10 @@ def test_a_submission_needs_no_claim(conn):
     constraint nobody has tested.
     """
     conn.execute(
-        "INSERT INTO submission (author,label,version,definition,created_at)"
-        " VALUES (?,?,?,?,?)",
-        ("someone", "kindness", "v1", "Their own words.", "2026-01-01T00:00:00Z"),
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at) VALUES (?,?,?,?,?,?)",
+        ("someone", "placeholder/does-not-resolve-1b", "kindness", "v1",
+         "Their own words.", "2026-01-01T00:00:00Z"),
     )
     conn.commit()
     assert views.namespace_view(conn, "someone")["claims"] == []

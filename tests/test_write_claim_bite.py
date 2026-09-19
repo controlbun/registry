@@ -410,9 +410,9 @@ def test_a_pointer_only_row_with_a_wrong_shape_is_caught_by_nothing_downstream(
     # Written the way both seeds used to write: the tensor facts typed straight
     # into the INSERT, with one digit wrong.
     conn.execute(
-        "INSERT INTO submission (author,label,version,definition,created_at,"
-        "is_synthetic) VALUES ('nadia','kindness','v1','pointed at, not held',"
-        "'2026-09-17',1)"
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES ('nadia','placeholder/does-not-resolve-1b',"
+        "'kindness','v1','pointed at, not held','2026-09-17',1)"
     )
     conn.execute(
         "INSERT INTO intervention (id,author,label,version,kind,model_id,layer,"

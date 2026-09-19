@@ -1,3 +1,3 @@
 # registry
 
-Design docs for a registry of activation-steering artifacts. Private.
+A registry of activation-steering artifacts.
