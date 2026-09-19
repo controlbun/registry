@@ -332,6 +332,11 @@ free-form box adds $200 per class.
 Five items. None is a security hole. Two are one-line decisions and two are the
 author's writing. The first one has a closing window and the rest do not.
 
+**Status at the flip, 2026-09-19.** 1, 2, 4 and 5 are closed and are left below
+as written rather than deleted, because the reasoning is the record. 3 is half
+closed: the README no longer says "Private" and no longer says "Design docs",
+and it still does not link to `controlbun.com`. That line is the author's.
+
 **1. A cluster allocation path is in the tracked tree and in history, and the
 window to remove it closes at step 5.** `minor_updates.md` carries
 `/work/neu/<allocation-id>/...` inside the 2026-09-19 entry that certifies the path
