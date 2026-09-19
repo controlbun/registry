@@ -255,7 +255,31 @@ def seed(conn) -> None:
                 # recipe payload with the sentence that makes it readable.
                 None,
                 8.0, 32.0, "all-positions",
-                "apache-2.0, redistribution permitted",
+                # A dated reading, and the second one. This field records what
+                # somebody read about the rights, where, and when, so a changed
+                # reading is a new reading and not a new version: these bytes
+                # are byte-identical and a version names what changed about a
+                # direction. The first reading said a direction is derived from
+                # model weights and is therefore governed by the model's
+                # license. That premise is the author's open question now
+                # rather than his claim, per `DECISIONS.md` 2026-09-19.
+                #
+                # The safetensors headers still carry the old sentence, frozen
+                # at ingest, and that stays. A header is provenance, it is dated
+                # by the commit it was written in, and rewriting it would change
+                # the bytes of four artifacts, one of which a consumer has
+                # pinned. `artifacts/source.py` is unchanged for the same
+                # reason: its `LICENSE` string is an input to the digest.
+                "allenai/Olmo-3-1125-32B is apache-2.0, confirmed from the Hub "
+                "model API on 2026-09-14. Whether a direction read out of a "
+                "model is a derivative work of it is unsettled and nobody has "
+                "litigated it. This author's position, recorded 2026-09-19, is "
+                "that a direction is his own work built against a model rather "
+                "than a piece of one. For this model it is moot either way: "
+                "Apache-2.0 permits redistribution with attribution on either "
+                "reading. Replaces a reading recorded 2026-09-14 that stated "
+                "the derivative premise as settled; the frozen header on each "
+                "artifact still carries that older sentence.",
                 # No chat template was applied. Activations were read from raw
                 # concatenated text against a base checkpoint, which is a fact
                 # about the extraction rather than a hash anyone forgot.
