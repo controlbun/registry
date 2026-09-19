@@ -125,6 +125,74 @@ VIOLATIONS = {
         "def only(conn, label):\n    return _submissions(conn, label)[0]\n",
         "test_nothing_resolves_a_label_to_one_artifact",
     ),
+
+    # Namespace claims. Every one of these is a step somebody would take for a
+    # good local reason, which is why each has to go red rather than be
+    # remembered. The spellings are ones the tree does not use, so a scanner
+    # that only catches today's wording is caught here rather than in a year.
+    "ordering namespaces by claim status in SQL": (
+        "src/registry/probe.py",
+        'q = "SELECT * FROM owner ORDER BY is_claimed DESC"\n',
+        "test_no_ordering_is_derived_from_a_namespace_claim",
+    ),
+    "ordering namespaces by claim status in JS": (
+        "astro/src/probe.ts",
+        "rows.sort((a, b) => b.claims.length - a.claims.length);\n",
+        "test_no_ordering_is_derived_from_a_namespace_claim",
+    ),
+    "ordering namespaces by when they were claimed": (
+        "src/registry/probe.py",
+        "ranked = sorted(owners, key=lambda o: o.claimed_at)\n",
+        "test_no_ordering_is_derived_from_a_namespace_claim",
+    ),
+    "a claim column made a sort control": (
+        "astro/src/probe.astro",
+        '<th><button data-col="2">Claimed</button></th>\n',
+        "test_no_ordering_is_derived_from_a_namespace_claim",
+    ),
+    "filtering a list down to the claimed ones": (
+        "astro/src/probe.ts",
+        "const shown = owners.filter((o) => o.claimed);\n",
+        "test_no_ordering_is_derived_from_a_namespace_claim",
+    ),
+    # The schema half. Each lands as an extra migration beside the real one
+    # rather than replacing it, which is why the checks they probe read every
+    # declaration in the tree and not the first one they find: a second table
+    # with the same name is exactly how a convenient version arrives.
+    "a claim bound to the handle instead of the subject": (
+        "schema/migrations/910_probe.sql",
+        "CREATE TABLE namespace_claim (\n    namespace TEXT NOT NULL,\n"
+        "    subject TEXT,\n    handle TEXT NOT NULL,\n"
+        "    UNIQUE (namespace, handle)\n);\n",
+        "test_a_claim_is_bound_to_a_subject_and_never_to_a_handle",
+    ),
+    "a claim looked up by handle": (
+        "src/registry/probe.py",
+        'row = ex("SELECT * FROM namespace_claim WHERE handle = ?", (name,))\n',
+        "test_a_claim_is_bound_to_a_subject_and_never_to_a_handle",
+    ),
+    "membership cached as a standing fact": (
+        "schema/migrations/910_probe.sql",
+        "CREATE TABLE account (\n    subject TEXT NOT NULL,\n"
+        "    is_member INTEGER NOT NULL\n);\n",
+        "test_org_membership_is_an_observation_and_never_a_stored_fact",
+    ),
+    "an observation overwritten instead of appended": (
+        "src/registry/probe.py",
+        'ex("UPDATE namespace_membership_observation SET org = ?", (org,))\n',
+        "test_org_membership_is_an_observation_and_never_a_stored_fact",
+    ),
+    "a namespace constrained to one claimant": (
+        "schema/migrations/910_probe.sql",
+        "CREATE TABLE probe (\n    namespace TEXT,\n    UNIQUE (namespace)\n);\n",
+        "test_a_namespace_permits_more_than_one_claimant",
+    ),
+    "publishing made conditional on a claim": (
+        "schema/migrations/910_probe.sql",
+        "CREATE TABLE submission (\n    author TEXT NOT NULL,\n"
+        "    claim_id TEXT NOT NULL REFERENCES namespace_claim (id)\n);\n",
+        "test_publishing_never_requires_a_claim",
+    ),
 }
 
 

@@ -966,6 +966,11 @@ in "The site is published on GitHub Pages, when the repo goes public". Revisit
 before the corpus grows or before anything is served as bytes.
 
 ## 2026-09-15 OPEN: contribution goes through Supabase, not through the site or HF
+**Amended by:** A namespace is claimed by an account, and a claim is never a
+rank. The identity half of this entry, "The design problem nobody had noticed"
+below, is built and settled as of 2026-09-19. Everything else here, including
+whether contribution goes through Supabase at all, is still open.
+
 **Not decided.** Recorded because it is expensive to reconstruct and because two
 wrong turns were taken getting here. The plan that follows if it is taken is in
 `V2.md`. Gated on v1 shipping and on the dual-use policy existing.
@@ -2156,3 +2161,115 @@ entry and is true after it.
 **Supersedes:** 2026-09-17 "No dual-use policy yet, and the trigger is a
 capability rather than a date", whose reasoning stands and whose triggers do
 not.
+
+## 2026-09-19 A namespace is claimed by an account, and a claim is never a rank
+**Decided:** `schema/migrations/009` adds three tables. `namespace_claim` binds
+an account to an `author` string, `namespace_claim_evidence` records what was
+offered for it, and `namespace_membership_observation` records what a provider
+said about that account's org memberships and when it said it. `author` stays a
+free string and nothing anywhere requires a claim.
+
+**`author` does not become an account, and `V2.md` section 1 gives the three
+cases.** Indexing the literature is deferred rather than reversed, so an entry
+for somebody else's published direction has an author who never signed up.
+Every row in this corpus today was hand-entered or is a fixture, so the rule
+would already be false. And attack cards, independent evaluations and support
+cards all name an author who is not the submitter, which means the subject of a
+piece of evidence may have no account while its writer does. So claiming is a
+separate object and publishing is not conditional on it.
+`test_publishing_never_requires_a_claim` fails the build on the foreign key
+that would make it conditional, which is the strongest form of the erosion and
+the one a schema makes easiest.
+
+**Bound to `sub`, never to `preferred_username`.** Handles are renameable on
+both providers this is written for, so a claim keyed on one breaks on a rename
+or, worse, follows the name to whoever registers it next, which is squatting
+with the registry's help. `handle` is kept on the row as what the provider said
+at `claimed_at`, rendered as "which called itself X that day", and nothing
+keys, joins or looks up by it.
+
+**Org membership is an observation with a date and never a stored fact.**
+`orgs` is an HF-specific claim and does not survive into Supabase, which `V2.md`
+records as better than it looks: storing membership at signup was always wrong
+because people join and leave organisations. So the row is what userinfo
+answered and when, `observed_at` is part of what makes it unique so looking
+again appends rather than overwrites, and the page says "Membership of X
+confirmed on 12 Sep 2026" rather than saying anything in the present tense. This
+is the rule the history audit and the attestations already follow: the result is
+dated, not permanent.
+
+**A namespace takes more than one claimant.** Uniqueness is on the account and
+the namespace together. Two accounts claiming `allenai` are two rows and both
+stand with their own evidence, because making `namespace` unique would make the
+index settle a contested name. This is the label rule one object over.
+
+**No closed enum on `provider` or on the evidence kind.** `huggingface` and
+`github`, and `repo`, `doi` and `human-decision`, are documented in the
+migration and enforced nowhere. A list of evidence kinds says which ways of
+establishing a claim are legitimate, and a list of providers says which
+identity services a person is allowed to be a person at.
+
+**The rendering decision, which is the one that matters.** A claim renders on
+the namespace's own page and nowhere else. Not a column in `/owners/`, not a
+mark on a submission row, not a line on the label view where claimants of one
+word sit side by side. The moment claimed and unclaimed appear next to each
+other in a list a reader takes one for better, and the next reasonable request
+is to sort by it. Unclaimed is written out in words, the way 005, 007 and 008
+absences are, because every namespace in this corpus is unclaimed including
+`soham`, who authored all five real rows.
+
+**Nothing derives an order from it, and that is executable.**
+`test_no_ordering_is_derived_from_a_namespace_claim` scans for the sort, the
+comparator, the column header and the filter, and
+`tests/test_invariants_bite.py` proves each one red. `claimed_at` is kept out of
+the owner index's `latest` deliberately: it is a date and it would have fit, and
+leaving it in would have put a claimed namespace above an unclaimed one that
+published the same day with nothing on screen saying why. Every ordering key in
+`export.py` is something somebody did to the work. A claim is not.
+
+**Third word-sense trap, recorded because this project now has three.** `claim`
+is three different words here: a claimant of a label, a label an owner has
+claimed, and the namespace sense this entry adds. The first scanner matched the
+substring and convicted the existing `Claimants` sort control and the `Labels
+claimed` column, neither of which has anything to do with accounts. It now
+matches what a header leads with. `CLAUDE.md` already records "best" catching
+the founding sentence and an ordinal scan catching "1st-person retrospective
+reports"; this is the same failure and the same fix.
+
+**The evidence detail is authored prose and is marked as such.** A human
+decision is recorded with its reasoning, which can carry names, dates and
+figures, so it renders through `Prose.astro` inside `data-authored` and the
+falsifier's `_authored_texts` reads it off the owner index. Proven to bite
+rather than assumed: `tests/test_falsifier_bites.py` renders one both ways and
+the run goes red only for the unmarked one.
+
+**One fixture claim, seven unclaimed namespaces, and no real one.** `alice` is
+claimed by an account whose provider does not exist, whose subject no provider
+issued and whose org sits on a reserved `.invalid` hostname, all recorded in
+`fixtures/SYNTHETIC.md`. Nothing real is claimed, including `soham`: the sign-in
+that would produce a real claim has not happened, and writing the row by hand
+because the id is known would be inventing the event the row attests. The only
+real identity in this project stays where `V2.md` put it.
+
+**What this makes impossible to express.** Asking which namespaces are claimed.
+There is no list, no filter, no count on any page and no boolean in the export
+or the client, so a reader cannot see at a glance which of ten claimants of one
+word has an account behind it and cannot put those first. That is the cost and
+it is paid on purpose: the question has one useful answer and a dozen harmful
+ones, and every harmful one reads a claim as a mark of quality that nothing
+about a claim supports.
+
+Also impossible: a claim that expires, since there is no revocation and no
+`valid_until`; evidence about somebody else's claim, since evidence hangs off
+the claim it supports and the object for disagreeing with a record is a separate
+authored one this schema does not yet have; and a namespace held by a group
+rather than by an account, since the membership that makes a person part of an
+org is a separate dated observation and the two cannot be collapsed.
+
+**Not built here.** The sign-in flow, the userinfo call and anything that talks
+to Supabase. This is the data model and the rendering; the live flow is separate
+work and `V2.md` stays not settled.
+
+**Supersedes:** nothing. Implements `V2.md` section 1 and settles the identity
+half of the open 2026-09-15 entry "OPEN: contribution goes through Supabase, not
+through the site or HF", which stays open on everything else.

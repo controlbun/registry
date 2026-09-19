@@ -447,6 +447,62 @@ def seed(conn, vectors: dict[str, Path]) -> None:
          "Picked for the costly-help reading because the season's probe set is "
          "about action. Not a claim that it is the better direction."),
     )
+
+    # One claimed namespace out of eight, because unclaimed is the state the
+    # page has to render well and claimed is the exception. alice is claimed;
+    # bob, carol, dana, erik, fern, gus and hana are not, and neither is any
+    # real author in this corpus. Nothing about alice's submissions changes.
+    #
+    # **The account is fabricated and says so.** Every string below is a
+    # placeholder: the provider does not exist, the subject is not an id any
+    # system issued, and the org does not resolve. `.invalid` is reserved by
+    # RFC 2606 precisely so a hostname cannot accidentally be real. The only
+    # real identity in this project is recorded in `V2.md` and is not here.
+    #
+    # The subject is what the claim binds to; the handle is only what the
+    # provider called the account on the day, and the two are different strings
+    # here so that a page or a query reading the wrong one is visible rather
+    # than coincidentally correct.
+    ex(
+        "INSERT INTO namespace_claim (id,namespace,provider,subject,handle,"
+        "claimed_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
+        ("nc_alice", "alice", "placeholder-oidc",
+         "SYNTHETIC-SUBJECT-NOT-ISSUED-BY-ANY-PROVIDER-alice", "alice-the-first",
+         "2026-09-12T00:00:00Z"),
+    )
+    # Two kinds, because `kind` is an open string and the corpus should say so
+    # here the way it says it for `kind` on an intervention. Neither is a
+    # member of a set anything enforces.
+    ex(
+        "INSERT INTO namespace_claim_evidence (claim_id,kind,detail,recorded_at)"
+        " VALUES (?,?,?,?)",
+        ("nc_alice", "repo",
+         "Offered as the repository the artifact was published from. It is a "
+         "fixture path inside this checkout rather than a repository anyone "
+         "owns, and it resolves to nothing outside these tests.",
+         "2026-09-12T00:00:00Z"),
+    )
+    ex(
+        "INSERT INTO namespace_claim_evidence (claim_id,kind,detail,recorded_at)"
+        " VALUES (?,?,?,?)",
+        ("nc_alice", "human-decision",
+         "Recorded by hand so that the claimed state has something to render "
+         "beside the seven unclaimed namespaces around it. The reasoning is the "
+         "evidence for this kind of claim, which is why it is stored as prose "
+         "somebody can disagree with rather than as a flag nobody can.",
+         "2026-09-12T00:00:00Z"),
+    )
+    # Dated, and it renders as dated. Looking again writes a second row beside
+    # this one rather than replacing it, which is why `observed_at` is part of
+    # what makes a row unique.
+    ex(
+        "INSERT INTO namespace_membership_observation (id,provider,subject,org,"
+        "role,observed_at,source,is_synthetic) VALUES (?,?,?,?,?,?,?,1)",
+        ("nm_alice", "placeholder-oidc",
+         "SYNTHETIC-SUBJECT-NOT-ISSUED-BY-ANY-PROVIDER-alice",
+         "placeholder-org-does-not-resolve", "member", "2026-09-12T00:00:00Z",
+         "https://placeholder-oidc.invalid/oauth/userinfo"),
+    )
     conn.commit()
 
 

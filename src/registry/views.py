@@ -1,4 +1,4 @@
-"""One claimant, shaped the way every view of it needs.
+"""One claimant, and one namespace, shaped the way every view of them needs.
 
 This is not a renderer. It was one: the project carried a Jinja frontend in
 `web/templates/` alongside the Astro site, and the two drifted, most visibly when
@@ -13,6 +13,12 @@ submission is.
 
 Every measurement is passed through as None when it was not taken. Nothing here
 substitutes a zero, and the absence is carried out to whoever renders it.
+
+`namespace_view` is the same arrangement for the other object a page needs, and
+it is kept apart from `claimant_view` on purpose. A claim is a property of a
+namespace and not of an artifact, so hanging it off a submission would put it
+beside a score, which is where it turns into a badge. See
+`schema/migrations/009`.
 """
 
 from __future__ import annotations
@@ -23,6 +29,86 @@ import sqlite3
 # The name, not the module: the package exposes a public `compare()` function,
 # which shadows the `compare` submodule for anything reaching for it by attribute.
 from .comparison import attacks_against, score_state
+
+
+def namespace_view(conn: sqlite3.Connection, namespace: str) -> dict:
+    """What is known about who holds a namespace, which is usually nothing.
+
+    Returns `{"namespace": name, "claims": [...]}`. An empty list is the
+    ordinary state and the designed one: `author` is a free string, every row in
+    this corpus was written down rather than signed up for, and a namespace
+    nobody has bound an account to is unclaimed rather than incomplete. The
+    caller renders the empty list as its own state, the way 005, 007 and 008
+    absences are rendered, and nothing treats it as a finding.
+
+    **No boolean.** There is deliberately no `is_claimed` here. A flag is the
+    one shape a template can sort or filter on without anybody deciding to, and
+    a list of claims with their evidence is the shape that has to be read
+    instead of counted. `tests/test_invariants.py` fails the build on a claim
+    status that becomes a sort key.
+
+    **Several claims on one namespace is a real state, not a conflict to
+    resolve.** The schema keys uniqueness on the account, so two accounts
+    claiming one namespace are two rows and both come back. Ordered by when
+    each was claimed, oldest first, which is a statement about sequence and not
+    about who is right.
+
+    Each claim carries the account it binds, the evidence offered for it, and
+    what that account's provider said about its org memberships and when. The
+    memberships are observations with dates and never a current fact: people
+    join and leave organisations, so the page says what was seen and when it
+    was seen, and a reader decides whether that is recent enough.
+    """
+    claims = []
+    for c in conn.execute(
+        "SELECT * FROM namespace_claim WHERE namespace = ?"
+        " ORDER BY claimed_at, id",
+        (namespace,),
+    ):
+        claims.append({
+            "namespace": c["namespace"],
+            "provider": c["provider"],
+            # The binding. Opaque and stable, and the reason `handle` below is
+            # never looked up by: see schema/migrations/009.
+            "subject": c["subject"],
+            # What the provider called the account at `claimed_at`, which is not
+            # necessarily what it calls it now. None when it said nothing.
+            "handle": c["handle"],
+            "claimed_at": c["claimed_at"],
+            "is_synthetic": bool(c["is_synthetic"]),
+            # Authored. `detail` renders inside a `data-authored` region for the
+            # reason the 2026-09-19 decision gives: a human decision is recorded
+            # with its reasoning, and that prose can carry names and figures.
+            "evidence": [
+                {
+                    "kind": e["kind"],
+                    "detail": e["detail"],
+                    "recorded_at": e["recorded_at"],
+                }
+                for e in conn.execute(
+                    "SELECT kind, detail, recorded_at FROM namespace_claim_evidence"
+                    " WHERE claim_id = ? ORDER BY recorded_at, kind",
+                    (c["id"],),
+                )
+            ],
+            "memberships": [
+                {
+                    "org": m["org"],
+                    "role": m["role"],
+                    "observed_at": m["observed_at"],
+                    "source": m["source"],
+                }
+                for m in conn.execute(
+                    "SELECT org, role, observed_at, source"
+                    " FROM namespace_membership_observation"
+                    " WHERE provider = ? AND subject = ?"
+                    " ORDER BY observed_at, org",
+                    (c["provider"], c["subject"]),
+                )
+            ],
+        })
+
+    return {"namespace": namespace, "claims": claims}
 
 
 def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:

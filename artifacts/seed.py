@@ -375,6 +375,61 @@ def seed(conn) -> None:
     )
     conn.commit()
 
+    # --------------------------------------------------------------------- #
+    # The one real namespace claim, and every value in it was observed rather
+    # than composed.
+    #
+    # The account is `sohampadia` and the namespace is `soham`. Those are
+    # different strings on purpose: the namespace is what `author/label@version`
+    # is made of and what a reader sees, and the claim binds the provider's
+    # subject, which is opaque and stable. HF handles are renameable, so a claim
+    # bound to the handle either breaks on a rename or follows the handle to
+    # whoever takes it next.
+    #
+    # **Where these came from.** A real sign-in through the configured provider
+    # on 2026-09-19, whose capture recorded the subject, the handle, the issuer,
+    # the userinfo endpoint and the orgs. That capture lives in
+    # `artifacts/memberships.jsonl`, which is gitignored: a capture is a dated
+    # statement about a real person and this repository is about to be public,
+    # so publishing one is a decision to take deliberately rather than a side
+    # effect of signing in. What is tracked is this row, which carries the same
+    # dated facts. Nothing here is re-derived at build time, because re-deriving
+    # it would mean signing in again during `make site`.
+    ex = lambda q, v: conn.execute(q, v)  # noqa: E731
+    ex(
+        "INSERT INTO namespace_claim (id,namespace,provider,subject,handle,"
+        "claimed_at,is_synthetic) VALUES (?,?,?,?,?,?,0)",
+        ("nc_soham", AUTHOR, "custom:huggingface",
+         "62cf4580e7f6014c0ea2450f", "sohampadia", "2026-09-19T16:51:32Z"),
+    )
+    # The strongest evidence available and the one `V2.md` names first: the repo
+    # the artifact was published from is owned by the account making the claim.
+    # Checkable by anyone, which is the property that matters, and it is the
+    # same commit `soham/trauma@d61-diffmeans-expository-L34` is pinned to.
+    ex(
+        "INSERT INTO namespace_claim_evidence (claim_id,kind,detail,recorded_at)"
+        " VALUES (?,?,?,?)",
+        ("nc_soham", "repo",
+         "The artifact pinned by soham/trauma@d61-diffmeans-expository-L34 is "
+         "published at huggingface.co/sohampadia/pro-human, commit "
+         "2ff771e4bbdc21a74d37dee111e98be6d71600f5, path "
+         "vectors/events/trauma_minus_neutral_expository.safetensors. That "
+         "repository belongs to the account this claim binds, and anyone can "
+         "check both halves without asking anybody.",
+         "2026-09-19T16:51:32Z"),
+    )
+    # An observation and not a standing fact. People join and leave
+    # organisations, so what is recorded is what the endpoint said and when it
+    # said it. Looking again appends a row beside this one.
+    ex(
+        "INSERT INTO namespace_membership_observation (id,provider,subject,org,"
+        "role,observed_at,source,is_synthetic) VALUES (?,?,?,?,?,?,?,0)",
+        ("nm_soham_controlbun", "custom:huggingface",
+         "62cf4580e7f6014c0ea2450f", "controlbun", "admin",
+         "2026-09-19T16:51:32Z", "https://huggingface.co/oauth/userinfo"),
+    )
+    conn.commit()
+
     # Where the author published these, if he has. Applied here rather than
     # written into the INSERT above because `artifacts/publish.py record` has to
     # write the same two columns against a database that already exists, and one

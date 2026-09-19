@@ -9,6 +9,7 @@ import AttackCards from "../components/AttackCards.astro";
 import SubmissionRows from "../components/SubmissionRows.astro";
 import Pins from "../components/Pins.astro";
 import Relations from "../components/Relations.astro";
+import NamespaceClaim from "../components/NamespaceClaim.astro";
 import data from "../data/registry.json";
 
 // Everything below the index lives under the model, because an intervention is a
@@ -312,6 +313,13 @@ const released = (iso) =>
     </div>
 
     <div data-pagefind-body>
+      {/* The namespace and whoever has claimed it. Here, on the namespace's own
+          page, and nowhere else: a claim shown beside other people's in a list
+          reads as a rank, which is the erosion this project is most alert to.
+          See NamespaceClaim.astro. */}
+      <h2>Namespace</h2>
+      <NamespaceClaim namespace={owner.owner} claims={owner.claims} />
+
       <h2>Submissions</h2>
       {owner.submissions.length === 0 && (
         <p class="note absent-block">

@@ -17,6 +17,11 @@ Three things it refuses to do, because the registry refuses to do them:
   nobody produced. Where somebody wrote down why there is none, `absences`
   carries that sentence, because an absence with a reason and an absence nobody
   looked into are different states and only one of them tells you what to do.
+- **A namespace does not report whether it is claimed.** `namespace()` hands
+  back the claims and their evidence, and there is no boolean beside them,
+  because a boolean is what a caller sorts on. Nothing in this client or in the
+  site orders anything by claim status, and an unclaimed namespace is the state
+  every namespace in this registry is in.
 
 Deliberately not here: an nnsight or steering-vectors adapter. Neither library is
 installed, and writing an integration against a remembered API signature is how
@@ -254,6 +259,87 @@ class Submission:
 
 
 @dataclass(frozen=True)
+class MembershipObservation:
+    """What a provider said about an account's org membership, and when.
+
+    Never a current fact. People join and leave organisations, so this is an
+    observation with a date on it and the date is not decoration: it is what
+    lets a reader decide whether the observation is recent enough for what they
+    are doing. There is no `is_member` anywhere, here or in the schema.
+    """
+
+    org: str
+    # `roleInOrg` where the provider gives one, None where it did not.
+    role: str | None
+    observed_at: str
+    # Which endpoint answered.
+    source: str
+
+
+@dataclass(frozen=True)
+class ClaimEvidence:
+    """One reason offered for a claim, with the date it was recorded.
+
+    `kind` is an open string. `repo`, `doi` and `human-decision` are what this
+    is built against and nothing enumerates the set, so a kind this client has
+    never seen arrives and reads out unchanged.
+    """
+
+    kind: str
+    detail: str
+    recorded_at: str
+
+
+@dataclass(frozen=True)
+class NamespaceClaim:
+    """An account bound to a namespace, on dated evidence.
+
+    Named in full rather than `Claim`, because `registry.artifact.Claim` is
+    already what a writer asserts about a tensor and the two have nothing to do
+    with each other.
+
+    Bound to `subject`, the provider's opaque stable id. `handle` is what the
+    provider called the account when the claim was made and may not be what it
+    calls it now, so it is display and never a lookup key: handles are
+    renameable, and a claim bound to one follows the handle to whoever
+    registers it next.
+    """
+
+    namespace: str
+    provider: str
+    subject: str
+    handle: str | None
+    claimed_at: str
+    evidence: list[ClaimEvidence]
+    memberships: list[MembershipObservation]
+    is_synthetic: bool
+
+    @property
+    def account(self) -> str:
+        """The binding, written the way it should be quoted: provider and
+        subject. Not the handle, which is what it was called on the day."""
+        return f"{self.provider}:{self.subject}"
+
+
+@dataclass(frozen=True)
+class Namespace:
+    """A namespace and whoever has claimed it, which is usually nobody.
+
+    `claims` is empty for every namespace in this registry today, and that is
+    the ordinary state rather than a missing one: `author` is a free string,
+    every row here was written down rather than signed up for, and an unclaimed
+    namespace says nothing at all about the work published under it.
+
+    **There is no `is_claimed` and there will not be.** A boolean is the shape a
+    caller sorts and filters on, and ordering anything by claim status is the
+    designation this registry does not do. Read the claims; do not count them.
+    """
+
+    name: str
+    claims: list[NamespaceClaim]
+
+
+@dataclass(frozen=True)
 class Comparison:
     label: str
     claimants: list[Submission]
@@ -417,6 +503,41 @@ def load(ref: str, *, database: str | Path | None = None) -> Submission:
     if row is None:
         raise NotFound(f"{owner}/{label}@{version} is not in this registry")
     return _build(conn, row)
+
+
+def namespace(name: str, *, database: str | Path | None = None) -> Namespace:
+    """Who has claimed a namespace, which for every namespace here is nobody.
+
+    A namespace that nothing has been published under is not an error: the
+    string is free, so asking about one returns an unclaimed namespace rather
+    than raising. `NotFound` is for a reference to something that was supposed
+    to resolve, and a namespace never was.
+
+    Deliberately not reachable from `Submission`. A claim is a property of the
+    namespace and not of the artifact, and putting it on the submission object
+    would set it beside the evidence, where the next reader to want one number
+    per submission reads it as part of the score. Ask about the namespace.
+    """
+    conn = _connect(database)
+    from . import views  # noqa: PLC0415  (shared view logic, one source of truth)
+
+    view = views.namespace_view(conn, name)
+    return Namespace(
+        name=view["namespace"],
+        claims=[
+            NamespaceClaim(
+                namespace=c["namespace"],
+                provider=c["provider"],
+                subject=c["subject"],
+                handle=c["handle"],
+                claimed_at=c["claimed_at"],
+                evidence=[ClaimEvidence(**e) for e in c["evidence"]],
+                memberships=[MembershipObservation(**m) for m in c["memberships"]],
+                is_synthetic=c["is_synthetic"],
+            )
+            for c in view["claims"]
+        ],
+    )
 
 
 def claimants(label: str, *, database: str | Path | None = None) -> list[Submission]:

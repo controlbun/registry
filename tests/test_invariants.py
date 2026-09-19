@@ -439,3 +439,203 @@ def test_cosine_is_never_evidence_of_disagreement():
         "(arXiv:2602.06801). Low cosine similarity is not by itself a finding:\n"
         + "\n".join(offenders)
     )
+
+
+# --------------------------------------------------------------------------- #
+# 10. A namespace claim is never a rank, a filter, or a condition on publishing.
+
+
+# Every spelling of "does this namespace have an account behind it". Matched as
+# a concept rather than as today's column name, because the cosine scan went
+# blind for exactly one rename and stayed green while it did.
+#
+# `claimed_at` is deliberately not in here. Ordering one namespace's own claims
+# by when each was made is a statement about sequence, which `views.namespace_view`
+# does and should; the scans below that take a sort key add it back, because
+# ordering *namespaces* by a claim date is the thing that reads as a rank.
+CLAIM_STATUS = r"(is_claimed|claim_status|has_claim|unclaimed|claimed|claims)"
+
+
+def test_no_ordering_is_derived_from_a_namespace_claim():
+    """Nothing puts a claimed namespace above an unclaimed one.
+
+    Every author in this corpus is unclaimed, including all five real rows, so
+    claimed and unclaimed are not two tiers with most things in the upper one:
+    they are one exception and the normal case. Sort by it and the normal case
+    goes to the bottom of every list with nothing on screen saying why.
+
+    The same argument the eval-result ordering rule makes, one object over. An
+    order derived from something other than what somebody did to the work is the
+    registry asserting a preference and calling it a default.
+    """
+    offenders = scan(rf"ORDER\s+BY[^;]*\b{CLAIM_STATUS}\b")
+    for term in (CLAIM_STATUS, r"claimed_at"):
+        offenders += scan(rf"sorted\s*\([^)]*\b{term}\b")
+        offenders += scan(rf"key\s*=\s*[^,)]*\b{term}\b")
+        offenders += scan(rf"\b(sort|rank)\w*\s*[=(][^)]*\b{term}\b")
+        offenders += scan(rf"\.sort\([^;]*\b{term}\b")
+    # A clickable column header is a sort control whatever the handler is
+    # called, and a claim column in a table of namespaces is a rank whether or
+    # not anybody clicks it.
+    #
+    # Matched on what the header starts with, and `claim` is three different
+    # words on this site. "Claimants" counts the people claiming one label and
+    # has been a sort control since the model page existed. "Labels claimed"
+    # counts what an owner has published under. Only a header that leads with
+    # the namespace sense is the one being banned, and this is the third time
+    # this project has had to separate a word from its senses rather than ban
+    # the substring: `CLAUDE.md` records the other two.
+    header = r"(namespace\s+claim|claim(?!ant)|held\s+by|account)"
+    offenders += scan(rf"<button[^>]*>\s*{header}")
+    offenders += scan(rf"data-(col|sort)[^>]*>\s*{header}")
+    # Filtering to the claimed ones is the same designation with the ordering
+    # step skipped: it answers "which of these is the real one" by deletion.
+    offenders += scan(rf"\.filter\([^;]*\b{CLAIM_STATUS}\b")
+    offenders += scan(rf"WHERE[^;]*\b{CLAIM_STATUS}\b\s*(=\s*1|=\s*true|IS\s+NOT\s+NULL)")
+    assert not offenders, (
+        "A claim says who holds a namespace and nothing about the work published "
+        "under it. Ordering or filtering by it turns an account into a quality "
+        "signal, which is the designation this registry does not make:\n"
+        + "\n".join(offenders)
+    )
+
+
+def test_a_claim_is_bound_to_a_subject_and_never_to_a_handle():
+    """The binding is the provider's opaque id, because handles move.
+
+    A claim bound to `preferred_username` breaks the day somebody renames, or
+    worse follows the handle to whoever registers it next, which is squatting
+    with the registry's help. `handle` is kept as what the provider said on the
+    day and is display only, so nothing may key, join or look up by it.
+    """
+    ddl = strip_sql_comments(sql_text())
+    # Every declaration, not the first one found. A migration that redeclares a
+    # table is how the convenient version arrives, and a check that stops at the
+    # first match would read the careful one forever.
+    bodies = [
+        m.group(1) for m in
+        re.finditer(r"CREATE TABLE namespace_claim\s*\((.*?)\n\);", ddl, re.S | re.I)
+    ]
+    assert bodies, "no namespace_claim table; a claim with no record is not contestable"
+
+    offenders = []
+    for body in bodies:
+        line = next(
+            (l for l in body.splitlines() if re.search(r"^\s*subject\b", l)), None
+        )
+        if line is None or not re.search(r"\bNOT\s+NULL\b", line, re.I):
+            offenders.append(
+                "namespace_claim.subject is missing or nullable. A claim with no "
+                "subject is bound to whatever else is on the row, and the only "
+                "other candidate is the handle."
+            )
+        for kind in ("PRIMARY KEY", "UNIQUE"):
+            for mm in re.finditer(rf"{kind}\s*\(([^)]*)\)", body, re.I):
+                cols = [c.strip().strip('"') for c in mm.group(1).split(",")]
+                if {"handle", "preferred_username"} & set(cols):
+                    offenders.append(f"{kind} ({mm.group(1).strip()})")
+    offenders += scan(r"(WHERE|AND)\s+\w*(handle|preferred_username)\s*=")
+    offenders += scan(r"claim\w*\[[\"']?(handle|preferred_username)[\"']?\]\s*==")
+    assert not offenders, (
+        "A handle is renameable, so a claim keyed on one either breaks on a "
+        "rename or follows the name to whoever takes it next:\n" + "\n".join(offenders)
+    )
+
+
+def test_org_membership_is_an_observation_and_never_a_stored_fact():
+    """What the provider said, and when. Never what is true now.
+
+    People join and leave organisations, so a membership checked once and held
+    forever is stale silently and carries nothing saying it might be. The same
+    rule the history audit and the attestations already follow: the result is
+    dated, not permanent.
+    """
+    ddl = strip_sql_comments(sql_text())
+    bodies = [
+        m.group(1) for m in re.finditer(
+            r"CREATE TABLE namespace_membership_observation\s*\((.*?)\n\);",
+            ddl, re.S | re.I,
+        )
+    ]
+    assert bodies, (
+        "no namespace_membership_observation table; a membership with no "
+        "observation date is a badge"
+    )
+
+    offenders = []
+    for body in bodies:
+        line = next(
+            (l for l in body.splitlines() if re.search(r"^\s*observed_at\b", l)), None
+        )
+        if line is None or not re.search(r"\bNOT\s+NULL\b", line, re.I):
+            offenders.append(
+                "observed_at must exist and be NOT NULL. An undated observation "
+                "is a stored fact wearing a different column name."
+            )
+        keys = re.findall(r"(?:PRIMARY KEY|UNIQUE)\s*\(([^)]*)\)", body, re.I)
+        if not any("observed_at" in k for k in keys):
+            offenders.append(
+                "observed_at has to be part of what makes a row unique, or "
+                "looking again overwrites what was seen last time and the "
+                "history stops existing"
+            )
+
+    # A column asserting a standing membership, anywhere in the schema.
+    offenders += [
+        line.strip() for line in ddl.splitlines()
+        if re.match(r"\s*(is_member|member_of|membership|is_verified|verified)\b",
+                    line, re.I)
+    ]
+    # And anything that edits an observation instead of writing a new one.
+    offenders += scan(r"UPDATE\s+namespace_membership_observation")
+    offenders += scan(r"INSERT\s+OR\s+REPLACE\s+INTO\s+namespace_membership_observation")
+    assert not offenders, (
+        "A membership is what a provider answered on a date. Caching it as a "
+        "current fact, or overwriting the last answer with a new one, deletes the "
+        "only thing that made it honest:\n" + "\n".join(offenders)
+    )
+
+
+def test_a_namespace_permits_more_than_one_claimant():
+    """Two accounts claiming one namespace is a state, not a conflict to resolve.
+
+    Making `namespace` unique on its own would make the index the thing that
+    decides a contested claim. Both rows stand, both carry their evidence, and a
+    reader adjudicates. This is the label rule one object over.
+    """
+    ddl = strip_sql_comments(sql_text())
+    offenders = []
+    for kind in ("PRIMARY KEY", "UNIQUE"):
+        for m in re.finditer(rf"{kind}\s*\(([^)]*)\)", ddl, re.I):
+            cols = [c.strip().strip('"') for c in m.group(1).split(",")]
+            if "namespace" in cols and not {"provider", "subject"} <= set(cols):
+                offenders.append(f"{kind} ({m.group(1).strip()})")
+    assert not offenders, (
+        "Constraining a namespace to one claimant makes the schema settle who "
+        "holds a contested name:\n" + "\n".join(offenders)
+    )
+
+
+def test_publishing_never_requires_a_claim():
+    """No row anywhere needs an account behind it to exist.
+
+    The strongest version of the erosion is not a sort key, it is a foreign key:
+    a submission that cannot be written without a claim makes the indexed corpus
+    unrepresentable and turns an account into the price of having a voice.
+    """
+    ddl = strip_sql_comments(sql_text())
+    offenders = []
+    for table in ("submission", "intervention", "recipe", "eval_suite",
+                  "eval_report", "attack", "support_card", "pin",
+                  "label_relation", "reproduction"):
+        # Every declaration of the table, for the reason the claim check gives:
+        # the convenient version arrives as a later migration, not as an edit to
+        # the careful one.
+        for m in re.finditer(rf"CREATE TABLE {table}\s*\((.*?)\n\);", ddl, re.S | re.I):
+            if re.search(r"namespace_claim", m.group(1), re.I):
+                offenders.append(f"{table} references namespace_claim")
+    assert not offenders, (
+        "An author here is a free string somebody wrote down. Requiring a claim "
+        "to publish forecloses the indexed corpus and prices a voice at an "
+        "account:\n" + "\n".join(offenders)
+    )

@@ -481,6 +481,16 @@ td.sim { font-variant-numeric: tabular-nums; }
 }
 .tag.warn { color: var(--warn); border-color: var(--warn-line); }
 
+/* A namespace claim, set like a support card and deliberately not like a badge.
+   There is no color, no check mark and no pill: the whole point of the dated
+   rendering is that a claim is a record to read rather than a mark to spot. */
+.claim { border-left: 2px solid var(--line); padding-left: 1rem; margin-bottom: 1.4rem; }
+.claim h3 { font-size: .85rem; margin: 1rem 0 .4rem; }
+.claim dl.spec { margin-top: .5rem; }
+.claim .prose { margin: 0; }
+ul.memberships { margin: .3rem 0; padding-left: 1.1rem; font-size: .85rem; }
+ul.memberships li { margin-bottom: .25rem; }
+
 /* The situation picker on the home page. A sentence the reader completes with
    their own artifact and their own reason, because the prose it replaced was an
    abstraction and a researcher answered it as one. The controls sit inline in

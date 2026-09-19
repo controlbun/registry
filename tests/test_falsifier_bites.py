@@ -203,3 +203,55 @@ def test_a_missing_artifact_is_not_silently_skipped(tree):
         assert run(tree) == 1, "a missing raw artifact must fail, not pass quietly"
     finally:
         moved.rename(held)
+
+
+def test_claim_evidence_that_renders_unmarked(tree):
+    """The third kind of authored prose, added with `schema/migrations/009`.
+
+    A claim made on a human decision records the reasoning behind it, which is
+    somebody's own words and can carry names, dates and figures the same way a
+    definition and an absence reason do. It renders on the namespace's page, so
+    the guard reads it off the owner index rather than off the claimants, and
+    this is the proof that half of `_authored_texts` is wired to anything.
+
+    The detail below is a sentence this test wrote about a fixture account and
+    says so, because `fixtures/SYNTHETIC.md` covers invented prose as much as
+    invented numbers.
+    """
+    path = tree / "astro" / "src" / "data" / "registry.json"
+    original = path.read_text()
+    payload = json.loads(original)
+    owner = payload["owner_index"][0]
+    detail = ("Written by the test suite about an account that does not exist. "
+              "Nobody decided anything and there was nothing to decide.")
+    owner["claims"] = [{
+        "namespace": owner["owner"],
+        "provider": "test-provider-does-not-exist",
+        "subject": "SYNTHETIC-SUBJECT-probe",
+        "handle": None,
+        "claimed_at": "2026-01-01T00:00:00Z",
+        "evidence": [{"kind": "human-decision", "detail": detail,
+                      "recorded_at": "2026-01-01T00:00:00Z"}],
+        "memberships": [],
+        "is_synthetic": True,
+    }]
+    path.write_text(json.dumps(payload))
+
+    page = tree / "astro" / "dist" / "probe" / "index.html"
+    was = page.read_text()
+    try:
+        page.write_text(was.replace("</p>", f"</p><p>{detail}</p>"))
+        assert run(tree) == 1, (
+            "claim evidence rendered with no `data-authored` on it passed, so "
+            "the marking guard never learned about the third kind of prose"
+        )
+        filler = " ".join(["The registry never designates and a consumer pins."] * 8)
+        page.write_text(was.replace(
+            "</p>", f"</p><p>{filler}</p><p data-authored>{detail}</p>"))
+        assert run(tree) == 0, (
+            "the same detail inside a marked region failed, so the guard is "
+            "refusing the prose rather than checking where it sits"
+        )
+    finally:
+        page.write_text(was)
+        path.write_text(original)

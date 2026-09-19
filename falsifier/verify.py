@@ -351,11 +351,13 @@ def check_published_numbers_are_accounted_for(payload: dict) -> None:
 def _authored_texts(payload: dict) -> list[tuple[dict, str]]:
     """Every run of prose the site attributes to a person, with whose it is.
 
-    Definitions and the reasons beside an absence. Both are one author's own
-    words and both carry numerals: a definition quotes its own measurements,
-    and a reason names the file and line where the value was looked for. The
-    second kind joined this list with `schema/migrations/008`, which is when
-    the first one existed.
+    Definitions, the reasons beside an absence, and the detail recorded with a
+    namespace claim's evidence. All three are somebody's own words and all
+    three carry numerals: a definition quotes its own measurements, a reason
+    names the file and line where the value was looked for, and a claim made on
+    a human decision records the reasoning behind it. The second kind joined
+    this list with `schema/migrations/008`, which is when the first one
+    existed; the third with 009.
 
     Keyed off the export rather than off the page, so a region that stopped
     being marked is found by its absence from the marked side rather than by
@@ -367,6 +369,16 @@ def _authored_texts(payload: dict) -> list[tuple[dict, str]]:
             out.append((claimant, " ".join((claimant.get("definition") or "").split())))
             for reason in (claimant.get("absences") or {}).values():
                 out.append((claimant, " ".join((reason or "").split())))
+    # A claim lives on the namespace's own page rather than on a submission, so
+    # it is read off the owner index. The subject reported in a failure is the
+    # namespace, shaped to the same three keys the message below formats.
+    for owner in payload.get("owner_index", []):
+        subject = {
+            "author": owner["owner"], "label": "namespace", "version": "claim",
+        }
+        for claim in owner.get("claims", []):
+            for item in claim.get("evidence", []):
+                out.append((subject, " ".join((item.get("detail") or "").split())))
     return [(c, t) for c, t in out if t]
 
 

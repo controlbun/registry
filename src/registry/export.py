@@ -313,19 +313,40 @@ def build(conn: sqlite3.Connection) -> dict:
             "predictability": r["predictability"],
         })
 
+    # A namespace whose only record here is a claim still gets a page, for the
+    # same reason an attacker who has published nothing does: the page is where
+    # the claim and its evidence are readable, and a claim nobody can read is
+    # not contestable. Called after every other producer, so a namespace that
+    # already has one keeps its place and the ordering below is untouched.
+    for r in conn.execute("SELECT DISTINCT namespace FROM namespace_claim"):
+        owner(r["namespace"])
+
     def owner_entry(o: dict) -> dict:
         # Every date this person put on anything, so the ordering key covers
         # attacking and evaluating as well as publishing. Reading it off the
         # submissions alone would sort a prolific attacker as though they had
         # never done anything.
+        #
+        # **`claimed_at` is deliberately not in here.** It is a date and it
+        # would fit, and including it would make the recency ordering derive
+        # partly from whether a namespace is claimed: a claimed one would sort
+        # above an unclaimed one that published on the same day, with nothing on
+        # screen saying why. Every ordering key in this file is something
+        # somebody did to the work. A claim is not.
         dates = (
             [s["created_at"] for s in o["submissions"]]
             + [e["reported_at"] for e in o["evaluations"]]
             + [a["attacked_at"] for a in o["attacks_made"]]
             + [c["reported_at"] for c in o["support_given"]]
         )
+        # Who has bound an account to this namespace, and on what dated
+        # evidence. Empty for every namespace in this corpus, which is the
+        # ordinary state rather than a gap: see schema/migrations/009. A list
+        # and not a flag, because a flag is what a table sorts on.
+        claims = views.namespace_view(conn, o["owner"])["claims"]
         return {
             "owner": o["owner"],
+            "claims": claims,
             "submissions": sorted(
                 o["submissions"], key=lambda s: s["created_at"], reverse=True
             ),
@@ -354,11 +375,16 @@ def build(conn: sqlite3.Connection) -> dict:
             # Their own rows plus the rows their work points at. Somebody who has
             # published nothing and only attacked fixtures still has a page full
             # of fabricated subjects, and it has to say so.
+            #
+            # Claims are in the tally because a fixture claim names a fixture
+            # account, and a namespace whose only record here is one would
+            # otherwise render an invented identity with no marker on the page.
             "synthetic": marker(
                 [s["is_synthetic"] for s in o["submissions"]]
                 + [x["subject_synthetic"] for x in o["evaluations"]]
                 + [x["subject_synthetic"] for x in o["attacks_made"]]
                 + [x["subject_synthetic"] for x in o["support_given"]]
+                + [x["is_synthetic"] for x in claims]
             ),
         }
 
@@ -426,6 +452,7 @@ def main() -> None:
     print(f"  models     {len(payload['model_index'])}")
     print(f"  owners     {len(payload['owner_index'])}")
     print(f"  pins       {len(payload['pins'])}")
+    print(f"  claims     {sum(len(o['claims']) for o in payload['owner_index'])}")
     print(f"  relations  {len(payload['relations'])}")
     print(f"  labels     {len(payload['labels'])}")
     print(f"  claimants  {payload['corpus']['size']}")

@@ -112,6 +112,11 @@ design. Tests that fail the build:
 - Cosine similarity is a displayed fact, never evidence of disagreement and never
   a sort key. Behaviorally indistinguishable vectors can sit far apart in angle
   (arXiv:2602.06801)
+- A namespace claim is never an ordering, a filter, or a condition on publishing.
+  Unclaimed is a state with its own words and is what every namespace here is. A
+  claim binds the provider's `sub` and never a renameable handle, a namespace
+  takes more than one claimant, and an org membership renders as an observation
+  with its date beside it rather than as a standing fact
 
 Add one whenever a new invariant is settled. An invariant that is only in prose
 is not an invariant.

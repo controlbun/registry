@@ -1,0 +1,125 @@
+---
+import Prose from "./Prose.astro";
+// Who has bound an account to this namespace, and on what dated evidence.
+//
+// **Unclaimed is the ordinary state and renders as one.** Every namespace in
+// this corpus is unclaimed, including all five real ones: the rows were written
+// down rather than signed up for, and `author` is a free string on purpose
+// because the deferred indexing lane fills it with people who never will sign
+// up. So the unclaimed branch is the normal page and says so in words, the way
+// every other absence here does, instead of leaving a blank where a badge goes.
+//
+// **This renders on the namespace's own page and nowhere else, deliberately.**
+// It is not a column in the owners table, not a mark on a submission row, and
+// not a line on the label view where claimants of one word sit side by side.
+// The moment claimed and unclaimed appear next to each other in a list, a
+// reader takes one for better, and the next reasonable step is sorting by it.
+// Nothing here is sortable and no ordering anywhere derives from a claim:
+// `tests/test_invariants.py` fails the build on one. See
+// `schema/migrations/009` and `DECISIONS.md` 2026-09-19.
+//
+// **A membership is dated, never standing.** People join and leave
+// organisations, so the page reports what the provider said and when it said
+// it, and lets the reader decide whether that is recent enough. It never says
+// an account is a member of anything now, because nothing here knows that.
+interface Props {
+  namespace: string;
+  claims: any[];
+}
+const { namespace, claims } = Astro.props;
+
+const when = (iso) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+---
+
+{claims.length === 0 ? (
+  <p class="note absent-block">
+    The namespace <span class="mono">{namespace}</span> is unclaimed. Nobody has
+    bound an account to it, which is the state every namespace in this registry
+    is in. An author here is a free string that somebody wrote down, not an
+    account somebody signed up for, and nothing about the work published under a
+    namespace follows from whether anyone has claimed it.
+  </p>
+) : (
+  claims.map((c) => (
+    <div class="claim">
+      <div class="provenance">
+        Claimed on <time datetime={c.claimed_at}>{when(c.claimed_at)}</time> by
+        the account <span class="mono">{c.provider}:{c.subject}</span>{c.handle
+          ? <>, which called itself <span class="mono">{c.handle}</span> that day</>
+          : <>, which gave no handle</>}
+      </div>
+
+      <p class="note">
+        The claim is bound to the provider's subject id above. Handles are
+        renameable on every provider here, so a claim bound to one would either
+        break on a rename or follow the handle to whoever registers it next.
+        {c.handle && <> The handle is recorded as of the claim date and is not
+        looked up by.</>}
+      </p>
+
+      <h3>Evidence</h3>
+      {c.evidence.length === 0 ? (
+        <p class="note absent-block">
+          No evidence was recorded with this claim, so there is nothing here to
+          weigh it by.
+        </p>
+      ) : (
+        <dl class="spec">
+          {c.evidence.map((e) => (
+            <>
+              <dt class="mono">{e.kind}</dt>
+              <dd>
+                <Prose text={e.detail} />
+                <div class="provenance">
+                  recorded <time datetime={e.recorded_at}>{when(e.recorded_at)}</time>
+                </div>
+              </dd>
+            </>
+          ))}
+        </dl>
+      )}
+
+      <h3>Organisation membership</h3>
+      {c.memberships.length === 0 ? (
+        <p class="note absent-block">
+          Nothing has been observed about this account's organisation
+          memberships. That is an absence of observation and not a statement
+          that it belongs to none.
+        </p>
+      ) : (
+        <ul class="memberships">
+          {c.memberships.map((m) => (
+            <li>
+              Membership of <span class="mono">{m.org}</span> confirmed on{" "}
+              <time datetime={m.observed_at}>{when(m.observed_at)}</time>{m.role
+                ? <>, with the role <span class="mono">{m.role}</span></>
+                : <>, with no role stated</>}, by{" "}
+              <span class="mono">{m.source}</span>.
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p class="note">
+        Each line above is what the provider answered on that date and not a
+        standing fact. People join and leave organisations, so a membership
+        checked once and held forever goes stale silently. Rechecking means the
+        account signs in again and a new observation is written beside this one.
+      </p>
+    </div>
+  ))
+)}
+
+{claims.length > 1 && (
+  <p class="note">
+    More than one account claims this namespace. Every claim stands with its own
+    evidence and this registry does not decide between them. The namespace is
+    not the claim.
+  </p>
+)}
+
+<p class="note">
+  Claiming a namespace needs a sign-in path, and this build has none.
+</p>
