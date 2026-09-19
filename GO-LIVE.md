@@ -1,6 +1,6 @@
 # Go live: the ordered list
 
-Written 2026-09-19 against tip `81f2fc4`. This is a runbook, not a plan. `V1.md`
+Written 2026-09-19 against tip `b8d1579`. This is a runbook, not a plan. `V1.md`
 section A is the plan and `DECISIONS.md` is authoritative on conflict.
 
 ## Premise, restated because this file is about mechanics
@@ -16,7 +16,7 @@ Everything reversible is done. What is left needs the author's credentials or is
 irreversible, and it is listed in the order it has to happen.
 
 **The audit is dated, not permanent.** The entry in `minor_updates.md` covers tip
-`81f2fc4`. If more commits land before the flip, re-run it at the real tip on the
+`b8d1579`. If more commits land before the flip, re-run it at the real tip on the
 real day and date a new entry. `V1.md` A1 asks for the audit on the day, not the
 week.
 
@@ -35,7 +35,7 @@ there are unresolved, and the first of them stops being fixable at step 5.
   CSS and no JavaScript and no error anywhere. This was the one silent breakage.
 - `artifacts/memberships.jsonl` is now gitignored, which `artifacts/seed.py`
   already claimed it was.
-- `make verify` green at `81f2fc4` from a clean `git archive` extract, run outside
+- `make verify` green at `b8d1579` from a clean `git archive` extract, run outside
   the working tree because another agent is mid-change in it. 32 pages, every
   internal link resolves, every published number re-derives, all proofs bind.
 - Built site is 1.7 MB over 86 files. Pages allows 1 GB, a soft 100 GB per month
@@ -62,11 +62,11 @@ of these four.
 
 ### 1. Re-run the history audit at the real tip
 
-Only if commits have landed since `81f2fc4`. Append a dated entry to
+Only if commits have landed since `b8d1579`. Append a dated entry to
 `minor_updates.md` superseding the one there.
 
 Split every scan. A combined expression has already exceeded a matcher's
-complexity limit once, and the PEM scans in the `81f2fc4` audit errored on a
+complexity limit once, and the PEM scans in the `b8d1579` audit errored on a
 pattern starting with a dash until they were rerun with `grep -e`. A scan that
 errors and a scan that finds nothing print the same thing.
 
@@ -336,7 +336,7 @@ author's writing. The first one has a closing window and the rest do not.
 window to remove it closes at step 5.** `minor_updates.md` carries
 `/work/neu/<allocation-id>/...` inside the 2026-09-19 entry that certifies the path
 is not tracked. Quoting it to say it is absent is what put it there. It is in two
-reachable blobs, on `78e879e` and `3166b08`, so editing the working tree would not
+reachable blobs, on `cbd207d` and `4abd755`, so editing the working tree would not
 remove it. It is not a credential, grants no access, and discloses an allocation
 id beside an affiliation the same file already names. The decision is to accept it
 or to rewrite history, and a rewrite is cheap now, with one remote and one clone,

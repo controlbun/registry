@@ -1,0 +1,47 @@
+controlbun registry
+Copyright 2026 Soham Padia
+
+This product includes software developed by Soham Padia, licensed under the
+Apache License, Version 2.0. See LICENSE.
+
+
+ARTIFACTS ARE NOT COVERED BY THAT LICENSE
+
+A steering vector is derived from model weights, so what may be done with one
+is constrained by the license of the model its activations were read from, not
+by the license on this code. The two are separate questions and this file keeps
+them apart.
+
+What this repository actually holds, as of 2026-09-19:
+
+  artifacts/soham/d_olmo3_v1.safetensors
+  artifacts/soham/d_olmo3_logistic.safetensors
+  artifacts/soham/d_olmo3_lda.safetensors
+  artifacts/soham/d_olmo3_L24_logistic.safetensors
+
+      Directions derived from allenai/Olmo-3-1125-32B, which is Apache-2.0.
+      Extracted by the author from github.com/soham-padia/steering-arena at
+      commit b8b4721. See artifacts/REAL.md.
+
+  fixtures/*.safetensors
+
+      Synthetic. Integer ramps written by fixtures/build.py against model ids
+      that resolve to nothing. Not derived from any model, and every number
+      attached to them is invented and labeled as such. See
+      fixtures/SYNTHETIC.md.
+
+One artifact in the corpus is not in this repository:
+
+  soham/meta-llama/Llama-3.3-70B-Instruct/trauma@d61-diffmeans-expository-L34
+
+      Derived from meta-llama/Llama-3.3-70B-Instruct, which is the Llama 3.3
+      Community License and is NOT Apache-2.0. Those bytes are published in
+      the author's own Hugging Face namespace and this repository records only
+      a pointer to them. Its row carries the author's dated reading of that
+      license, including a clause he records as unresolved: whether the
+      requirement to begin a derivative model's name with "Llama" reaches a
+      read-out direction vector is not settled by the text.
+
+The registry points at artifacts and serves none. A pointer is not a
+redistribution, which is why the Llama-derived direction can be indexed here
+while its bytes stay where their author put them.
