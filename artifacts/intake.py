@@ -969,12 +969,24 @@ function facts(id, payload) {
 let handle = null;
 
 async function post(path, options) {
-  const res = await fetch(path + (path.includes('?') ? '&' : '?') + 'k=' + key,
-                          Object.assign({ method: 'POST' }, options));
+  let res;
+  try {
+    res = await fetch(path + (path.includes('?') ? '&' : '?') + 'k=' + key,
+                      Object.assign({ method: 'POST' }, options));
+  } catch (e) {
+    // The tool is not listening any more. Distinguished from every other
+    // failure because it is the one the page cannot say anything useful about
+    // and the one a stale tab produces, and the token is per run, so the fix
+    // is never to retry here.
+    return { ok: false, gone: true, body: { refused:
+      'this page is talking to an intake that is no longer running. The token '
+      + 'in the URL is per run, so reopen the address the current one printed.'
+    } };
+  }
   const text = await res.text();
   let body;
   try { body = JSON.parse(text); } catch (e) { body = { refused: text }; }
-  return { ok: res.ok, body };
+  return { ok: res.ok, status: res.status, body };
 }
 
 q('check').addEventListener('click', async () => {
@@ -1037,9 +1049,13 @@ q('agent-prompt').addEventListener('click', async () => {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ fields: fields() }),
   });
+  if (res.gone || res.status === 404) {
+    agentSays(res.body.refused || 'Nothing answers /agent-prompt on this run, '
+      + 'so there is no prompt to copy. The form works without it.');
+    return;
+  }
   if (!res.ok || !res.body.prompt) {
-    agentSays('Nothing answers /agent-prompt on this run, so there is no prompt '
-      + 'to copy. The form works without it.');
+    agentSays(res.body.refused || 'No prompt came back and no reason with it.');
     return;
   }
   try {
@@ -1059,9 +1075,18 @@ q('agent-fill').addEventListener('click', async () => {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ pasted: text }),
   });
+  // Three different failures, and they were one message until a real refusal
+  // arrived wearing the words "nothing answers this route". A refusal carries
+  // the reason the paste was not read and that reason is the whole product of
+  // the error path, so it is shown rather than summarized.
+  if (res.gone || res.status === 404) {
+    agentSays(res.body.refused || 'Nothing answers /agent-paste on this run, '
+      + 'so the paste was not read. Type the fields in below.');
+    return;
+  }
   if (!res.ok || !res.body.fields) {
-    agentSays('Nothing answers /agent-paste on this run, so the paste was not '
-      + 'read. Type the fields in below.');
+    agentSays(res.body.refused || 'The paste was not read and no reason came '
+      + 'back with it.');
     return;
   }
   let filled = 0;

@@ -856,3 +856,30 @@ def test_the_form_offers_the_tensor_field_and_explains_it(tool):
         conn.close()
     assert 'data-field="bytes_tensor"' in page
     assert 'id="why-bytes_tensor"' in page
+
+
+def test_a_refused_paste_comes_back_with_its_reason_not_as_a_missing_route(tool):
+    """The three failures behind the paste button are not one failure.
+
+    A dead server, an absent route and a refusal with a reason all rendered as
+    "nothing answers /agent-paste on this run", so a paste the parser had read
+    and rejected for a stated reason reported as a tool that was not running.
+    The reason is the whole product of the error path.
+    """
+    code, body = tool.post_json("/agent-paste", {"pasted": "no block here at all"},
+                                origin=tool.base)
+    assert code == 400, "a paste with no block is refused"
+    assert body.get("refused"), "and the refusal carries its reason"
+    assert "nothing answers" not in body["refused"].lower()
+
+
+def test_the_page_tells_those_three_apart(tool):
+    conn = db.connect(tool.database)
+    try:
+        page = intake.page(conn, token="t", repo="a/b", origin="o").decode()
+    finally:
+        conn.close()
+    # A network failure is caught rather than left to reject the handler, and
+    # 404 is read off the status rather than inferred from a missing key.
+    assert "gone: true" in page
+    assert "res.status === 404" in page
