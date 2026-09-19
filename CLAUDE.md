@@ -311,20 +311,13 @@ ots upgrade <manifest>.sha256.ots   # network, pending proofs only
 
 ## Repo
 
-`github.com/controlbun/registry`. **Private as of 2026-09-19, and written for
-the public repo it is about to be.** Every rule below is the rule for a public
-repo and applies now, because the whole point of writing them in advance is
-that the flip does not become the moment they start mattering.
+`github.com/controlbun/registry`. Public, and the site is served from it.
 
 This section used to read "Private ... no Actions, no public push, no `gh`
 workflows", which was right for an off-site backup and incoherent for a repo that
 publishes a website. Amended deliberately rather than discovered mid-build, per
 the obligation recorded in `DECISIONS.md` 2026-09-13. Most of it survived; what
 changed is marked.
-
-It then stated the end state as though it were the current one, which is a
-different way of being wrong and lasted three days. **Delete this paragraph and
-the qualifier above when the repo is actually public**, and not before.
 
 **Write nothing that would need a history rewrite to remove.** This was a
 precaution and is now a fact: every commit is readable by anyone. Personal,
