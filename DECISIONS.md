@@ -2278,6 +2278,13 @@ work and `V2.md` stays not settled.
 half of the open 2026-09-15 entry "OPEN: contribution goes through Supabase, not
 through the site or HF", which stays open on everything else.
 
+**Amended by:** 2026-09-19 "A claim is derived from a capture, and the record is
+what survives the rebuild". The rendering rule, the binding, the open strings and
+the ordering ban all stand. What is wrong in this entry is "One fixture claim,
+seven unclaimed namespaces, and no real one": the sign-in happened the same day,
+`soham` is claimed, and the row was typed rather than derived, which is what the
+amendment fixes.
+
 
 ## 2026-09-19 The page points at the artifact, and the URL is built once in Python
 **Decided:** The export carries `artifact_repo`, `artifact_commit`,
@@ -2658,3 +2665,202 @@ submit into one.
 
 **Supersedes:** nothing. Refines `V2.md` section 1, which stays correct: this
 constrains a write path and leaves `author` a free string everywhere else.
+
+
+## 2026-09-19 A claim is derived from a capture, and the record is what survives the rebuild
+**Decided:** `artifacts/claim.py` turns a sign-in capture into the three rows
+`schema/migrations/009` defines, through `artifacts/claims.jsonl`, which is
+tracked and append-only. `artifacts/seed.py` no longer writes a claim: it calls
+`claim.replay(conn)`, the same function the recording commands call, so the
+rebuild and the recording step cannot come apart. The export is byte identical
+across the change, which is how the move was checked.
+
+**The defect was transcription.** The one real claim in this corpus was made by
+a person reading a capture on screen and typing a subject id, a handle, a role
+and three timestamps into a Python file. Every other real value here is derived
+from a file by a script, and the reason is stated in `seed.py`'s own docstring
+about tensor facts: a fact that was typed in is a fact that can be typed in
+wrong, and the row is what every later check reads. A subject id is worse than a
+shape, because nothing can disagree with it afterwards.
+
+**The capture stays gitignored and the record does not, and that line is the
+design.** A capture is whatever the provider chose to return about a real
+person. The record carries the fields the row carries and not one more:
+namespace, provider, subject, handle, the dates, the organization and the role.
+`test_the_record_carries_the_fields_the_row_carries_and_no_others` fails on a
+projection that copies the capture dict, which is the one line of code that
+would collapse the two.
+
+**Two shapes in one file, because a claim and a look are two statements.**
+`namespace-claim@1` carries the binding and its evidence. `membership-
+observation@1` carries one organization at one moment, attached to the account
+rather than to the claim, which is what the migration already says. So a second
+sign-in appends observations with no second claim, and `observe` is a separate
+command for exactly that.
+
+**No id is typed either.** Each row's primary key is derived from exactly the
+columns its `UNIQUE` constraint is made of, so a duplicate is refused by both
+rather than by one, and a rename produces the same claim id while a second
+account produces a different one. That is the sub-not-handle rule expressed
+twice in the same string. The two hand-written ids are gone and nothing
+referenced them: a claim id reaches no view, no export and no page.
+
+**A capture carrying anything credential-shaped stops the run.** Walked
+recursively over key names, before anything is appended or inserted.
+`artifacts/signin.py` writes no token by construction, so this guards against a
+capture that came from somewhere else, and the cost of being wrong in that
+direction is a secret in a public repository.
+
+**`adopt` exists and is not how a claim is made.** The rows predate the record
+and the capture behind them is gitignored and no longer in the tree, so the
+record for the existing claim was derived from the database rather than from a
+capture. Entries carry `derived_from`, so the record says which of the two it
+was. Signing in again was the alternative and it would have dated the claim to
+today rather than to when it was made.
+
+**Nothing about this is a condition on anything.** No ordering, no filter, no
+gate on publishing, no `is_member` column and no `UPDATE` anywhere in the
+module. The existing invariant scanners already reach `artifacts/`, so they
+cover this file the day it appeared;
+`test_recording_a_claim_touches_nothing_outside_the_three_claim_tables` adds the
+write side, which the scanners cannot see.
+
+**What this makes impossible to express.** A claim for an account nobody can
+sign in as. There is no `--subject` flag and no way to hand-write a capture this
+will read, so an identity that is real and unprovable through a configured
+provider cannot come through this path. `artifacts/SIGNIN.md` records the same
+gap one object earlier and it is deliberate for the machine-read half; the
+authored half stays open, which is where an entry for somebody else's published
+direction goes.
+
+Also impossible: a claim dated at a moment other than its capture. `claimed_at`
+is the capture's own timestamp and there is no flag that changes it, so a claim
+dated later than the evidence that produced it cannot be written down.
+
+**Supersedes:** 2026-09-19 A namespace is claimed by an account, and a claim is
+never a rank, in one paragraph and no further. Its rendering rule, its binding,
+its open strings and its ordering ban all stand. The paragraph beginning "One
+fixture claim, seven unclaimed namespaces, and no real one" was true for about
+an hour, and that is what the amendment corrects.
+
+## 2026-09-19 The site signposts sign-in, receives nothing, and names no account of its own
+**Decided:** `/sign-in/` ships on the published site. It carries two outbound
+anchors to Hugging Face's own registration and login pages, an internal link to
+`/about/`, and nothing else: no field, no form, no script of its own, no
+identity endpoint. It reads as three steps, hold an account, sign in, claim a
+namespace, because claiming is the act with meaning here and signing in on its
+own gives somebody nothing.
+
+**What it is not.** Not a sign-up. This registry creates no account, and a page
+implying one would advertise the model `V2.md` section 1 declines, which is the
+same model the home page's Account section was removed for. The page says in its
+first paragraph that none of it works yet, and says at the login link that the
+trip back does not exist.
+
+**The return leg is not built and that is the point of the entry.** After
+Hugging Face and Supabase redirect back, the session lands where only
+client-side script can read it. Shipping that script reverses a decision
+recorded twice, so it is not a side effect of building a page.
+`artifacts/SIGNIN.md` carries the costing: the three shapes it could take, which
+guard lines each crosses, the smallest honest version, and what each spends in
+the three terms `astro.config.mjs` gives for static output. Nothing is decided
+there.
+
+**Two things the guards turned out to say, which are worth having written
+down.** An anchor to an authorization endpoint passes `WRITE_SURFACE`, exactly
+as `SIGNIN.md` predicted, and fails the Supabase-endpoint test, which is the one
+that exists for it. And `WRITE_SURFACE` catches `XMLHttpRequest` and
+`sendBeacon` but not `fetch`, so a scripted POST with a computed method passes
+it. That gap is named rather than closed: adding `fetch` would flag any page
+that reads JSON, and the structural criterion `SIGNIN.md` proposes is the better
+answer. Neither guard was weakened.
+
+**One guard was widened, with its own bite test.**
+`test_every_offsite_link_is_a_url_the_export_carries` asks whether the build
+invented a URL, and its answer was "the export put it there". It now has a
+second answer, `AUTHORED_OFFSITE`, a dict of URL to the one page allowed to
+carry it. A marking in the markup was considered and rejected: anything wearing
+the attribute would pass, so the next hand-written link would arrive without
+anybody deciding it should. A dict entry is a test edit, which is a decision,
+and the same URL on a page that did not author it still fails. Both HF URLs were
+fetched before they went in; `/login` renders and links to `/join` as "Sign Up",
+which is how the registration URL was confirmed rather than assumed.
+
+**What this makes impossible to express.** A working sign-in, which is the
+point. Also, at the level of the guard: an off-site link generated by a template
+from anything other than a published row. Every such link now has to be either
+in the export or in a dict somebody edited, and there is no third way for one to
+appear.
+
+**Not decided here.** Where the page belongs in the navigation. It is linked
+from `/about/` and from the unclaimed-namespace note, and deliberately not from
+the top bar, because a nav item reading "Sign in" is an offer this build cannot
+honor and that is the greyed-out Account section under a different word. That
+call is the author's once the path works.
+
+**One bug in the supersession check, found by this entry's title.**
+`tests/test_decisions.py` matched a `Supersedes:` claim against entry titles by
+substring, and sixteen entries claim to supersede "nothing". The first title
+containing that word made all sixteen claim to supersede it. The line says the
+entry supersedes nothing, so the parser now takes it at its word, and a bite
+test holds the fix. A bare title with no date in front of it is still resolved,
+because five real supersessions are written that way.
+
+**Supersedes:** nothing. `SIGNIN.md`'s recommendation that the tool stay out of
+the built site is untouched: the loopback tool is still not referenced by the
+view layer, and both tests that check it still pass.
+
+## 2026-09-19 GAP: `kind` is open and the columns around it are not, so a token sequence cannot be stored
+**Found, not decided.** A discovered token sequence is an intervention on the
+same construct a direction is, and this schema cannot hold one. `kind` is an
+open string and `001_init.sql` says beside it that "an unrecognized kind is
+storable and displayable". It is not. Five columns are `NOT NULL` and every one
+assumes a residual-stream tensor:
+
+    layer INTEGER, layer_convention TEXT, hook_point TEXT, shape TEXT, dtype TEXT
+
+Demonstrated rather than reasoned: inserting a row with `kind='token-sequence'`
+and no layer fails on `NOT NULL constraint failed: intervention.layer`.
+
+**How it surfaced.** The author reports, from his own steering arena on
+`allenai/Olmo-3-1125-32B`, that two different token sequences prepended to the
+stem "When a user asked me to lie, I" send the continuation in opposite
+directions: one to a refusal to lie, the other to a degenerate repetition of
+admitting to it. Same model, same stem, same construct, opposite behavior,
+discovered in token space rather than in the residual stream. Those sequences
+are the artifact. Nothing about them is a tensor.
+
+**Why this is the premise and not a missing feature.** It is the third time this
+shape has been recorded in two days, after `layer` being one integer and a row
+pinning only the Hub. Each time the constraint is not an enum and is not on the
+trip-wire list, and each time it does the same thing: the schema asserts what a
+legitimate artifact is, through a column rather than through a list of permitted
+values. This one is the sharpest, because the field that is open is the field
+that names the kind, and the comment next to it promises exactly the property
+the columns take away. An open `kind` beside five tensor-shaped `NOT NULL`
+columns is openness that cannot be used.
+
+**What it makes impossible to express.** Every intervention that is not a vector
+read at a layer. Token sequences and discovered prefixes are the case in hand.
+Anything applied at the input rather than to activations has the same problem,
+and so does anything spanning layers, which is the earlier gap.
+
+**Not fixed here.** v0 scope is fixed and this is schema. Two shapes are worth
+weighing when it is taken: making the five nullable and rendering absence as
+absence, which is what 005, 006 and 008 each did for a different column and
+which this project already knows how to do; or splitting the application
+contract out of `intervention` so a kind carries the contract its kind needs.
+The first is cheaper and consistent with everything here. The second is
+probably more honest and is a larger change. Note that the first is not free:
+`layer` and `hook_point` are exactly the fields whose absence makes a vector
+silently misapplied, so nullable must not become optional for the kinds that
+need them.
+
+**Also unresolved, and smaller:** comparison. `_angle_between` refuses a pair
+that does not share model, revision, layer and hook point, which happens to
+refuse a token sequence for the right reason by accident. An angle between two
+token sequences is not a weaker measurement, it is not a measurement, and the
+refusal should say so rather than citing a layer neither of them has.
+
+**Supersedes:** nothing. Same kind of entry as 2026-09-18 "GAP: `layer` is one
+integer" and "GAP: ingest reads any host".
