@@ -61,6 +61,7 @@ That is a decision for the author, not something to slip in here.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
 import secrets
@@ -355,6 +356,39 @@ def check_link(repo: str, commit: str, path: str, stated: dict[str, str],
     )
 
 
+def _said_the_input_digest(apart: Exception, blob: bytes,
+                           stated: dict[str, str]) -> Exception:
+    """The digest disagreement that is a header rewrite, told apart from the rest.
+
+    `artifact.disagreements` is right for the read path it was written for: a
+    pinned artifact whose bytes no longer hash to the record means one of the
+    two moved, and that is alarming. On this path it is almost never that. The
+    author states the digest of the file they exported, `ingest` rewrites the
+    header with its keys sorted so the bytes reproduce, and the file it writes
+    therefore hashes to something else. Same tensor, different byte order.
+
+    Detected rather than assumed: the claim is compared against the bytes that
+    came in, and only a claim that matches those exactly gets this sentence.
+    Anything else keeps the original, because a digest that matches neither
+    side is the case the original message is about.
+    """
+    if hashlib.sha256(blob).hexdigest() != (stated.get("sha256") or ""):
+        return apart
+    return Refused(
+        "that sha256 is the digest of the file you handed over, and this tool "
+        "rewrites the header with its keys sorted before it records anything, "
+        "so the file it wrote hashes to something else. safetensors seeds its "
+        "header order per process, and a file that does not reproduce byte for "
+        "byte would make every digest in this registry meaningless, which is "
+        "why the rewrite happens rather than being skipped for a file that "
+        "arrives already sorted.\n\n"
+        "The tensor is the same. Only the byte order of the header moved.\n\n"
+        "Clear the sha256 field and the row records what the written file "
+        "hashes to, which is the digest anybody fetching it later will "
+        "compute. Stating nothing here is not a wrong claim."
+    )
+
+
 def check_bytes(blob: bytes, filename: str, path: str,
                 stated: dict[str, str], tensor: str = "") -> Checked:
     """Convert and check a dropped file, outside this repository.
@@ -395,6 +429,9 @@ def check_bytes(blob: bytes, filename: str, path: str,
             payload=ingest.named_array(tensor) if tensor else None,
             root=staging,
         )
+    except artifact.MismatchedArtifact as apart:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise _said_the_input_digest(apart, blob, stated) from apart
     except BaseException:
         shutil.rmtree(staging, ignore_errors=True)
         raise

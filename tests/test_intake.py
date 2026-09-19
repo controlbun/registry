@@ -895,3 +895,43 @@ def test_the_page_renders_parser_notes_rather_than_counting_them(tool):
     assert "res.body.notes" in page, "the handler has to read them"
     assert "class = 'notes'" in page or "className = 'notes'" in page
     assert ".notes {" in page, "and they need a style or they are a wall of text"
+
+
+def _unsorted(tmp: Path) -> bytes:
+    """A safetensors file whose header keys are not in sorted order.
+
+    Which is what an ordinary export produces: safetensors seeds its header
+    order per process. Integer ramp, labeled synthetic, no number a measurement.
+    """
+    from safetensors.numpy import save
+    return save({"direction": np.arange(8, dtype=np.float32)},
+                metadata={"z": "1", "a": "2", "note": SYNTHETIC})
+
+
+def test_stating_the_input_digest_is_told_apart_from_a_real_mismatch(tmp_path):
+    """The author's own digest cannot survive the header rewrite.
+
+    `disagreements` says "one of the two moved", which is right for a pinned
+    artifact on the read path and alarming nonsense here: the author stated the
+    digest of the file they exported and the tool sorted the header before
+    recording. Same tensor, different byte order.
+    """
+    import hashlib
+    blob = _unsorted(tmp_path)
+    with pytest.raises(intake.Refused) as refused:
+        intake.check_bytes(blob, "d.safetensors", "v/d.safetensors",
+                           stated={"sha256": hashlib.sha256(blob).hexdigest()})
+    said = str(refused.value)
+    assert "the file you handed over" in said
+    assert "Clear the sha256 field" in said
+    assert "one of the two moved" not in said
+
+
+def test_a_digest_matching_neither_side_keeps_the_original_message(tmp_path):
+    """Detected, not assumed. A digest that is nobody's is the case the
+    original sentence was written for and it still gets it."""
+    blob = _unsorted(tmp_path)
+    with pytest.raises(artifact.MismatchedArtifact) as apart:
+        intake.check_bytes(blob, "d.safetensors", "v/d.safetensors",
+                           stated={"sha256": "a" * 64})
+    assert "one of the two moved" in str(apart.value)
