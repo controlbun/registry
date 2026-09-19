@@ -24,6 +24,20 @@ const r = c.recipe;
 // of it renders as it always did, and a missing reason is not a finding.
 const absences = c.absences ?? {};
 
+// Where the author published the bytes, and the URL they resolve to. Built in
+// Python by `registry.fetch.row_url`, which is the one place that knows how a
+// host, a repo, a commit, a path and a template become a URL, and the one place
+// that refuses a template dropping the commit. Nothing here assembles one from
+// parts: this repo has been bitten several times by one rule living in two
+// places, and a page that composed its own URL would be a second rule that
+// nobody runs the fetch tests against.
+//
+// Null for nine of the ten rows in this corpus, which is the ordinary state and
+// not a degraded one. Five are fixtures and four are real directions their
+// author never published at a URL.
+const p = c.published;
+const ref = `${c.author}/${c.label}@${c.version}`;
+
 // Which of them this card already prints beside the field itself. A layout
 // fact about this card, not a list of the fields allowed a reason: the schema
 // puts no set on the field name, so anything not named here still has to reach
@@ -80,6 +94,70 @@ const elsewhere = Object.entries(absences).filter(([f]) => !beside.includes(f));
         artifacts worth comparing against. It does mean nobody can rerun this one,
         and the only thing distinguishing it from a behaviourally equivalent vector
         is the label on it.
+      </p>
+    )}
+
+    <h2>Where the bytes are</h2>
+    <dl class="spec">
+      {p && (
+        <>
+          <dt>host</dt>
+          <dd class="mono">
+            {p.host ?? (
+              <>
+                <span class="absent">not recorded</span>
+                <span class="meta">
+                  pinned before there was a column for it, so a client resolves
+                  it against its own default
+                </span>
+              </>
+            )}
+          </dd>
+          <dt>repo</dt><dd class="mono">{p.repo}</dd>
+          <dt>commit</dt><dd class="mono wrap">{p.commit}</dd>
+          <dt>path</dt>
+          <dd class="mono wrap">
+            {p.path ?? <span class="absent">not recorded</span>}
+          </dd>
+        </>
+      )}
+      <dt>sha256</dt>
+      <dd class="mono wrap">
+        {c.artifact_sha256 ?? <span class="absent">not recorded</span>}
+        <AbsenceReason reasons={absences} field="artifact_sha256" />
+      </dd>
+    </dl>
+
+    {p && p.url && (
+      <p class="fetch">
+        <a class="mono wrap" href={p.url} rel="noopener nofollow">{p.url}</a>
+      </p>
+    )}
+    {p && !p.url && <p class="note absent-block">{p.refusal}</p>}
+
+    {p ? (
+      <>
+        <p class="fetch">
+          <span class="mono wrap">registry.load("{ref}").vector()</span>
+        </p>
+        <p class="why">
+          The link is the author's own copy at that commit, on their host. This
+          registry serves no copy of it and holds no mirror, so what is at the
+          other end is theirs to move and theirs to withdraw. The client call
+          fetches that same commit and compares the bytes that arrive against the
+          sha256 above before it hands back a tensor. Following the link gets you
+          the file and leaves that check to you.
+        </p>
+      </>
+    ) : (
+      <p class="note absent-block">
+        Nobody recorded where these bytes are published, so this page has no URL
+        to point at. That is a fact about the row rather than a gap in it: an
+        artifact can be described here, measured here and argued about here
+        without its author ever having put it somewhere with an address, and this
+        registry does not publish one on their behalf. The sha256 is still what
+        the file hashes to, so a copy obtained any other way can be checked
+        against it.
       </p>
     )}
 

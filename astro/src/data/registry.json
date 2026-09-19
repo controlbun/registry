@@ -30,6 +30,7 @@
           "absences": {},
           "activation_norm": 11.1111,
           "artifact_path": "fixtures/alice_kindness_v1.safetensors",
+          "artifact_sha256": "b4ec7436ca1aa9b5145cc1cfc519754c60f6f764ce928382697516a3e79f55c4",
           "attacks": [
             {
               "attacked_at": "2026-09-12T00:00:00Z",
@@ -94,6 +95,7 @@
           "model_id": "placeholder/does-not-resolve-1b",
           "model_revision": "000000000000",
           "notes": null,
+          "published": null,
           "recipe": {
             "container_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
             "entrypoint_library": "steering-vectors",
@@ -146,6 +148,7 @@
           "absences": {},
           "activation_norm": 11.1111,
           "artifact_path": "fixtures/bob_kindness_v1.safetensors",
+          "artifact_sha256": "c6d5f30bf078df80f8d04707b9aec262357089f9bcd08c36c18942c3be4a1d0d",
           "attacks": [],
           "author": "bob",
           "axes": [
@@ -201,6 +204,7 @@
           "model_id": "placeholder/does-not-resolve-1b",
           "model_revision": "000000000000",
           "notes": null,
+          "published": null,
           "recipe": {
             "container_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
             "entrypoint_library": "steering-vectors",
@@ -295,6 +299,7 @@
           "absences": {},
           "activation_norm": 11.1111,
           "artifact_path": "fixtures/dana_refusal_v1.safetensors",
+          "artifact_sha256": "35dc6e7ce21a437b8c40594016fd6bba87753d3e8995fc4fe874bc62b3ba9bda",
           "attacks": [],
           "author": "dana",
           "axes": [
@@ -324,6 +329,7 @@
           "model_id": "placeholder/other-architecture-7b",
           "model_revision": "111111111111",
           "notes": null,
+          "published": null,
           "recipe": null,
           "score_state": "reportable",
           "shape": "[8]",
@@ -350,6 +356,7 @@
           "absences": {},
           "activation_norm": 11.1111,
           "artifact_path": "fixtures/erik_refusal_v1.safetensors",
+          "artifact_sha256": "0256db38e2bd070ddbdf6e1dae75a670dfc8f12b18bd3a57e1a7aaa025c63b10",
           "attacks": [],
           "author": "erik",
           "axes": [
@@ -377,6 +384,7 @@
           "model_id": "placeholder/other-architecture-7b",
           "model_revision": "111111111111",
           "notes": null,
+          "published": null,
           "recipe": {
             "container_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
             "entrypoint_library": "scikit-learn",
@@ -404,6 +412,7 @@
           "absences": {},
           "activation_norm": 11.1111,
           "artifact_path": "fixtures/fern_refusal_v1.safetensors",
+          "artifact_sha256": "9fdc0f3786ef9748ee02f6d060cee2a34f067909c06f3324fae8f373fc627fe1",
           "attacks": [],
           "author": "fern",
           "axes": [],
@@ -427,6 +436,7 @@
           "model_id": "placeholder/other-architecture-7b",
           "model_revision": "111111111111",
           "notes": null,
+          "published": null,
           "recipe": {
             "container_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
             "entrypoint_library": "sae-lens",
@@ -568,6 +578,7 @@
           "absences": {},
           "activation_norm": null,
           "artifact_path": "artifacts/soham/d_olmo3_L24_logistic.safetensors",
+          "artifact_sha256": "e448b8f4266403f17e32182b2d2a5ed9a62bc86078fe7e6cec397daa49494616",
           "attacks": [],
           "author": "soham",
           "axes": [],
@@ -591,6 +602,7 @@
           "model_id": "allenai/Olmo-3-1125-32B",
           "model_revision": null,
           "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run. No confound audit and no control-pair transfer for this one: the arena ran that battery on the three layer-32 directions and not on this. Its siblings' numbers are not transferable to it, sharing a method and a dataset notwithstanding.",
+          "published": null,
           "recipe": {
             "container_digest": null,
             "entrypoint_library": "steering-arena/scripts/extract_direction.py",
@@ -626,6 +638,7 @@
           "absences": {},
           "activation_norm": null,
           "artifact_path": "artifacts/soham/d_olmo3_logistic.safetensors",
+          "artifact_sha256": "0471128514fed62eba8e9ba1bfbd3595026eddfacc3154ea740372f4f0c5a8f1",
           "attacks": [],
           "author": "soham",
           "axes": [
@@ -659,6 +672,7 @@
           "model_id": "allenai/Olmo-3-1125-32B",
           "model_revision": null,
           "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+          "published": null,
           "recipe": {
             "container_digest": null,
             "entrypoint_library": "steering-arena/scripts/extract_direction.py",
@@ -695,6 +709,7 @@
           "absences": {},
           "activation_norm": null,
           "artifact_path": "artifacts/soham/d_olmo3_lda.safetensors",
+          "artifact_sha256": "54b6aebafdb2533c81616c9aa4e27d20dd44b9a70b25c95f330111f9f550e173",
           "attacks": [],
           "author": "soham",
           "axes": [
@@ -728,6 +743,7 @@
           "model_id": "allenai/Olmo-3-1125-32B",
           "model_revision": null,
           "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+          "published": null,
           "recipe": {
             "container_digest": null,
             "entrypoint_library": "steering-arena/scripts/extract_direction.py",
@@ -764,6 +780,7 @@
           "absences": {},
           "activation_norm": null,
           "artifact_path": "artifacts/soham/d_olmo3_v1.safetensors",
+          "artifact_sha256": "cfc5e2b7d670d509ccbb0bf71dbd9b75daa8f445afffa5738558ee40219dc186",
           "attacks": [],
           "author": "soham",
           "axes": [
@@ -797,6 +814,7 @@
           "model_id": "allenai/Olmo-3-1125-32B",
           "model_revision": null,
           "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+          "published": null,
           "recipe": {
             "container_digest": null,
             "entrypoint_library": "steering-arena/scripts/extract_direction.py",
@@ -1052,6 +1070,7 @@
           },
           "activation_norm": null,
           "artifact_path": "vectors/events/trauma_minus_neutral_expository.safetensors",
+          "artifact_sha256": "69cd9abec53bcce7c97cb5640d45229da5dbf8ebf93a0dd394698ed84dc319b0",
           "attacks": [],
           "author": "soham",
           "axes": [],
@@ -1075,6 +1094,15 @@
           "model_id": "meta-llama/Llama-3.3-70B-Instruct",
           "model_revision": "6f6073b42301",
           "notes": null,
+          "published": {
+            "commit": "2ff771e4bbdc21a74d37dee111e98be6d71600f5",
+            "host": "huggingface.co",
+            "path": "vectors/events/trauma_minus_neutral_expository.safetensors",
+            "refusal": null,
+            "repo": "sohampadia/pro-human",
+            "url": "https://huggingface.co/sohampadia/pro-human/resolve/2ff771e4bbdc21a74d37dee111e98be6d71600f5/vectors/events/trauma_minus_neutral_expository.safetensors",
+            "url_template": "https://{host}/{repo}/resolve/{commit}/{path}"
+          },
           "recipe": null,
           "score_state": "absent",
           "shape": "(8192,)",
@@ -1117,6 +1145,7 @@
               "absences": {},
               "activation_norm": 11.1111,
               "artifact_path": "fixtures/alice_kindness_v1.safetensors",
+              "artifact_sha256": "b4ec7436ca1aa9b5145cc1cfc519754c60f6f764ce928382697516a3e79f55c4",
               "attacks": [
                 {
                   "attacked_at": "2026-09-12T00:00:00Z",
@@ -1181,6 +1210,7 @@
               "model_id": "placeholder/does-not-resolve-1b",
               "model_revision": "000000000000",
               "notes": null,
+              "published": null,
               "recipe": {
                 "container_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
                 "entrypoint_library": "steering-vectors",
@@ -1233,6 +1263,7 @@
               "absences": {},
               "activation_norm": 11.1111,
               "artifact_path": "fixtures/bob_kindness_v1.safetensors",
+              "artifact_sha256": "c6d5f30bf078df80f8d04707b9aec262357089f9bcd08c36c18942c3be4a1d0d",
               "attacks": [],
               "author": "bob",
               "axes": [
@@ -1288,6 +1319,7 @@
               "model_id": "placeholder/does-not-resolve-1b",
               "model_revision": "000000000000",
               "notes": null,
+              "published": null,
               "recipe": {
                 "container_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
                 "entrypoint_library": "steering-vectors",
@@ -1400,6 +1432,7 @@
               "absences": {},
               "activation_norm": 11.1111,
               "artifact_path": "fixtures/dana_refusal_v1.safetensors",
+              "artifact_sha256": "35dc6e7ce21a437b8c40594016fd6bba87753d3e8995fc4fe874bc62b3ba9bda",
               "attacks": [],
               "author": "dana",
               "axes": [
@@ -1429,6 +1462,7 @@
               "model_id": "placeholder/other-architecture-7b",
               "model_revision": "111111111111",
               "notes": null,
+              "published": null,
               "recipe": null,
               "score_state": "reportable",
               "shape": "[8]",
@@ -1455,6 +1489,7 @@
               "absences": {},
               "activation_norm": 11.1111,
               "artifact_path": "fixtures/erik_refusal_v1.safetensors",
+              "artifact_sha256": "0256db38e2bd070ddbdf6e1dae75a670dfc8f12b18bd3a57e1a7aaa025c63b10",
               "attacks": [],
               "author": "erik",
               "axes": [
@@ -1482,6 +1517,7 @@
               "model_id": "placeholder/other-architecture-7b",
               "model_revision": "111111111111",
               "notes": null,
+              "published": null,
               "recipe": {
                 "container_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
                 "entrypoint_library": "scikit-learn",
@@ -1509,6 +1545,7 @@
               "absences": {},
               "activation_norm": 11.1111,
               "artifact_path": "fixtures/fern_refusal_v1.safetensors",
+              "artifact_sha256": "9fdc0f3786ef9748ee02f6d060cee2a34f067909c06f3324fae8f373fc627fe1",
               "attacks": [],
               "author": "fern",
               "axes": [],
@@ -1532,6 +1569,7 @@
               "model_id": "placeholder/other-architecture-7b",
               "model_revision": "111111111111",
               "notes": null,
+              "published": null,
               "recipe": {
                 "container_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
                 "entrypoint_library": "sae-lens",
@@ -1671,6 +1709,7 @@
               "absences": {},
               "activation_norm": null,
               "artifact_path": "artifacts/soham/d_olmo3_L24_logistic.safetensors",
+              "artifact_sha256": "e448b8f4266403f17e32182b2d2a5ed9a62bc86078fe7e6cec397daa49494616",
               "attacks": [],
               "author": "soham",
               "axes": [],
@@ -1694,6 +1733,7 @@
               "model_id": "allenai/Olmo-3-1125-32B",
               "model_revision": null,
               "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run. No confound audit and no control-pair transfer for this one: the arena ran that battery on the three layer-32 directions and not on this. Its siblings' numbers are not transferable to it, sharing a method and a dataset notwithstanding.",
+              "published": null,
               "recipe": {
                 "container_digest": null,
                 "entrypoint_library": "steering-arena/scripts/extract_direction.py",
@@ -1729,6 +1769,7 @@
               "absences": {},
               "activation_norm": null,
               "artifact_path": "artifacts/soham/d_olmo3_logistic.safetensors",
+              "artifact_sha256": "0471128514fed62eba8e9ba1bfbd3595026eddfacc3154ea740372f4f0c5a8f1",
               "attacks": [],
               "author": "soham",
               "axes": [
@@ -1762,6 +1803,7 @@
               "model_id": "allenai/Olmo-3-1125-32B",
               "model_revision": null,
               "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+              "published": null,
               "recipe": {
                 "container_digest": null,
                 "entrypoint_library": "steering-arena/scripts/extract_direction.py",
@@ -1798,6 +1840,7 @@
               "absences": {},
               "activation_norm": null,
               "artifact_path": "artifacts/soham/d_olmo3_lda.safetensors",
+              "artifact_sha256": "54b6aebafdb2533c81616c9aa4e27d20dd44b9a70b25c95f330111f9f550e173",
               "attacks": [],
               "author": "soham",
               "axes": [
@@ -1831,6 +1874,7 @@
               "model_id": "allenai/Olmo-3-1125-32B",
               "model_revision": null,
               "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+              "published": null,
               "recipe": {
                 "container_digest": null,
                 "entrypoint_library": "steering-arena/scripts/extract_direction.py",
@@ -1867,6 +1911,7 @@
               "absences": {},
               "activation_norm": null,
               "artifact_path": "artifacts/soham/d_olmo3_v1.safetensors",
+              "artifact_sha256": "cfc5e2b7d670d509ccbb0bf71dbd9b75daa8f445afffa5738558ee40219dc186",
               "attacks": [],
               "author": "soham",
               "axes": [
@@ -1900,6 +1945,7 @@
               "model_id": "allenai/Olmo-3-1125-32B",
               "model_revision": null,
               "notes": "Held-out separation is 1.000, measured on the held-out split of the same 135 pairs the direction was fitted on, so it is internal consistency rather than transfer. No trait score and no coherence score: no judged behavioral evaluation was run.",
+              "published": null,
               "recipe": {
                 "container_digest": null,
                 "entrypoint_library": "steering-arena/scripts/extract_direction.py",
@@ -2125,6 +2171,7 @@
               },
               "activation_norm": null,
               "artifact_path": "vectors/events/trauma_minus_neutral_expository.safetensors",
+              "artifact_sha256": "69cd9abec53bcce7c97cb5640d45229da5dbf8ebf93a0dd394698ed84dc319b0",
               "attacks": [],
               "author": "soham",
               "axes": [],
@@ -2148,6 +2195,15 @@
               "model_id": "meta-llama/Llama-3.3-70B-Instruct",
               "model_revision": "6f6073b42301",
               "notes": null,
+              "published": {
+                "commit": "2ff771e4bbdc21a74d37dee111e98be6d71600f5",
+                "host": "huggingface.co",
+                "path": "vectors/events/trauma_minus_neutral_expository.safetensors",
+                "refusal": null,
+                "repo": "sohampadia/pro-human",
+                "url": "https://huggingface.co/sohampadia/pro-human/resolve/2ff771e4bbdc21a74d37dee111e98be6d71600f5/vectors/events/trauma_minus_neutral_expository.safetensors",
+                "url_template": "https://{host}/{repo}/resolve/{commit}/{path}"
+              },
               "recipe": null,
               "score_state": "absent",
               "shape": "(8192,)",

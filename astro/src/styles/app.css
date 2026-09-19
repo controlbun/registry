@@ -348,6 +348,22 @@ dl.spec dd .meta { color: var(--faint); font-size: .75rem; margin-left: .35rem; 
 .absent-block {
   border-left: 2px solid var(--line); padding-left: 1rem; font-style: normal;
 }
+
+/* A commit, a digest and a URL are long single tokens with nothing to break on,
+   so they overflow the spec grid's second column and push the page sideways.
+   Break anywhere rather than truncating: a half-printed digest reads like a
+   digest and is not one, and a shortened URL is not the thing being pointed at. */
+.wrap { overflow-wrap: anywhere; }
+
+/* The two ways to get the artifact: the author's URL and the client call that
+   checks the digest on the way in. Set apart from the spec grid because neither
+   is a property of the artifact; both are something the reader does. */
+.fetch {
+  margin: .7rem 0 0; padding: .55rem .75rem;
+  background: var(--wash); border: 1px solid var(--line); border-radius: 4px;
+}
+.fetch + .fetch { margin-top: .4rem; }
+.card-main .why { color: var(--faint); font-size: .8rem; margin-top: .6rem; max-width: 46rem; }
 .attack { border-left: 2px solid var(--warn-line); padding-left: 1rem; margin-bottom: 1.2rem; }
 .card-rail .panel { margin-bottom: 1.2rem; }
 

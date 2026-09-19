@@ -356,6 +356,78 @@ def test_no_ordering_is_derived_from_an_eval_result():
 
 
 # --------------------------------------------------------------------------- #
+# 5. No ordering derives from whether an artifact is published anywhere.
+
+
+# The four columns that together are the pin, plus the two names the export and
+# the page know it by. `artifact_sha256` is not here: it is a fact about the
+# bytes rather than about where they are, and a row can record one with no pin.
+PIN_COLUMNS = (
+    "artifact_repo", "artifact_commit", "artifact_host", "artifact_url_template",
+    "artifact_url", "published",
+)
+
+
+def _orders_a_distinct_value_list(hit: str, col: str) -> bool:
+    """Whether a matched `ORDER BY` sorts that column's own distinct values.
+
+    `scan` is line-based and a SQL string in this codebase spans several
+    adjacent Python literals, so the `SELECT DISTINCT` is never on the line the
+    `ORDER BY` is on. Reading a short window above the hit is what makes the
+    exemption checkable rather than a name on a list.
+    """
+    path, line, _ = hit.split(":", 2)
+    lines = (ROOT / path).read_text().splitlines()
+    window = " ".join(lines[max(0, int(line) - 8): int(line)])
+    return bool(re.search(rf"SELECT\s+DISTINCT\s+{col}\b", window))
+
+
+def test_no_ordering_is_derived_from_whether_an_artifact_is_published():
+    """Fetchable is not a rank.
+
+    Nine of the ten rows in this corpus record no repo, and four of those nine
+    are real directions rather than fixtures. Sorting a pinned row up, or an
+    unpinned row down, would turn "the author put these bytes somewhere with a
+    URL" into a quality score, and the step after a quality score is a default
+    that reads as the registry's own judgment.
+
+    The plurality this protects is specific: an author who publishes a vector
+    from a paper, a cluster or a lab share, with no public URL anywhere, can be
+    argued about here on the same footing as one who pushed to a Hub repo this
+    morning.
+
+    **What the constraint makes impossible to express** is a view whose order
+    tells a reader which submissions they can actually get. That is a real thing
+    somebody will want, and it is a filter rather than an order: `published` is
+    on every claimant in the export and a reader can select on it without the
+    page having decided for them.
+
+    The `ORDER BY` scan skips a query that is a `SELECT DISTINCT` of the same
+    column, which is `artifacts/intake.py` listing the hosts and templates
+    already in use so the form can offer them. Alphabetizing a list of strings
+    is not ordering submissions, and refusing it would push that query into
+    building its own sort somewhere this scan cannot see. The exemption is
+    narrow on purpose: it is the same column, distinct, and nothing else in the
+    select, so `ORDER BY artifact_host` over a row set is still a finding.
+    """
+    offenders = []
+    for col in PIN_COLUMNS:
+        offenders += [
+            hit for hit in scan(rf"ORDER\s+BY[^;]*\b{col}\b")
+            if not _orders_a_distinct_value_list(hit, col)
+        ]
+        offenders += scan(rf"sorted\s*\([^)]*\b{col}\b")
+        offenders += scan(rf"key\s*=\s*[^,)]*\b{col}\b")
+        offenders += scan(rf"\b(sort|rank|order)\w*\s*[=(][^)]*\b{col}\b")
+        offenders += scan(rf"\.sort\([^;]*\b{col}\b")
+    assert not offenders, (
+        "Ordering on whether an artifact is published makes having a URL into a "
+        "quality. It is a fact about what the author did with the bytes and not "
+        "about the submission:\n" + "\n".join(offenders)
+    )
+
+
+# --------------------------------------------------------------------------- #
 # 6. Absence of an eval renders as its own state, not as an error.
 
 

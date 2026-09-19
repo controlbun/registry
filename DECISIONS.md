@@ -2273,3 +2273,59 @@ work and `V2.md` stays not settled.
 **Supersedes:** nothing. Implements `V2.md` section 1 and settles the identity
 half of the open 2026-09-15 entry "OPEN: contribution goes through Supabase, not
 through the site or HF", which stays open on everything else.
+
+
+## 2026-09-19 The page points at the artifact, and the URL is built once in Python
+**Decided:** The export carries `artifact_repo`, `artifact_commit`,
+`artifact_host`, `artifact_url_template` and `artifact_sha256`, and the artifact
+page renders the host, the repo, the commit, the digest, a link that resolves to
+the bytes, and the one-line client call. The URL is built by
+`registry.fetch.row_url` and by nothing else. No component assembles one from
+parts.
+
+**Why.** The registry's premise is that it points at artifacts rather than
+serving them, and its pages pointed at nothing. `artifact_path` travelled into
+`astro/src/data/registry.json` and the other five columns did not, so migration
+007, the any-host templates, `artifacts/publish.py` and the pin on the one real
+submission were invisible to anybody reading the website.
+`registry.load("soham/trauma@d61-diffmeans-expository-L34").vector()` resolved
+that pin from a cold cache and a person with a browser had nothing. Nothing
+failed, because the pin work went end to end through the Python client and the
+client never touches the export, so the website was never in the loop.
+
+**One rule, one place.** `row_url` is extracted from `from_repo` rather than
+written beside the page, so the URL a reader is shown is the URL the client
+fetches, including the fallback a row with no host of its own takes. It already
+refuses a template that drops the commit, a scheme that is not a network fetch
+and a placeholder carrying a format spec. A template assembling a URL from parts
+would be a second copy of all of that in the half nobody runs
+`tests/test_fetch.py` against, which is the failure mode this repo has already
+had several times.
+
+**It serves no bytes.** The link goes to where the author published, on their
+host, at their commit. `schema/migrations/004` is unchanged and `served_repo`
+stays NULL. What a reader gets by following the link is the file; what they get
+by running the client call is the file with its sha256 checked against the
+record first, which is why both are on the page and why the second is described
+as doing the check rather than as documentation.
+
+**Absence renders as absence.** Nine of the ten rows here record no repo: five
+synthetic fixtures and four real directions whose author never published them at
+a URL. Those pages say nobody recorded where the bytes are, print the digest
+anyway because that is a fact about the bytes rather than about where they are,
+and link nowhere. No URL is invented for a row that has none, and
+`tests/test_pinned_page.py` asks that of the whole build at once rather than of
+the sentence on one page: every off-site link on the site has to be a URL the
+export carries.
+
+**What this makes impossible to express.** Nothing that was expressible before.
+The new invariant beside it does remove one thing: a view ordered so that a
+reader can see at a glance which submissions they can actually get. That is a
+real want and it is a filter rather than an order, so `published` is on every
+claimant in the export for a reader to select on. Ordering on it would make
+having a URL into a quality, and a quality is one step from a default that reads
+as the registry's own judgment.
+
+**Supersedes:** nothing. It closes the gap the 2026-09-18 entry "The row carries
+its own URL template, so a pin can name any host" left on the read path, which
+that entry settled for the client and not for the site.
