@@ -687,3 +687,12 @@ ul.memberships li { margin-bottom: .25rem; }
   margin: -1px; padding: 0; border: 0;
   clip-path: inset(50%); overflow: hidden; white-space: nowrap;
 }
+
+/* The three steps on /sign-in/. Numbered by the browser rather than written
+   into the copy: a literal "1st" in the text trips the ranking scan in
+   tests/test_pages.py, and an ordered list is what this is anyway. */
+.steps { margin: 0 0 1.6rem; padding-left: 1.3rem; max-width: 46rem; }
+.steps > li { margin: 0 0 1.5rem; }
+.steps h3 { margin: 0 0 .4rem; font-size: 1rem; }
+.steps p { margin: 0 0 .5rem; }
+.steps .note { display: block; margin-top: .3rem; }

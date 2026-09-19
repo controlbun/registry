@@ -103,6 +103,26 @@ import Base from "../layouts/Base.astro";
     promise fails before it ships.
   </p>
 
+  {/* Added with `/sign-in/`, which would otherwise be a page nothing links to.
+
+      It goes here rather than in the site navigation on purpose. A nav item
+      reading "Sign in" is an offer, and this build cannot honor one: the page
+      at the other end explains a path that does not work yet. That is the
+      greyed-out Account section arriving again under a different word, which is
+      the single most costly thing a stranger found on this site. Where it
+      belongs in the navigation is the author's call once the path works.
+
+      Drafted rather than dictated, like the rest of this page. */}
+  <h2>Who you are here</h2>
+  <p>
+    Nobody signs up. An author is a namespace somebody wrote down, and most of
+    them belong to people who have never heard of this. Binding an account to a
+    namespace is a separate act, recorded with its date and its evidence, and
+    nothing about the work published under a namespace follows from whether
+    anyone has done it.{" "}
+    <a href="/sign-in/">How that would work, and why it does not yet</a>.
+  </p>
+
   {/* The name raises a question, so this is where it gets answered. Four beats,
       and the third is the whole section: the first two exist to set it up.
 

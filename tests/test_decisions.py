@@ -48,8 +48,32 @@ def entries() -> list[dict]:
     return out
 
 
+def claims_nothing(claim: str) -> bool:
+    """An entry that says it supersedes nothing is naming no entry."""
+    return bool(re.match(r"nothing\b", claim.strip(), re.I))
+
+
 def test_there_are_entries_to_check():
     assert len(entries()) > 20, "the parse found almost nothing, so it is broken"
+
+
+def test_a_claim_of_nothing_resolves_to_nothing():
+    """The bite, and the reason it is here.
+
+    The match below is a substring one, so a claim short enough to appear
+    inside somebody else's title resolves to it. "nothing" is the short claim
+    this file actually contains, sixteen times, and it stayed harmless only
+    while no title used the word. The first one that did made all sixteen
+    entries claim to supersede it at once.
+    """
+    for said in ("nothing", "nothing.", "Nothing; sharpens X", "nothing. Refines Y"):
+        assert claims_nothing(said), f"{said!r} names no entry and has to be dropped"
+    # And a real claim is still a claim, including the ones that are a bare
+    # title with no date in front of them.
+    for said in ("No ranking by default, sorting is user-chosen",
+                 "Submissions are versioned and immutable",
+                 "2026-09-17 \"No dual-use policy yet\""):
+        assert not claims_nothing(said), f"{said!r} is a real supersession"
 
 
 def test_every_superseded_entry_carries_the_pointer_back():
@@ -68,6 +92,15 @@ def test_every_superseded_entry_carries_the_pointer_back():
             # Some Supersedes lines name a passage in another document, or say
             # "nothing" and then explain what they sharpen. Only entry-to-entry
             # claims are checkable here.
+            #
+            # "nothing" is dropped before the substring match rather than left
+            # to fall through it. Sixteen entries say it, the match is a
+            # substring one, and the first entry whose title contained the word
+            # made every one of those sixteen claim to supersede it. The line
+            # says the entry supersedes nothing; taking it at its word is the
+            # fix, and `test_a_claim_of_nothing_resolves_to_nothing` keeps it.
+            if claims_nothing(claim):
+                continue
             match = next(
                 (t for t in titles if claim and claim.lower() in t.lower()), None
             )

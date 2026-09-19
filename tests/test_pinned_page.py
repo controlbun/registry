@@ -248,6 +248,27 @@ def offsite_links(html_by_page: dict[str, str], origin: str) -> dict[str, str]:
     return out
 
 
+# Off-site links nobody derived from a row, written by hand into one page's
+# source and checked against the live site when they were written.
+#
+# This is an enumeration and not a rule on purpose, which is the opposite of how
+# this repository treats user-supplied values and the right way round here. The
+# property under test is that the build never *invents* a URL, and the way that
+# property stays real is that every off-site link is accounted for somewhere a
+# reader can see. A marking in the markup would have been a bypass: anything
+# carrying the attribute would pass, and the next hand-written link would arrive
+# without anybody deciding it should. A line in this dict is a test edit, which
+# is a decision.
+#
+# Nothing here comes from the corpus and nothing here is a measurement. Both
+# were fetched on 2026-09-19: `/login` renders and links to `/join` as "Sign
+# Up", which is how the registration URL was confirmed rather than assumed.
+AUTHORED_OFFSITE = {
+    "https://huggingface.co/join": "sign-in/index.html",
+    "https://huggingface.co/login": "sign-in/index.html",
+}
+
+
 def test_every_offsite_link_is_a_url_the_export_carries():
     """The check that makes the unpinned case real rather than a form of words.
 
@@ -256,6 +277,10 @@ def test_every_offsite_link_is_a_url_the_export_carries():
     with no repo would look right on every page in this corpus. So the question
     is asked of the whole build at once: is there any off-site link here that
     the export did not put there.
+
+    `AUTHORED_OFFSITE` is the second answer to "did somebody put it there", and
+    it carries the page as well as the URL, so the same URL appearing on a page
+    that has no business linking to it still fails.
     """
     origin = site_origin()
     found = offsite_links(
@@ -266,7 +291,10 @@ def test_every_offsite_link_is_a_url_the_export_carries():
         for c in claimants()
         if c["published"] and c["published"]["url"]
     }
-    invented = {url: where for url, where in found.items() if url not in known}
+    invented = {
+        url: where for url, where in found.items()
+        if url not in known and AUTHORED_OFFSITE.get(url) != where
+    }
     assert not invented, (
         "the site links off-site to somewhere the exported data does not name:\n"
         + "\n".join(f"  {where}: {url}" for url, where in sorted(invented.items()))
@@ -294,6 +322,37 @@ def test_the_offsite_check_bites():
     found = offsite_links(hostile, origin)
     assert set(found) == {guessed, "https://example.invalid/vector.safetensors"}
     assert found[guessed] == "alice/index.html"
+
+
+def test_the_authored_offsite_allowance_is_bound_to_its_page():
+    """An allowance that any page could use is a hole, not an exception.
+
+    The entries in `AUTHORED_OFFSITE` exist so one page can signpost a third
+    party's own registration and login pages, which no row in this corpus will
+    ever carry. What must not follow is that a submission page can then link at
+    the same host and pass, because that is precisely the guessed-URL failure
+    the check above exists for.
+    """
+    assert AUTHORED_OFFSITE, "the allowance is empty, so this test is inert"
+    origin = site_origin()
+    for url, page in AUTHORED_OFFSITE.items():
+        assert AUTHORED_OFFSITE.get(url) == page
+        # The same URL, somewhere it was not written.
+        elsewhere = offsite_links({"alice/index.html": f'<a href="{url}">x</a>'},
+                                  origin)
+        assert AUTHORED_OFFSITE.get(url) != "alice/index.html", (
+            f"{url} would pass on a page that did not author it"
+        )
+        assert elsewhere == {url: "alice/index.html"}
+
+    # And the page named actually carries it, so a stale entry cannot sit here
+    # granting permission for a link nobody ships any more.
+    if not DIST.exists():
+        pytest.skip("site not built; run `make site`")
+    for url, page in AUTHORED_OFFSITE.items():
+        path = DIST / page
+        assert path.exists(), f"{page} is not built, so its allowance is stale"
+        assert url in path.read_text(), f"{page} no longer links to {url}"
 
 
 def test_a_url_and_a_digest_are_not_read_as_published_numbers():

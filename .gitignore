@@ -5,9 +5,11 @@ NOTES-private.md
 # private working material, never committed
 _local/
 
-# a sign-in capture is a dated statement about a real person. `artifacts/seed.py`
-# already says this file is ignored; it was not, so the comment was describing an
-# intention rather than a rule. The tracked row carries the same dated facts.
+# a sign-in capture is a dated statement about a real person, carrying whatever
+# the provider chose to return. `artifacts/claims.jsonl` is the tracked half and
+# carries the fields the row carries and no others; `artifacts/claim.py` is the
+# projection between them, and `tests/test_claim_record.py` fails the build on a
+# version of it that copies the capture instead.
 artifacts/memberships.jsonl
 __pycache__/
 *.pyc

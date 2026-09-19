@@ -1,0 +1,163 @@
+---
+import Base from "../layouts/Base.astro";
+
+// Identity is Hugging Face's, and this page says so rather than offering an
+// account of our own.
+//
+// **There is no sign-up here.** The author's sketch was "Log in with hf / no hf
+// account? create one and redirect them to hf", and both halves of that are a
+// redirect to Hugging Face. This registry creates nothing, stores no password
+// and issues no identity, so a page with a "Sign up" heading on it would be
+// advertising an account model `V2.md` section 1 specifically declines: `author`
+// stays a free namespace string, and claiming is a separate object. The home
+// page's Account section came out for that reason. This must not put it back.
+//
+// **Signing in on its own gives somebody nothing**, which is why the page is
+// three steps rather than one button. Holding an account, signing in, and
+// claiming a namespace are different acts and only the last one is visible in
+// the corpus. A page that leads with the button implies the button is the point.
+//
+// **No session handling, and that is the constraint rather than an oversight.**
+// `astro.config.mjs` is `output: "static"` with no adapter. An outbound anchor to
+// somebody else's authorization endpoint is fine: the browser navigates away and
+// this page is gone, so it is not a target that receives anything. The return leg
+// is the part that cannot be built here. After a provider redirects back, the
+// session lands where only client-side script can read it, so "signed in as X"
+// needs JavaScript that this build deliberately does not ship. Two guards in the
+// test suite hold that line, one on write surfaces anywhere in `astro/dist` and
+// one on identity endpoints, and neither is weakened by anything on this page.
+// Neither is named here: both of them fail the build if the view layer so much
+// as mentions the loopback tools they belong to, which is the point of them, so
+// the file names live in `tests/test_sign_in_page.py` next door instead.
+//
+// So every link here goes to Hugging Face's own pages, which work today, and the
+// page says plainly that the trip back does not exist yet.
+//
+// **The copy is drafted, not dictated.** Structure and accuracy are mine; the
+// sentences are the author's to rewrite.
+
+const HF_CREATE = "https://huggingface.co/join";
+const HF_LOGIN = "https://huggingface.co/login";
+---
+
+<Base title="Sign in" trail={[{ text: "controlbun", href: "/" }]} synthetic="none">
+  <h1 slot="heading">Sign in</h1>
+
+  <p class="lede">
+    Identity here is Hugging Face's. This registry issues no account, holds no
+    password and has nothing to sign up for.
+  </p>
+
+  <p class="banner">
+    <strong>None of this works yet.</strong> The links below go to Hugging Face
+    and they work. The trip back does not exist: this site is built as files and
+    has nowhere to receive a session, so signing in at Hugging Face today changes
+    nothing here and claiming a namespace is not yet possible from a browser.
+  </p>
+
+  <h2>Three steps, and the middle one is the smallest</h2>
+
+  <ol class="steps">
+    <li>
+      <h3>Hold a Hugging Face account</h3>
+      <p>
+        Most people publishing a steering direction already have one, because
+        that is where the weights and the artifacts live. If you do not,
+        Hugging Face registers it, not us.
+      </p>
+      <p><a href={HF_CREATE}>Create a Hugging Face account</a></p>
+    </li>
+
+    <li>
+      <h3>Sign in with it</h3>
+      <p>
+        Hugging Face asks you whether to let this registry read who you are. If
+        you agree, what comes back is an opaque subject id, the handle you hold
+        at that moment, and, if you grant it, the organizations Hugging Face
+        says you belong to. No password reaches this site, because none is ever
+        sent here.
+      </p>
+      <p>
+        <a href={HF_LOGIN}>Sign in at Hugging Face</a>{" "}
+        <span class="note">
+          This signs you in at Hugging Face and returns you there. It does not
+          sign you in here, and nothing on this site will look different
+          afterwards.
+        </span>
+      </p>
+    </li>
+
+    <li>
+      <h3>Claim a namespace</h3>
+      <p>
+        This is the act with meaning. A claim binds the account to a namespace
+        and is recorded with its date and its evidence, so a reader can weigh
+        it. Everything published under a namespace stands whether or not anyone
+        has claimed it, and a namespace nobody has claimed is the ordinary
+        state rather than a gap.
+      </p>
+      <p>
+        More than one account can claim the same namespace. Both claims stand,
+        both carry their own evidence, and this registry does not decide
+        between them.
+      </p>
+    </li>
+  </ol>
+
+  <h2>Your namespace is your handle, and there is no field for it</h2>
+
+  <p>
+    If you ever submit through a signed-in path, the namespace is the handle
+    Hugging Face reported when you signed in. It is shown to you, not offered:
+    no box, and no default to type over. Somebody signed in under one handle
+    cannot publish under a name belonging to somebody else, and a dispute about
+    who really holds a name is Hugging Face's to settle rather than ours.
+  </p>
+
+  <p class="note">
+    What that makes impossible, stated because a rule that cannot name its cost
+    has not been thought through: publishing under a pseudonym, under a lab name
+    you hold no account for, or into one namespace shared by several people who
+    each sign in as themselves. The last is a real shape, and today the answer
+    is that a group claims a namespace rather than submits into one. An author
+    string written down by somebody indexing published work is unaffected, and
+    stays a free string.
+  </p>
+
+  <h2>A membership is something a provider said on a day</h2>
+
+  <p>
+    If Hugging Face reports your organizations, what gets recorded is what it
+    said and when it said it. Nothing rechecks it afterwards, so nothing here
+    will ever claim you belong to an organization now. People join and leave;
+    a membership read once and held forever goes stale quietly while still
+    looking like a fact. Checking again means signing in again, which writes a
+    new observation beside the old one rather than replacing it.
+  </p>
+
+  <h2>Why Hugging Face</h2>
+
+  <p>
+    Because that is where the artifacts already are, and because it can answer
+    the organization question, which a plain login cannot. It is the provider
+    this was built against and not a list of permitted ones. A claim records
+    the provider string it was made with and nothing anywhere compares that
+    string against a set of approved names, so another provider is a
+    configuration rather than a change to the schema.
+  </p>
+
+  <p class="note">
+    A claim binds the provider's subject id and not the handle. Handles are
+    renameable on every provider, so a claim bound to a handle would either
+    break when somebody renames or follow the name to whoever registers it
+    next. The handle is recorded as of the claim date, and is not what anything
+    looks up by.
+  </p>
+
+  <h2>What is missing, in one sentence</h2>
+
+  <p>
+    A page that can receive you after Hugging Face sends you back.{" "}
+    <a href="/about/">What this registry is and where it came from</a>.
+  </p>
+</Base>
