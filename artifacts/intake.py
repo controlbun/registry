@@ -820,6 +820,16 @@ fieldset > legend { display: none; }
 .said-quiet { font-size: .82rem; color: var(--dim); display: block; margin-bottom: .25rem; }
 .status { font-size: .84rem; color: var(--dim); margin: .6rem 0 0; }
 
+/* What the parser worked out rather than read. Not styled as a warning: none
+   of these is a fault and most pastes that produce them are fine. They are
+   read like footnotes, so they are set like footnotes, and the rule down the
+   side is there because a list of them gets long. */
+.notes {
+  margin: .5rem 0 0; padding: 0 0 0 .8rem; list-style: none;
+  border-left: 2px solid var(--line);
+}
+.notes li { margin: .3rem 0; color: var(--ink); }
+
 /* ---------------------------------------------------------------- buttons */
 
 button {
@@ -1038,10 +1048,26 @@ q('write').addEventListener('click', async () => {
 // The two seams for the prompt handoff, which is built elsewhere. Both routes
 // may not exist on this run, and a button that answers a 404 with a sentence is
 // the whole contract: nothing here parses a prompt or writes one.
-function agentSays(text) {
+function agentSays(text, notes) {
   const line = q('agent-status');
   line.hidden = false;
-  line.textContent = text;
+  line.textContent = '';
+  line.appendChild(document.createTextNode(text));
+  // What the parser had to decide rather than read. A paste that parses is not
+  // the same as a paste that was understood: a definition closed one sentence
+  // in fills every field and quietly drops two thirds of the one field that
+  // matters most. These are the only evidence of that, so they are shown even
+  // when nothing was refused, and shown in full rather than counted.
+  if (notes && notes.length) {
+    const list = document.createElement('ul');
+    list.className = 'notes';
+    for (const note of notes) {
+      const item = document.createElement('li');
+      item.textContent = note;
+      list.appendChild(item);
+    }
+    line.appendChild(list);
+  }
 }
 
 q('agent-prompt').addEventListener('click', async () => {
@@ -1094,8 +1120,12 @@ q('agent-fill').addEventListener('click', async () => {
     const value = res.body.fields[el.dataset.field];
     if (typeof value === 'string') { el.value = value; filled += 1; }
   }
+  const notes = res.body.notes || [];
   agentSays(filled + ' fields filled from the paste. Every one of them is still '
-    + 'editable, and nothing is checked until you check the bytes.');
+    + 'editable, and nothing is checked until you check the bytes.'
+    + (notes.length ? ' Read these before you check: they are what the parser '
+       + 'had to work out rather than read, and a value it worked out wrong '
+       + 'looks exactly like one it read.' : ''), notes);
 });
 """
 

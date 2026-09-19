@@ -883,3 +883,15 @@ def test_the_page_tells_those_three_apart(tool):
     # 404 is read off the status rather than inferred from a missing key.
     assert "gone: true" in page
     assert "res.status === 404" in page
+
+
+def test_the_page_renders_parser_notes_rather_than_counting_them(tool):
+    """The count was the whole message and the notes never left the server."""
+    conn = db.connect(tool.database)
+    try:
+        page = intake.page(conn, token="t", repo="a/b", origin="o").decode()
+    finally:
+        conn.close()
+    assert "res.body.notes" in page, "the handler has to read them"
+    assert "class = 'notes'" in page or "className = 'notes'" in page
+    assert ".notes {" in page, "and they need a style or they are a wall of text"

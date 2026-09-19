@@ -958,4 +958,11 @@ def received(text: str) -> dict:
         "absent": got.absent,
         "pinned": got.pinned,
         "display": got.display(),
+        # Everything the parser had to decide rather than read. These were
+        # computed and then dropped here, so a definition closed one sentence
+        # in reported as "19 fields filled" while two thirds of it had been
+        # re-read as the rest of six fields nobody asked for. A paste that
+        # parses is not the same as a paste that was understood, and the
+        # difference is exactly this list.
+        "notes": got.notes,
     }

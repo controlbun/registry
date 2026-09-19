@@ -572,3 +572,24 @@ def test_closing_the_block_is_all_it_takes():
     out = handoff.received(block(body))
     assert out["fields"]["intervention_id"] == "iv1"
     assert "Estimator: something." in out["fields"]["definition"]
+
+
+def test_received_hands_the_notes_on():
+    """A paste that parses is not the same as a paste that was understood.
+
+    `parse` computed these and `received` dropped them, so a definition closed
+    one sentence in reported as every field filled while two thirds of it had
+    been re-read as the rest of six fields nobody asked for.
+    """
+    body = (
+        "author: a\nlabel: l\nversion: v\n"
+        "created_at: 2026-01-01T00:00:00+00:00\n"
+        "definition: <<<\nThe first sentence only.\n>>>\n"
+        "and then loose prose that carries on: with a colon in it\n"
+        "intervention_id: iv1\nkind: direction\nmodel_id: m/x\n"
+        "layer: 3\nlayer_convention: block-0indexed\nhook_point: resid_post\n"
+        "artifact_path: v/d.safetensors\n"
+    )
+    out = handoff.received(block(body))
+    assert out["notes"], "the parser noticed and the payload has to carry it"
+    assert out["notes"] == handoff.parse(block(body)).notes
