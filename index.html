@@ -1,0 +1,325 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>controlbun</title><meta name="description" content="A registry for activation-steering artifacts, in the spirit of GitHub or Hugging Face rather than a curated database."><link rel="canonical" href="https://controlbun.com/"><meta property="og:type" content="website"><meta property="og:site_name" content="controlbun"><meta property="og:title" content="controlbun"><meta property="og:description" content="A registry for activation-steering artifacts, in the spirit of GitHub or Hugging Face rather than a curated database."><meta property="og:url" content="https://controlbun.com/"><meta property="og:image" content="https://controlbun.com/icon-512.png"><meta name="twitter:card" content="summary"><script>
+  // Applied before paint, so a reader who picked a theme never sees a flash of
+  // the other one. Inline and unbundled on purpose: a deferred module would run
+  // after first paint, which is the flash this exists to prevent.
+  const saved = localStorage.getItem("theme");
+  if (saved) document.documentElement.dataset.theme = saved;
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.DeVWi-iC.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button></header><script>
+  // Inline and unbundled, same reason as the script in the head: no waiting on a
+  // module graph for three lines of work.
+  (function () {
+    const button = document.querySelector("#theme");
+    const root = document.documentElement;
+    if (!button) return;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    const isDark = () =>
+      (root.dataset.theme || (prefersDark ? "dark" : "light")) === "dark";
+
+    // Names the theme you would switch to, not the one you are in. This is the
+    // behavior the home page already had and it is the right one for a bare text
+    // button: "Light theme" while the page is light reads as a label rather than
+    // as something to press.
+    const label = () => {
+      button.textContent = isDark() ? "Light theme" : "Dark theme";
+    };
+    label();
+
+    button.addEventListener("click", () => {
+      const next = isDark() ? "light" : "dark";
+      root.dataset.theme = next;
+      localStorage.setItem("theme", next);
+      label();
+    });
+  }());
+</script><div class="home"><nav class="sidenav"><h3>Browse</h3><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a></nav><main class="intro"><h1>controlbun</h1><p class="lede">Extracting a steering direction takes about a day. Deciding whether to trust it takes weeks, and none of that work carries over to anybody else.</p><div class="situation"><p class="ask">I have a <span class="field" id="pick-kind-field"><input id="pick-kind" list="kinds" value="direction" size="9" spellcheck="false" autocomplete="off" aria-label="kind of artifact, type anything"><datalist id="kinds"><option value="direction"></option><option value="probe"></option><option value="sae-latent"></option><option value="linear-probe"></option><option value="difference-of-means"></option><option value="caa-vector"></option><option value="persona-vector"></option><option value="steering-vector"></option><option value="transcoder-feature"></option><option value="circuit"></option><option value="attention-head-role"></option><option value="task-vector"></option><option value="function-vector"></option><option value="causal-mask"></option><option value="lora"></option><option value="reft"></option></datalist></span> for <span class="field" id="pick-label-field"><input id="pick-label" list="labels" value="kindness" size="8" spellcheck="false" autocomplete="off" aria-label="what it is meant to capture, type anything"><datalist id="labels"><option value="kindness"></option><option value="pro-human"></option><option value="refusal"></option><option value="trauma"></option><option value="compliance"></option><option value="harmfulness"></option><option value="jailbreak-susceptibility"></option><option value="sycophancy"></option><option value="deception"></option><option value="lying"></option><option value="sandbagging"></option><option value="reward-hacking"></option><option value="power-seeking"></option><option value="self-preservation"></option><option value="shutdown-resistance"></option><option value="alignment-faking"></option><option value="sabotage"></option><option value="withholding"></option><option value="manipulation"></option><option value="whistleblowing"></option><option value="truthfulness"></option><option value="known-vs-unknown"></option><option value="uncertainty"></option><option value="confidence"></option><option value="hallucination"></option><option value="entity-recognition"></option><option value="factual-recall"></option><option value="belief-vs-assertion"></option><option value="chain-of-thought-faithfulness"></option><option value="warmth"></option><option value="helpfulness"></option><option value="honesty"></option><option value="humility"></option><option value="arrogance"></option><option value="evil"></option><option value="sarcasm"></option><option value="humor"></option><option value="formality"></option><option value="verbosity"></option><option value="enthusiasm"></option><option value="bluntness"></option><option value="pedantry"></option><option value="assistant-persona"></option><option value="sentience-claiming"></option><option value="valence"></option><option value="arousal"></option><option value="distress"></option><option value="anxiety"></option><option value="anger"></option><option value="sadness"></option><option value="joy"></option><option value="curiosity"></option><option value="boredom"></option><option value="frustration"></option><option value="inner-conflict"></option><option value="i-am-an-ai"></option><option value="evaluation-awareness"></option><option value="deployment-vs-training"></option><option value="self-vs-other"></option><option value="introspective-access"></option><option value="tool-use-awareness"></option><option value="observed-awareness"></option><option value="gender"></option><option value="race"></option><option value="age"></option><option value="nationality"></option><option value="religion"></option><option value="political-leaning"></option><option value="socioeconomic-class"></option><option value="sentiment-toward-group"></option><option value="golden-gate-bridge"></option><option value="brooklyn-bridge"></option><option value="transit-infrastructure"></option><option value="dna-sequences"></option><option value="python-code"></option><option value="code-errors"></option><option value="legal-language"></option><option value="immigration"></option><option value="tourist-attractions"></option><option value="named-people"></option><option value="months"></option><option value="currencies"></option><option value="board-state"></option><option value="spatial-coordinates"></option><option value="latitude-longitude"></option><option value="time-and-date"></option><option value="physical-scale"></option><option value="causal-direction"></option><option value="syntax-trees"></option><option value="coreference"></option><option value="language-selection"></option><option value="output-format"></option><option value="instruction-following"></option><option value="register-transfer"></option><option value="task-vector"></option><option value="function-vector"></option></datalist></span> and I <span class="choice"><select id="pick-need" aria-label="what you want to do"><option value="cannot tell whether to trust it">cannot tell whether to trust it</option><option value="want to publish it">want to publish it</option><option value="think somebody else's is better">think somebody else&#39;s is better</option><option value="want to know if somebody already tried">want to know if somebody already tried</option></select></span>.</p><p class="answer" id="answer">Then what you want is not our opinion, it is somebody else&#39;s check. A submission here shows what its author measured, what they did not, and anything a third party found afterwards. Nothing is scored and nothing is ranked. The three pro-human directions on this site come from one dataset at one layer and differ only in the estimator, every check their author ran says all three are fine, and nothing distinguishes them. That is the problem stated exactly.</p><p class="sr-only" id="pick-status" role="status"></p></div><p>So the next person starts from nothing. And somebody who tries an existing artifact, gets nothing out of it, and gives up has nowhere to say so, which means the person after them spends the same weeks finding out the same thing.</p><p>This is a record of what people extracted, from which model, how, and what happened when they or anyone else checked it. Failures included, because those are the ones that save somebody a month.</p><p>Several people will mean different things by the same word and build different vectors for it. Those sit here side by side. Nothing picks one, and nothing is ranked by a score. <a href="/about/">What this is and where it came from</a>.</p><div class="banner"><strong>A working demonstration, not a running service.</strong> 10 submissions and no uploads yet. Synthetic corpus, except soham&#39;s: everything listed is fabricated to exercise the interface apart from those, which are real directions with real measurements. Fabricated scores are repeated-digit decimals, fabricated vectors are integer ramps, and the models those name do not resolve.</div></main><script>(function(){const NEEDS = {"cannot tell whether to trust it":"Then what you want is not our opinion, it is somebody else's check. A submission here shows what its author measured, what they did not, and anything a third party found afterwards. Nothing is scored and nothing is ranked. The three pro-human directions on this site come from one dataset at one layer and differ only in the estimator, every check their author ran says all three are fine, and nothing distinguishes them. That is the problem stated exactly.","want to publish it":"Not yet. This takes no uploads and has no accounts. What exists is the schema, the pages and a Python client, so you can see precisely what a submission would have to record before deciding whether recording it is worth your time.","think somebody else's is better":"Quite possibly, and finding out is the point of this. There will always be a better one for what you are doing; there is never a best one, because better is a judgment you make for one purpose and this registry does not make it for you. Today it is mostly unbuilt: 10 submissions, 5 of them real, so browse it for the shape rather than the contents.","want to know if somebody already tried":"Nothing here yet, and that is the gap this aims at. Negative results have nowhere to live, so everybody spends the same weeks finding out the same thing separately."};
+const IN_CORPUS_KINDS = ["direction","probe","sae-latent"];
+const IN_CORPUS_LABELS = ["kindness","pro-human","refusal","trauma"];
+const FIELD_CHARS = {"min":6,"max":28};
+
+        // The need drives the answer. Kind and label are there so the reader
+        // states their own case rather than reading ours, and because typing
+        // something this corpus does not hold is the honest answer for most
+        // artifacts: three kinds and three labels is what this corpus happens
+        // to hold, not what the schema permits.
+        const need = document.getElementById("pick-need");
+        const kind = document.getElementById("pick-kind");
+        const label = document.getElementById("pick-label");
+        const answer = document.getElementById("answer");
+        const status = document.getElementById("pick-status");
+
+        // Said only when the reader has actually typed something the corpus
+        // does not hold, because that is the moment they would otherwise
+        // assume the answer is no. Saying it unprompted would be the site
+        // arguing with an objection nobody raised, which is the category cut
+        // everywhere else on this site.
+        const HELD = new Set(
+          [...IN_CORPUS_KINDS, ...IN_CORPUS_LABELS].map((v) => v.toLowerCase()),
+        );
+        const NOT_HELD =
+          " Neither of those is a list you pick from. Both are open strings in " +
+          "the schema, the suggestions are words people have used, and nothing " +
+          "you typed there has to be one of them.";
+
+        function render() {
+          let text = NEEDS[need.value] ?? "";
+          const typed = [kind.value, label.value].map((v) => v.trim().toLowerCase());
+          if (typed.some((v) => v && !HELD.has(v))) text += NOT_HELD;
+          answer.textContent = text;
+        }
+
+        for (const el of [need, kind, label]) {
+          el.addEventListener("change", render);
+          el.addEventListener("input", render);
+        }
+
+        // ------------------------------------------------------------ combobox
+        //
+        // The two open fields were `<input list>` and nothing else, which is
+        // right in every way except the one the reader sees: the browser draws
+        // the popup, it takes no styling at all, and it arrives looking like a
+        // fragment of somebody else's site dropped into the sentence.
+        //
+        // What follows replaces the popup and keeps the datalist, in that
+        // order. Enhancement reads the words out of the datalist that already
+        // shipped, drops the input's `list` attribute so the native popup does
+        // not open underneath this one, and builds a listbox in its place.
+        //
+        // Free text is the point here and not a nicety. `kind` and the label
+        // are open strings in the schema, so a control that only takes its own
+        // list would be declaring which concepts are legitimate, which is the
+        // closed-enum failure arriving through a widget instead of a CHECK.
+        // Nothing below can reject what is typed: there is no commit step, the
+        // input's own value is the answer at every moment, and the last row of
+        // the popup hands the typed text back verbatim.
+        function combobox(inputId, boxId, listId, inCorpus) {
+          const input = document.getElementById(inputId);
+          const box = document.getElementById(boxId);
+          const source = document.getElementById(listId);
+          if (!input || !box || !source) return;
+
+          const corpus = new Set(inCorpus.map((v) => v.toLowerCase()));
+          const words = Array.from(source.children).map((o) => o.getAttribute("value"));
+
+          // The datalist element stays in the page. It is the no-script layer,
+          // it is where these words were just read from, and a datalist nothing
+          // points at renders nothing.
+          input.removeAttribute("list");
+          input.setAttribute("role", "combobox");
+          input.setAttribute("aria-autocomplete", "list");
+          input.setAttribute("aria-expanded", "false");
+          input.setAttribute("aria-controls", listId + "-listbox");
+
+          const listbox = document.createElement("ul");
+          listbox.id = listId + "-listbox";
+          listbox.className = "options";
+          listbox.setAttribute("role", "listbox");
+          listbox.setAttribute("aria-label", input.getAttribute("aria-label"));
+          listbox.hidden = true;
+          box.appendChild(listbox);
+
+          let choices = [];
+          let active = -1;
+          let open = false;
+
+          function part(parent, text, cls) {
+            if (!text) return;
+            const el = document.createElement("span");
+            if (cls) el.className = cls;
+            el.textContent = text;
+            parent.appendChild(el);
+          }
+
+          // Every row reads the same way: the value on the left in the face this
+          // site sets stored identifiers in, and on the right, in the page's own
+          // serif, one fact about where the word came from. The reader's own text
+          // is the last row under that same grammar, which is how the field shows
+          // it takes anything without the page arguing the point in prose.
+          function row(value, at, len, note, cls) {
+            const li = document.createElement("li");
+            li.id = listbox.id + "-r" + choices.length;
+            li.setAttribute("role", "option");
+            li.setAttribute("aria-selected", "false");
+            if (cls) li.className = cls;
+
+            const val = document.createElement("span");
+            val.className = "val";
+            if (len > 0) {
+              // Split so CSS can hold the matched run at full strength and let
+              // the rest fall back. A substring hit has to explain itself:
+              // "form" landing in "output-format" is not obvious otherwise.
+              part(val, value.slice(0, at), "rest");
+              part(val, value.slice(at, at + len), "hit");
+              part(val, value.slice(at + len), "rest");
+            } else {
+              val.textContent = value;
+            }
+            li.appendChild(val);
+            part(li, note, "whence");
+
+            // Bound per row rather than delegated from the listbox. Rebuilding a
+            // hundred closures on a keystroke is nothing at this size, and
+            // delegation would need the popup to work out which row an event
+            // inside a nested span came from.
+            li.addEventListener("mousedown", (e) => e.preventDefault());
+            li.addEventListener("click", () => take(value));
+
+            choices.push(value);
+            return li;
+          }
+
+          // Corpus first, always. What this registry holds sorts above the words
+          // it merely suggests, and that is a claim about provenance rather than
+          // about quality: the ones at the top are the ones you can go and read.
+          // Within each of those two groups: exact, then prefix, then the start
+          // of a hyphenated part, then anywhere, then the order the page emitted.
+          function matches(query) {
+            const q = query.trim().toLowerCase();
+            const out = [];
+            for (let i = 0; i < words.length; i++) {
+              const word = words[i];
+              const low = word.toLowerCase();
+              const at = q ? low.indexOf(q) : 0;
+              if (at < 0) continue;
+              out.push({
+                word: word, at: at, len: q.length, n: i,
+                held: corpus.has(low) ? 0 : 1,
+                tier: !q ? 1 : low === q ? 0 : at === 0 ? 1
+                  : word.charAt(at - 1) === "-" ? 2 : 3,
+              });
+            }
+            out.sort((a, b) => a.held - b.held || a.tier - b.tier || a.n - b.n);
+            return out;
+          }
+
+          // The query and the field's contents are two different things, and
+          // conflating them is what makes a filled combobox answer a click with
+          // one row, its own. The filter runs on the query; the row that offers
+          // the reader's own text back always reflects what is in the field.
+          function draw(query) {
+            const typed = input.value.trim();
+            const hits = matches(query);
+            choices = [];
+            const rows = hits.map((h) =>
+              row(h.word, h.at, h.len,
+                  h.held === 0 ? "in the corpus" : "", ""));
+
+            // Offered whenever what is typed is not already one of the words,
+            // which is the only moment a reader needs telling that it counts
+            // anyway. CSS sticks it to the bottom edge of the popup, so it is
+            // reachable without scrolling and without taking the top row off
+            // the entries this registry actually holds.
+            if (typed && !words.some((w) => w.toLowerCase() === typed.toLowerCase())) {
+              rows.push(row(typed, 0, 0, "as typed", "literal"));
+            }
+
+            listbox.replaceChildren(...rows);
+            active = -1;
+            input.removeAttribute("aria-activedescendant");
+
+            if (status) {
+              status.textContent = hits.length === 0
+                ? "no suggestions; what you type is taken as it is"
+                : hits.length + (hits.length === 1 ? " suggestion" : " suggestions");
+            }
+          }
+
+          function show() {
+            if (!choices.length) { hide(); return; }
+            listbox.hidden = false;
+            input.setAttribute("aria-expanded", "true");
+            open = true;
+            // The sentence wraps, so a field can end up hard against the right
+            // edge on a phone. Measured rather than guessed, because which edge
+            // it is near depends on where the line happened to break.
+            listbox.className = "options";
+            if (listbox.getBoundingClientRect().right > window.innerWidth - 8) {
+              listbox.className = "options flip";
+            }
+          }
+
+          function hide() {
+            listbox.hidden = true;
+            input.setAttribute("aria-expanded", "false");
+            input.removeAttribute("aria-activedescendant");
+            if (status) status.textContent = "";
+            active = -1;
+            open = false;
+          }
+
+          function move(n) {
+            const rows = Array.from(listbox.children);
+            if (rows[active]) rows[active].setAttribute("aria-selected", "false");
+            active = n;
+            if (!rows[n]) { input.removeAttribute("aria-activedescendant"); return; }
+            rows[n].setAttribute("aria-selected", "true");
+            input.setAttribute("aria-activedescendant", rows[n].id);
+            rows[n].scrollIntoView({ block: "nearest" });
+          }
+
+          function fit() {
+            input.size = Math.min(
+              Math.max(input.value.length, FIELD_CHARS.min), FIELD_CHARS.max);
+          }
+
+          function take(value) {
+            input.value = value;
+            fit();
+            hide();
+            // Assigning .value from script raises no input event, so without
+            // this the paragraph below would keep describing the previous word.
+            render();
+          }
+
+          // Opening without typing shows the whole list and stands on whatever
+          // the field already holds, which is what somebody clicking a filled
+          // field is asking for.
+          function browse() {
+            draw("");
+            show();
+            const here = input.value.trim().toLowerCase();
+            const at = choices.findIndex((c) => c.toLowerCase() === here);
+            if (at >= 0) move(at);
+          }
+
+          input.addEventListener("input", () => { fit(); draw(input.value); show(); });
+
+          // Clicking an already-focused field opens it. Focus alone does not:
+          // arriving by Tab and being handed ninety-five rows is noise.
+          input.addEventListener("click", () => { if (!open) browse(); });
+
+          input.addEventListener("blur", hide);
+
+          input.addEventListener("keydown", (e) => {
+            const key = e.key;
+            if (key === "ArrowDown" || key === "ArrowUp") {
+              e.preventDefault();
+              // Opening lands on the current row rather than stepping past it,
+              // which is where a reader expects to start from.
+              if (!open) { browse(); return; }
+              if (!choices.length) return;
+              const step = key === "ArrowDown" ? 1 : -1;
+              move(active < 0
+                ? (step > 0 ? 0 : choices.length - 1)
+                : (active + step + choices.length) % choices.length);
+            } else if (key === "Enter") {
+              // Takes only a row the reader moved to. Enter over typed text with
+              // nothing highlighted closes the popup and leaves the text alone,
+              // which is the entire argument for this control over a menu.
+              if (open && active >= 0) { e.preventDefault(); take(choices[active]); }
+              else if (open) hide();
+            } else if (key === "Escape") {
+              if (open) { e.preventDefault(); hide(); }
+            } else if (key === "Tab") {
+              // Leaves with what is typed. Committing the highlighted row here
+              // is the behaviour that quietly overwrites somebody's own word.
+              hide();
+            }
+          });
+
+          fit();
+        }
+
+        combobox("pick-kind", "pick-kind-field", "kinds", IN_CORPUS_KINDS);
+        combobox("pick-label", "pick-label-field", "labels", IN_CORPUS_LABELS);
+      })();</script><aside class="rail"><div class="panel"><h3>Recently added</h3><ol><li><a href="/alice/placeholder/does-not-resolve-1b/kindness/v1/" title="alice/placeholder/does-not-resolve-1b/kindness@v1">alice/kindness</a><span class="meta mono">direction · placeholder/does-not-resolve-1b</span><span class="meta">Sep 12</span></li><li><a href="/bob/placeholder/does-not-resolve-1b/kindness/v1/" title="bob/placeholder/does-not-resolve-1b/kindness@v1">bob/kindness</a><span class="meta mono">direction · placeholder/does-not-resolve-1b</span><span class="meta">Sep 12</span></li><li><a href="/dana/placeholder/other-architecture-7b/refusal/v1/" title="dana/placeholder/other-architecture-7b/refusal@v1">dana/refusal</a><span class="meta mono">sae-latent · placeholder/other-architecture-7b</span><span class="meta">Sep 12</span></li><li><a href="/erik/placeholder/other-architecture-7b/refusal/v1/" title="erik/placeholder/other-architecture-7b/refusal@v1">erik/refusal</a><span class="meta mono">probe · placeholder/other-architecture-7b</span><span class="meta">Sep 12</span></li><li><a href="/fern/placeholder/other-architecture-7b/refusal/v1/" title="fern/placeholder/other-architecture-7b/refusal@v1">fern/refusal</a><span class="meta mono">sae-latent · placeholder/other-architecture-7b</span><span class="meta">Sep 12</span></li><li><a href="/soham/meta-llama/Llama-3.3-70B-Instruct/trauma/d61-diffmeans-expository-L34/" title="soham/meta-llama/Llama-3.3-70B-Instruct/trauma@d61-diffmeans-expository-L34">soham/trauma</a><span class="meta mono">direction · meta-llama/Llama-3.3-70B-Instruct</span><span class="meta">Aug 19</span></li><li><a href="/soham/allenai/Olmo-3-1125-32B/pro-human/L24/" title="soham/allenai/Olmo-3-1125-32B/pro-human@L24">soham/pro-human</a><span class="meta mono">direction · allenai/Olmo-3-1125-32B</span><span class="meta">Jun 8</span></li><li><a href="/soham/allenai/Olmo-3-1125-32B/pro-human/logistic/" title="soham/allenai/Olmo-3-1125-32B/pro-human@logistic">soham/pro-human</a><span class="meta mono">direction · allenai/Olmo-3-1125-32B</span><span class="meta">Jun 8</span></li></ol><p class="why">10 submissions, under the 100 needed before engagement means anything. Newest first until then: there is nothing to trend on yet, and an invented ranking would be worse than none.</p></div></aside></div></body></html>

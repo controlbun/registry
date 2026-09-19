@@ -1,0 +1,105 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sign in</title><meta name="description" content="A registry for activation-steering artifacts, in the spirit of GitHub or Hugging Face rather than a curated database."><link rel="canonical" href="https://controlbun.com/sign-in/"><meta property="og:type" content="website"><meta property="og:site_name" content="controlbun"><meta property="og:title" content="Sign in"><meta property="og:description" content="A registry for activation-steering artifacts, in the spirit of GitHub or Hugging Face rather than a curated database."><meta property="og:url" content="https://controlbun.com/sign-in/"><meta property="og:image" content="https://controlbun.com/icon-512.png"><meta name="twitter:card" content="summary"><script>
+  // Applied before paint, so a reader who picked a theme never sees a flash of
+  // the other one. Inline and unbundled on purpose: a deferred module would run
+  // after first paint, which is the flash this exists to prevent.
+  const saved = localStorage.getItem("theme");
+  if (saved) document.documentElement.dataset.theme = saved;
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.DeVWi-iC.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button></header><script>
+  // Inline and unbundled, same reason as the script in the head: no waiting on a
+  // module graph for three lines of work.
+  (function () {
+    const button = document.querySelector("#theme");
+    const root = document.documentElement;
+    if (!button) return;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    const isDark = () =>
+      (root.dataset.theme || (prefersDark ? "dark" : "light")) === "dark";
+
+    // Names the theme you would switch to, not the one you are in. This is the
+    // behavior the home page already had and it is the right one for a bare text
+    // button: "Light theme" while the page is light reads as a label rather than
+    // as something to press.
+    const label = () => {
+      button.textContent = isDark() ? "Light theme" : "Dark theme";
+    };
+    label();
+
+    button.addEventListener("click", () => {
+      const next = isDark() ? "light" : "dark";
+      root.dataset.theme = next;
+      localStorage.setItem("theme", next);
+      label();
+    });
+  }());
+</script><main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">controlbun</a></nav><h1>Sign in</h1><p class="lede">Identity here is Hugging Face's. This registry issues no account, holds no password and has nothing to sign up for.</p><p class="banner"><strong>None of this works yet.</strong> The links below go to Hugging Face and they work. The trip back does not exist: this site is built as files and has nowhere to receive a session, so signing in at Hugging Face today changes nothing here and claiming a namespace is not yet possible from a browser.</p><h2>Three steps, and the middle one is the smallest</h2><ol class="steps"><li><h3>Hold a Hugging Face account</h3><p>Most people publishing a steering direction already have one, because that is where the weights and the artifacts live. If you do not, Hugging Face registers it, not us.</p><p><a href="https://huggingface.co/join">Create a Hugging Face account</a></p></li><li><h3>Sign in with it</h3><p>Hugging Face asks you whether to let this registry read who you are. If you agree, what comes back is an opaque subject id, the handle you hold at that moment, and, if you grant it, the organizations Hugging Face says you belong to. No password reaches this site, because none is ever sent here.</p><p><a href="https://huggingface.co/login">Sign in at Hugging Face</a> <span class="note">This signs you in at Hugging Face and returns you there. It does not sign you in here, and nothing on this site will look different afterwards.</span></p></li><li><h3>Claim a namespace</h3><p>This is the act with meaning. A claim binds the account to a namespace and is recorded with its date and its evidence, so a reader can weigh it. Everything published under a namespace stands whether or not anyone has claimed it, and a namespace nobody has claimed is the ordinary state rather than a gap.</p><p>More than one account can claim the same namespace. Both claims stand, both carry their own evidence, and this registry does not decide between them.</p></li></ol><h2>Your namespace is your handle, and there is no field for it</h2><p>If you ever submit through a signed-in path, the namespace is the handle Hugging Face reported when you signed in. It is shown to you, not offered: no box, and no default to type over. Somebody signed in under one handle cannot publish under a name belonging to somebody else, and a dispute about who really holds a name is Hugging Face's to settle rather than ours.</p><p class="note">What that makes impossible, stated because a rule that cannot name its cost has not been thought through: publishing under a pseudonym, under a lab name you hold no account for, or into one namespace shared by several people who each sign in as themselves. The last is a real shape, and today the answer is that a group claims a namespace rather than submits into one. An author string written down by somebody indexing published work is unaffected, and stays a free string.</p><h2>A membership is something a provider said on a day</h2><p>If Hugging Face reports your organizations, what gets recorded is what it said and when it said it. Nothing rechecks it afterwards, so nothing here will ever claim you belong to an organization now. People join and leave; a membership read once and held forever goes stale quietly while still looking like a fact. Checking again means signing in again, which writes a new observation beside the old one rather than replacing it.</p><h2>Why Hugging Face</h2><p>Because that is where the artifacts already are, and because it can answer the organization question, which a plain login cannot. It is the provider this was built against and not a list of permitted ones. A claim records the provider string it was made with and nothing anywhere compares that string against a set of approved names, so another provider is a configuration rather than a change to the schema.</p><p class="note">A claim binds the provider's subject id and not the handle. Handles are renameable on every provider, so a claim bound to a handle would either break when somebody renames or follow the name to whoever registers it next. The handle is recorded as of the claim date, and is not what anything looks up by.</p><h2>What is missing, in one sentence</h2><p>A page that can receive you after Hugging Face sends you back. <a href="/about/">What this registry is and where it came from</a>.</p></main></body></html><script>(function(){const corpus = {"active_order":"recently-added","active_order_name":"Recently added","age_offset_hours":2,"gravity":1.5,"order_choices":[{"key":"recently-added","name":"Recently added"},{"key":"trending","name":"Trending"}],"size":10,"threshold":100};
+
+  // The ordering control shipped for days with no handler: the buttons rendered,
+  // aria-pressed was set, and clicking did nothing. It looked finished, which is
+  // the worst failure mode a control has.
+  //
+  // The contract is markup-shaped rather than table-shaped, so it holds for a list
+  // that is not a table: `data-orderable` marks whatever element directly holds
+  // the items, and each child carries the two inputs order.py uses. Every such
+  // container on the page is bound, not the first one, so a page that grows a
+  // second list does not end up with a control that silently drives half of what
+  // the reader is looking at.
+  const bar = document.querySelector(".ordering");
+  const lists = [...document.querySelectorAll("[data-orderable]")];
+
+  if (bar && lists.length) {
+    const now = Date.now();
+    const finite = (v) => (Number.isFinite(v) ? v : 0);
+    const created = (el) => finite(Date.parse(el.dataset.created));
+
+    const keyOf = {
+      "recently-added": created,
+      // order.trending_score, ported. The constants ride along in the payload
+      // instead of being retyped here, because two copies of a ranking function
+      // drift and the page would then describe an ordering it does not compute.
+      // Engagement plus one, so an untouched submission still decays purely with
+      // age rather than flattening into a tie.
+      trending: (el) => {
+        const hours = Math.max((now - created(el)) / 3600000, 0);
+        return (finite(Number(el.dataset.engagement)) + 1) /
+          Math.pow(hours + corpus.age_offset_hours, corpus.gravity);
+      },
+    };
+
+    // Captured before any reorder, so an unrecognized key falls back to what the
+    // exporter emitted. Same disposition as apply_order: an ordering this build
+    // does not implement is a request it cannot serve, not an error in the data.
+    const stored = lists.map((list) => [list, [...list.children]]);
+    const buttons = [...bar.querySelectorAll("[data-order-key]")];
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const score = keyOf[button.dataset.orderKey];
+
+        stored.forEach(([list, original]) => {
+          const items = score
+            // Descending, and ties keep storage order: two things released the
+            // same day are not ranked against each other by an accident of sort
+            // implementation.
+            ? original
+                .map((el, i) => [el, i])
+                .sort((a, b) => score(b[0]) - score(a[0]) || a[1] - b[1])
+                .map(([el]) => el)
+            : [...original];
+          items.forEach((el) => list.appendChild(el));
+        });
+
+        // The sentence above the buttons names the ordering. Leaving it on the
+        // server-rendered value meant the page said one thing and showed another
+        // the moment the reader clicked, which is the same dishonesty as the dead
+        // control in a quieter form.
+        const named = bar.querySelector("strong");
+        if (named) named.textContent = button.textContent.trim();
+
+        buttons.forEach((b) =>
+          b.setAttribute("aria-pressed", String(b === button)),
+        );
+      });
+    });
+  }
+})();</script>

@@ -1,0 +1,105 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>bob/placeholder/does-not-resolve-1b/kindness@v1</title><meta name="description" content="A registry for activation-steering artifacts, in the spirit of GitHub or Hugging Face rather than a curated database."><link rel="canonical" href="https://controlbun.com/bob/placeholder/does-not-resolve-1b/kindness/v1/"><meta property="og:type" content="website"><meta property="og:site_name" content="controlbun"><meta property="og:title" content="bob/placeholder/does-not-resolve-1b/kindness@v1"><meta property="og:description" content="A registry for activation-steering artifacts, in the spirit of GitHub or Hugging Face rather than a curated database."><meta property="og:url" content="https://controlbun.com/bob/placeholder/does-not-resolve-1b/kindness/v1/"><meta property="og:image" content="https://controlbun.com/icon-512.png"><meta name="twitter:card" content="summary"><script>
+  // Applied before paint, so a reader who picked a theme never sees a flash of
+  // the other one. Inline and unbundled on purpose: a deferred module would run
+  // after first paint, which is the flash this exists to prevent.
+  const saved = localStorage.getItem("theme");
+  if (saved) document.documentElement.dataset.theme = saved;
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.DeVWi-iC.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button></header><script>
+  // Inline and unbundled, same reason as the script in the head: no waiting on a
+  // module graph for three lines of work.
+  (function () {
+    const button = document.querySelector("#theme");
+    const root = document.documentElement;
+    if (!button) return;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    const isDark = () =>
+      (root.dataset.theme || (prefersDark ? "dark" : "light")) === "dark";
+
+    // Names the theme you would switch to, not the one you are in. This is the
+    // behavior the home page already had and it is the right one for a bare text
+    // button: "Light theme" while the page is light reads as a label rather than
+    // as something to press.
+    const label = () => {
+      button.textContent = isDark() ? "Light theme" : "Dark theme";
+    };
+    label();
+
+    button.addEventListener("click", () => {
+      const next = isDark() ? "light" : "dark";
+      root.dataset.theme = next;
+      localStorage.setItem("theme", next);
+      label();
+    });
+  }());
+</script><main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">controlbun</a><span class="sep">/</span><a href="/models/">Models</a><span class="sep">/</span><a href="/models/placeholder/does-not-resolve-1b/">placeholder/does-not-resolve-1b</a><span class="sep">/</span><a href="/models/placeholder/does-not-resolve-1b/kindness/">kindness</a></nav><h1 class="mono">bob/placeholder/does-not-resolve-1b/kindness@v1</h1><div class="banner"><strong>Synthetic corpus.</strong> Every figure here is fabricated to exercise the interface. Scores are repeated-digit decimals, vectors are integer ramps, and the models named do not resolve. Nothing on this page is a measurement.</div><p class="lede">One owner's complete take on <strong>kindness</strong>, against <a class="mono" href="/models/placeholder/does-not-resolve-1b/">placeholder/does-not-resolve-1b</a>. Self-contained and internally consistent. It does not have to agree with <a href="/models/placeholder/does-not-resolve-1b/kindness/">anyone else claiming the same word</a>, and the registry does not ask it to.</p><div class="tabs" role="tablist"><button role="tab" type="button" id="tab-artifact" data-tab="artifact" aria-selected="true" aria-controls="panel-artifact">Artifact</button><button role="tab" type="button" id="tab-support" data-tab="support" aria-selected="false" aria-controls="panel-support">Support cards<span class="tabcount">1</span></button><button role="tab" type="button" id="tab-measurements" data-tab="measurements" aria-selected="false" aria-controls="panel-measurements">Independent measurements<span class="tabcount">0</span></button><button role="tab" type="button" id="tab-attacks" data-tab="attacks" aria-selected="false" aria-controls="panel-attacks">Attack cards<span class="tabcount">0</span></button><button role="tab" type="button" id="tab-pins" data-tab="pins" aria-selected="false" aria-controls="panel-pins">Pins<span class="tabcount">1</span></button><button role="tab" type="button" id="tab-comments" data-tab="comments" aria-selected="false" aria-controls="panel-comments">Comments</button></div><script type="module">var e=document.querySelector(`.tabs`);if(e){let t=[...e.querySelectorAll(`[data-tab]`)],n=[...document.querySelectorAll(`[data-panel]`)],r=e=>{t.forEach(t=>t.setAttribute(`aria-selected`,String(t.dataset.tab===e))),n.forEach(t=>t.classList.toggle(`hidden`,t.dataset.panel!==e))};t.forEach(e=>e.addEventListener(`click`,()=>{r(e.dataset.tab),history.replaceState(null,``,`#${e.dataset.tab}`)}));let i=location.hash.replace(`#`,``);r(t.some(e=>e.dataset.tab===i)?i:t[0].dataset.tab)}</script><div data-pagefind-body><div data-panel="artifact"><div class="card"><div class="card-main"><h2>Definition</h2><div class="prose definition" data-authored><p>Kindness is costly help: the model gives up something to benefit the user. Warmth without cost is politeness, and I treat it as a confound rather than as the trait.</p></div><h2>Method</h2><p class="provenance">Profile <span class="mono">soham/contrastive-v1</span>, namespaced and versioned. Not chosen from a list, because there is no list.</p><dl class="spec"><dt>contrast source</dt><dd>generator prompt + generator model + seed</dd><dt>layer sweep</dt><dd>blocks 0-15</dd><dt>method</dt><dd>caa</dd><dt>selection criterion</dt><dd>held-out separation</dd><dt>token masking</dt><dd>response-only</dd></dl><h2>Author's theory</h2><div class="prose definition" data-authored><p>Warmth without cost is politeness. I orthogonalized against sentiment and formality so that what is left is the willingness to give something up, which is what I mean by the word.</p></div><h2>Reproducing it</h2><dl class="spec"><dt>entrypoint</dt><dd class="mono">steering-vectors 0.0.0-SYNTHETIC</dd><dt>container</dt><dd class="mono">sha256:1111111111111111111111111111111111111111111111111111111111111111</dd></dl><h2>Where the bytes are</h2><dl class="spec"><dt>sha256</dt><dd class="mono wrap">c6d5f30bf078df80f8d04707b9aec262357089f9bcd08c36c18942c3be4a1d0d</dd></dl><p class="note absent-block">Nobody recorded where these bytes are published, so this page has no URL to point at. That is a fact about the row rather than a gap in it: an artifact can be described here, measured here and argued about here without its author ever having put it somewhere with an address, and this registry does not publish one on their behalf. The sha256 is still what the file hashes to, so a copy obtained any other way can be checked against it.</p><h2>Evidence</h2><div class="measures"><div><span class="k">Trait score</span>0.4444</div><div><span class="k">Coherence</span>0.9999</div><div><span class="k">Transfer</span><span class="absent">not measured</span></div><div><span class="k">Confound axes checked</span>formality, refusal_rate</div></div><h2>Coefficient sweep</h2><figure class="viz-root chart"><svg viewBox="0 0 560 240" role="img" aria-label="Trait score and coherence plotted against steering coefficient"><line class="grid" x1="40" x2="474" y1="192" y2="192"></line><text class="tick" x="32" y="196" text-anchor="end">0</text><line class="grid" x1="40" x2="474" y1="148.5" y2="148.5"></line><text class="tick" x="32" y="152.5" text-anchor="end">0.25</text><line class="grid" x1="40" x2="474" y1="105" y2="105"></line><text class="tick" x="32" y="109" text-anchor="end">0.5</text><line class="grid" x1="40" x2="474" y1="61.5" y2="61.5"></line><text class="tick" x="32" y="65.5" text-anchor="end">0.75</text><line class="grid" x1="40" x2="474" y1="18" y2="18"></line><text class="tick" x="32" y="22" text-anchor="end">1</text><text class="tick" x="40" y="228" text-anchor="middle">0</text><text class="tick" x="148.5" y="228" text-anchor="middle">0.5</text><text class="tick" x="257" y="228" text-anchor="middle">1</text><text class="tick" x="365.5" y="228" text-anchor="middle">1.5</text><text class="tick" x="474" y="228" text-anchor="middle">2</text><text class="tick" x="257" y="240" text-anchor="middle">steering coefficient</text><path class="series-1 line" d="M40,172.6686 L148.5,153.3372 L257,134.00580000000002 L365.5,114.67439999999999 L474,114.67439999999999"></path><path class="series-2 line" d="M40,18.0174 L148.5,18.0174 L257,18.0174 L365.5,37.3488 L474,37.3488"></path><circle class="series-1 dot" cx="40" cy="172.6686" r="4.5"></circle><circle class="series-2 dot" cx="40" cy="18.0174" r="4.5"></circle><circle class="series-1 dot" cx="148.5" cy="153.3372" r="4.5"></circle><circle class="series-2 dot" cx="148.5" cy="18.0174" r="4.5"></circle><circle class="series-1 dot" cx="257" cy="134.00580000000002" r="4.5"></circle><circle class="series-2 dot" cx="257" cy="18.0174" r="4.5"></circle><circle class="series-1 dot" cx="365.5" cy="114.67439999999999" r="4.5"></circle><circle class="series-2 dot" cx="365.5" cy="37.3488" r="4.5"></circle><circle class="series-1 dot" cx="474" cy="114.67439999999999" r="4.5"></circle><circle class="series-2 dot" cx="474" cy="37.3488" r="4.5"></circle><text class="direct" x="484" y="118.67439999999999">Trait</text><text class="direct" x="484" y="41.3488">Coherence</text></svg><figcaption><span class="key"><span class="swatch series-1-bg"></span>Trait score</span><span class="key"><span class="swatch series-2-bg"></span>Coherence</span><span class="synthetic-tag">synthetic, repeated-digit values</span></figcaption><details class="table-view"><summary>Table</summary><table><thead><tr><th>Coefficient</th><th>Trait score</th><th>Coherence</th></tr></thead><tbody><tr><td>0</td><td>0.1111</td><td>0.9999</td></tr><tr><td>0.5</td><td>0.2222</td><td>0.9999</td></tr><tr><td>1</td><td>0.3333</td><td>0.9999</td></tr><tr><td>1.5</td><td>0.4444</td><td>0.8888</td></tr><tr><td>2</td><td>0.4444</td><td>0.8888</td></tr></tbody></table></details></figure><h2>Trait against its collateral axes</h2><figure class="viz-root chart"><svg viewBox="0 0 460 102" role="img" aria-label="Trait score beside each confound axis the author measured"><text class="tick" x="94" y="15" text-anchor="end">trait</text><rect class="track" x="104" y="0" width="300" height="22" rx="4"></rect><rect class="series-1-bg bar" x="104" y="0" width="133.32" height="22" rx="4"></rect><text class="direct" x="245.32" y="15">0.4444</text><text class="tick" x="94" y="47" text-anchor="end">formality</text><rect class="track" x="104" y="32" width="300" height="22" rx="4"></rect><rect class="series-2-bg bar" x="104" y="32" width="99.99" height="22" rx="4"></rect><text class="direct" x="211.99" y="47">0.3333</text><text class="tick" x="94" y="79" text-anchor="end">refusal_rate</text><rect class="track" x="104" y="64" width="300" height="22" rx="4"></rect><rect class="series-2-bg bar" x="104" y="64" width="66.66" height="22" rx="4"></rect><text class="direct" x="178.66" y="79">0.2222</text></svg><figcaption><span class="key"><span class="swatch series-1-bg"></span>The trait it claims</span><span class="key"><span class="swatch series-2-bg"></span>Collateral axis</span><span class="key">coherence 0.9999</span><span class="synthetic-tag">synthetic, repeated-digit values</span></figcaption><p class="note">A direction that moves the trait hard and everything else with it is a worse artifact than one that moves it modestly and nothing else. These bars are the author's own measurements of their own artifact; someone else measuring the same axes is under Support cards.</p></figure></div><aside class="card-rail"><div class="panel"><h3>Application contract</h3><dl class="spec tight"><dt>kind</dt><dd class="mono">direction</dd><dt>model</dt><dd><a class="mono" href="/models/placeholder/does-not-resolve-1b/">placeholder/does-not-resolve-1b</a></dd><dt>revision</dt><dd class="mono">000000000000</dd><dt>layer</dt><dd>4 <span class="meta">block-0indexed</span></dd><dt>hook point</dt><dd class="mono">resid_post</dd><dt>chat template</dt><dd class="mono">sha256:eeeeeeee</dd><dt>steering position</dt><dd>all-positions</dd><dt>coefficient</dt><dd>0.5 to 1.5</dd></dl><p class="why">A vector applied at the wrong layer, hook point or chat template appears not to work rather than failing loudly. That is why this sits beside the artifact and not in a README.</p></div><div class="panel"><h3>Tensor</h3><dl class="spec tight"><dt>shape</dt><dd class="mono">[8]</dd><dt>dtype</dt><dd class="mono">float32</dd><dt>L2 norm</dt><dd>1</dd><dt>activation norm</dt><dd>11.1111<span class="meta">at that layer</span></dd><dt>format</dt><dd class="mono">safetensors</dd></dl><p class="why">Activation norm is here so a coefficient can be a fraction of activation magnitude rather than a raw alpha, which means nothing across models.</p></div><div class="panel"><h3>Distribution</h3><dl class="spec tight"><dt>license status</dt><dd><span class="uninterpretable">unresolved</span></dd><dt>downloads</dt><dd><span class="absent">not tracked</span></dd><dt>stars</dt><dd><span class="absent">not tracked</span></dd></dl><p class="why">Whether a source model's license reaches a direction read out of it is open, and this registry does not answer it. What is here is what the artifact's own author asserts. Unresolved means either that nobody has checked or that someone checked and left it unresolved, and an artifact whose rights are unresolved is pointed at rather than served.</p></div></aside></div></div><div data-panel="support" class="hidden"><div class="support"><div class="provenance"><a class="mono" href="/gus/">gus</a> used it on Sep 12, 2026 · <span class="mono">placeholder/support-desk-eval@aaaaaaaaaaaa</span><span class="tag">as documented</span></div><div class="prose definition" data-authored><p>Steering a support-desk assistant toward offering concrete help rather than sympathy.</p></div><dl class="spec"><dt>expected</dt><dd>Per the contract: coefficient 0.5 to 1.5 at layer 4 resid_post, all-positions, with coherence holding across that range.</dd><dt>observed</dt><dd>Held across the documented range. At 1.5 the assistant offered to do the task rather than describing it, which is the behavior the label claims. Coherence did not visibly degrade.</dd></dl><p class="note"><strong>bob:</strong> Matches what I measured. The costly-help reading is exactly the case this was built for.</p></div><p class="note">Publishing a support card needs a write path, and this build has none.</p></div><div data-panel="measurements" class="hidden"><p class="note absent-block">Nobody other than bob has measured this artifact, so the author wrote both the submission and the check on it. That establishes internal consistency and not much else, and an independent measurement is the cheapest evidence anyone can add here.</p></div><div data-panel="attacks" class="hidden"><p class="note absent-block">No attack cards. Nobody has tried to break this artifact, so the only evidence attached to it is evidence its author selected.</p><p class="note">Publishing an attack card needs a write path, and this build has none.</p></div><div data-panel="pins" class="hidden"><div class="pin"><div class="provenance"><strong>steering-arena</strong> pinned <span class="mono">bob/placeholder/does-not-resolve-1b/kindness@v1</span> on Sep 12, 2026</div><div class="prose definition" data-authored><p>Season scoring target, frozen so player scores are commensurable</p></div><p class="note">Picked for the costly-help reading because the season&#39;s probe set is about action. Not a claim that it is the better direction.</p><div class="passed-over"><span class="k">Passed over</span><ul><li class="mono">alice/placeholder/does-not-resolve-1b/kindness@v1</li></ul></div></div></div><div data-panel="comments" class="hidden"><p class="note absent-block">No comments, and no way to leave one. Comments need a write path and an account behind it, and this build has neither.</p></div></div></main></body></html><script>(function(){const corpus = {"active_order":"recently-added","active_order_name":"Recently added","age_offset_hours":2,"gravity":1.5,"order_choices":[{"key":"recently-added","name":"Recently added"},{"key":"trending","name":"Trending"}],"size":10,"threshold":100};
+
+  // The ordering control shipped for days with no handler: the buttons rendered,
+  // aria-pressed was set, and clicking did nothing. It looked finished, which is
+  // the worst failure mode a control has.
+  //
+  // The contract is markup-shaped rather than table-shaped, so it holds for a list
+  // that is not a table: `data-orderable` marks whatever element directly holds
+  // the items, and each child carries the two inputs order.py uses. Every such
+  // container on the page is bound, not the first one, so a page that grows a
+  // second list does not end up with a control that silently drives half of what
+  // the reader is looking at.
+  const bar = document.querySelector(".ordering");
+  const lists = [...document.querySelectorAll("[data-orderable]")];
+
+  if (bar && lists.length) {
+    const now = Date.now();
+    const finite = (v) => (Number.isFinite(v) ? v : 0);
+    const created = (el) => finite(Date.parse(el.dataset.created));
+
+    const keyOf = {
+      "recently-added": created,
+      // order.trending_score, ported. The constants ride along in the payload
+      // instead of being retyped here, because two copies of a ranking function
+      // drift and the page would then describe an ordering it does not compute.
+      // Engagement plus one, so an untouched submission still decays purely with
+      // age rather than flattening into a tie.
+      trending: (el) => {
+        const hours = Math.max((now - created(el)) / 3600000, 0);
+        return (finite(Number(el.dataset.engagement)) + 1) /
+          Math.pow(hours + corpus.age_offset_hours, corpus.gravity);
+      },
+    };
+
+    // Captured before any reorder, so an unrecognized key falls back to what the
+    // exporter emitted. Same disposition as apply_order: an ordering this build
+    // does not implement is a request it cannot serve, not an error in the data.
+    const stored = lists.map((list) => [list, [...list.children]]);
+    const buttons = [...bar.querySelectorAll("[data-order-key]")];
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const score = keyOf[button.dataset.orderKey];
+
+        stored.forEach(([list, original]) => {
+          const items = score
+            // Descending, and ties keep storage order: two things released the
+            // same day are not ranked against each other by an accident of sort
+            // implementation.
+            ? original
+                .map((el, i) => [el, i])
+                .sort((a, b) => score(b[0]) - score(a[0]) || a[1] - b[1])
+                .map(([el]) => el)
+            : [...original];
+          items.forEach((el) => list.appendChild(el));
+        });
+
+        // The sentence above the buttons names the ordering. Leaving it on the
+        // server-rendered value meant the page said one thing and showed another
+        // the moment the reader clicked, which is the same dishonesty as the dead
+        // control in a quieter form.
+        const named = bar.querySelector("strong");
+        if (named) named.textContent = button.textContent.trim();
+
+        buttons.forEach((b) =>
+          b.setAttribute("aria-pressed", String(b === button)),
+        );
+      });
+    });
+  }
+})();</script>
