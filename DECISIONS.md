@@ -2656,6 +2656,19 @@ and which renders as two claims with their dates and evidence rather than as a
 conflict anybody has to resolve. It degrades into the plural case visibly. That
 is the intended behavior and not a hole to close later.
 
+**It also removes the form, and the evidence with it.** If the namespace is the
+handle, there is nothing for a submitter to fill in and nothing to argue about:
+the provider attests the handle, and the capture is the attestation. Evidence on
+a claim exists for the case this rule forecloses, somebody signed in as
+`qwen-fan` claiming `Qwen`, which needs a repo, a DOI or a human decision with
+its reason. That case cannot arise on this path, so a claim made this way
+carries no evidence and needs no page to collect any. What a remote write path
+has to build for claiming is therefore a session and somewhere to put it, and
+not a form.
+
+The one real claim in this corpus carries evidence prose precisely because it is
+the exception: namespace `soham`, handle `sohampadia`.
+
 **What this makes impossible to express.** A signed-in author publishing under a
 name other than their handle: a pseudonym, a lab name they hold no account for,
 or a namespace shared by several people who each sign in as themselves. The
