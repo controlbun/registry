@@ -1548,6 +1548,10 @@ for sources other than one GitHub commit, and is the shared path the v2 write
 step in `V2.md` section 2 would call.
 
 ## 2026-09-17 No dual-use policy yet, and the trigger is a capability rather than a date
+**Amended by:** 2026-09-19 "No dual-use policy is required, and what review
+does is a later question". The reasoning below stands and the three triggers no
+longer gate anything. In particular "anything can be submitted" is not a gate.
+
 **Decided:** Do not write one now. `POLICY.md` was drafted and became
 `WHAT-IT-DOES.md`, which keeps the verified description and drops the positions.
 
@@ -2120,3 +2124,35 @@ somewhere to put the answer.
 **Supersedes:** nothing. Pays off the `not-found:` line in
 `artifacts/agent_handoff.py`, which has been parsed and discarded since
 2026-09-18.
+
+## 2026-09-19 No dual-use policy is required, and what review does is a later question
+**Decided:** No dual-use policy is needed. It does not gate the site, it does
+not gate submission, and nothing waits on it.
+
+**Why, in the author's terms.** The question that produced the 2026-09-17 entry
+was what a dual-use policy even is for a thing like this, and the answer that
+came out of drafting one was that most of it was not policy. It was a
+description of what the system does, which is why `POLICY.md` became
+`WHAT-IT-DOES.md`. A policy governs decisions, and the decisions it would govern
+do not exist. That conclusion is unchanged; what changes here is that the
+capability triggers attached to it are lifted rather than left standing as a
+gate on work nobody is blocked on.
+
+**What is deliberately not decided here.** What a review step does when
+submissions open. The 2026-09-17 entry's real claim was never that a document is
+required; it was that a review step with no stated rule fills up with whatever
+the reviewer thinks that day. That concern is unaffected by this entry and it is
+a problem of the future, to be answered when there is a submission route and not
+before. Recorded so that answering it later is not mistaken for reopening this.
+
+**What this makes impossible to express.** Nothing in the schema or the client.
+What it removes is a prepared answer to the first question a safety-adjacent
+reader asks, which the 2026-09-15 entry already named as the cost of deferring
+and which is unchanged in kind by making the deferral permanent. Publishing
+`BRIEF.md` and `VALIDATION.md` still means publishing this project's own
+analysis of misuse surface with nothing answering it. That was true before this
+entry and is true after it.
+
+**Supersedes:** 2026-09-17 "No dual-use policy yet, and the trigger is a
+capability rather than a date", whose reasoning stands and whose triggers do
+not.
