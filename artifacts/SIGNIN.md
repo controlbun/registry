@@ -3,7 +3,12 @@
 Premise, restated because a premise stated in one document gets violated in every
 other one: the registry never designates, consumers pin, visibly. Signing in
 confers no standing. It produces one thing, a dated record of what Hugging Face
-said about an account at one moment, and nothing in the corpus reads it.
+said about an account at one moment, and signing in writes nothing into the
+corpus.
+
+Turning that capture into a namespace claim is a separate command somebody runs
+on purpose: `artifacts/claim.py record --namespace <ns>`. See "The record, which
+is the handover" below for the line between the two files.
 
 ```
 .venv/bin/python artifacts/signin.py serve
@@ -59,6 +64,104 @@ The sign-in page this tool serves already meets the structural rule: one link
 out, no script, no form, no field. `tests/test_signin.py` asserts that, so the
 property is executable rather than a claim in this file.
 
+## The published page, and what the return leg would cost
+
+Written 2026-09-19, when `/sign-in/` was added to the built site. That page is
+the honest half: it signposts Hugging Face's own registration and login pages,
+which work, it names claiming as the act that matters, and it says in its first
+paragraph that the trip back does not exist. It ships no script of its own, no
+field and no identity endpoint, so it crosses nothing.
+
+**The outbound half was never the problem and the guards already say so.** An
+anchor to an authorization endpoint passes `WRITE_SURFACE` as written, by the
+structural argument above. It fails `test_the_built_site_carries_no_supabase_endpoint`,
+because that test names `/auth/v1/`, `supabase` and `signInWithOAuth` by
+string, and the Supabase authorize URL carries the first two. So the live
+"Log in with Hugging Face" button is not blocked by the write-surface guard at
+all. It is blocked by the one written for exactly this, and that is the guard
+to argue with rather than route around.
+
+### What would have to be added
+
+After Hugging Face and Supabase redirect back, the session arrives in the
+browser and a file on a static host cannot read it. Something has to run. There
+are three shapes and they are not the same size.
+
+| | what runs | keeps `output: "static"` |
+|---|---|---|
+| **Script on the page** | the browser, on `controlbun.com` | yes |
+| **A route of ours** | a process, behind an Astro adapter | no |
+| **Somebody else's origin** | an app that is not this site | yes, and this site never sees a session |
+
+### Which guard lines each one crosses
+
+- **Script on the page.** `test_the_built_site_carries_no_supabase_endpoint`,
+  on the authorize URL and the token URL, whether hand-rolled or bundled.
+  `WRITE_SURFACE`, on `method\s*[:=]\s*post`, which a minified
+  `method:"POST"` matches. `tests/test_sign_in_page.py`, on `fetch(` and on
+  the page's own `<script>`. Four lines, in two files that exist to hold them.
+- **A route of ours.** All of the above, plus
+  `test_the_site_build_emits_files_and_cannot_run_a_route`, which asserts
+  `output: "static"` and no adapter and quotes the config's own reason back.
+- **Somebody else's origin.** None, which is the interesting part. The
+  published site keeps one anchor out and receives nothing, and the return leg
+  lands where the guards do not reach because it is not this build.
+
+**One gap, found while writing this and worth naming.** `WRITE_SURFACE` catches
+`XMLHttpRequest` and `sendBeacon` but not `fetch`. A scripted POST whose method
+is a variable rather than a literal passes it. That is not a reason to add
+`fetch` to the list, because `fetch` with no body receives nothing and the list
+would then flag any page that reads JSON. It is a reason to prefer the
+structural criterion in the section above, which asks whether an element is a
+target that receives, over a list of names. Proposed rather than applied: the
+guard is not this file's to rewrite.
+
+### The smallest honest version
+
+One page, `/signed-in/`, with one inline script and no dependency. It reads
+`?code=` out of the query string, POSTs it with the stored PKCE verifier to
+`{SUPABASE_URL}/auth/v1/token?grant_type=pkce`, calls the Hugging Face userinfo
+endpoint with the `provider_token` in the response, and renders
+`preferred_username` and the organizations with the date. It keeps the session
+in a local variable, sets no cookie and writes nothing to storage, so closing
+the tab ends it, and it never writes a row anywhere.
+
+That version is small, and it is still the decision. The moment the published
+site can hold a session, what stops it writing is that no route accepts a write
+rather than that the page cannot make one, and those are different guarantees.
+The current one is structural and the other is a promise.
+
+**What it does not do, and why that matters.** It cannot persist a claim, so
+signing in still gives somebody nothing they can point at. Persisting is the
+step that needs a table that accepts an insert from a browser, and that is a
+separate decision from this one and a larger one.
+
+### The cost, in the terms `astro.config.mjs` uses
+
+The config gives three reasons for static output and the three shapes spend
+them differently.
+
+- *"A build that emits files cannot drift into being a public surface the way a
+  running process can."* Script on the page keeps this literally, since the
+  output is still files, and spends it in substance: the file is now a client
+  holding a session. A route of ours ends it outright.
+- *"This needs no nginx and no rewrite rules."* Script on the page keeps it. A
+  route of ours ends it and adds a host that has to be running for the site to
+  answer at all.
+- The equivalence in `CLAUDE.md`, that Pages serves a locally built `dist` that
+  passed `make verify`, so the falsifier checks the build readers read. Script
+  on the page keeps it. A route of ours ends it: a route's behavior is not in
+  `dist` and nothing local checks it.
+
+So the price of the first shape is one property, stated precisely: the
+published site stops being a thing that structurally cannot write, and becomes
+a thing that does not. The price of the second is all three.
+
+### Not decided here
+
+Whether to take any of it. The author's, explicitly, and not a side effect of
+building a page.
+
 ## Why membership is captured rather than stored
 
 A real sign-in through the configured Supabase provider lands `preferred_username`
@@ -80,8 +183,17 @@ signing in again.
 ## The record, which is the handover
 
 One JSON object per line, appended, never rewritten, at
-`artifacts/memberships.jsonl`. Gitignored by default, with the reason at the
-line in `.gitignore`.
+`artifacts/memberships.jsonl`. Gitignored, with the reason at the line in
+`.gitignore`.
+
+**The capture is not the claim, and only one of the two is published.** A
+capture is whatever the provider chose to return about a real person and this
+repository is public, so it stays ignored. What becomes tracked is
+`artifacts/claims.jsonl`, written by `artifacts/claim.py`, which carries the
+fields the row carries and not one more: the namespace, the provider, the
+subject, the handle, the dates, the organization and the role. That projection
+is the line between the two files and a test fails the build on a version of it
+that copies the capture instead.
 
 ```json
 {
@@ -174,8 +286,9 @@ is one kind of evidence for a claim. It is not the only kind, and a claim model
 that accepts only captures would foreclose the seeding lane.
 
 Also impossible: asking a second time without the person present. There is no
-refresh path, by construction. Re-verification is a new sign-in, which is a new
-line, which is why the lines are dated.
+refresh path, by construction. Looking again is a new sign-in, which is a new
+line here and, through `artifacts/claim.py observe`, a second observation row
+beside the last one rather than over it. That is why the lines are dated.
 
 ## Checks on the loopback constraint
 

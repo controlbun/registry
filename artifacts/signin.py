@@ -4,9 +4,15 @@ Premise, restated because a premise stated in one document gets violated in ever
 other one: **plurality is the product; the registry never designates, consumers
 pin, visibly.** Nothing here ranks, scores, approves or filters anybody. Signing
 in produces one thing: a dated record of what Hugging Face said about an account
-at one moment. It confers no standing, gates no namespace and is read by nothing
-in the corpus. What a claim does with this evidence is a separate object, owned
-by whoever builds it.
+at one moment. It confers no standing and gates no namespace, and signing in
+writes nothing into the corpus.
+
+**Turning a capture into a claim is a separate command run on purpose.**
+`artifacts/claim.py record` reads a capture and writes `namespace_claim` and
+`namespace_membership_observation` rows through a tracked record, which is what
+keeps a subject id out of a file somebody types into. Nothing here calls it and
+nothing here knows the namespace being claimed: a capture says who signed in and
+says nothing about what they are claiming.
 
 **This is not a sign-in on the published site, and the difference is structural
 rather than a matter of naming.** It listens on 127.0.0.1 and on nothing else.
@@ -486,8 +492,11 @@ the moment.</p>
 </ul>
 <p>It is evidence with a date on it, not a standing. Nothing re-checks it, so
 membership that ends later will not un-record itself here; checking again means
-signing in again. No token is written anywhere, and nothing in the corpus reads
-this file.</p>
+signing in again. No token is written anywhere.</p>
+<p>Signing in publishes nothing. The line stays in a file this repository
+ignores. Binding an account to a namespace is a second, separate command that
+somebody runs on purpose, and what it publishes is the claim rather than this
+file.</p>
 <a class="go" href="{html.escape(url)}">Continue to Hugging Face</a>
 <p>The line is appended to <code>artifacts/memberships.jsonl</code> on this
 machine.</p>""")
