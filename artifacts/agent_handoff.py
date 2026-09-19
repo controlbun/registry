@@ -122,6 +122,13 @@ class Spec:
     `schema/migrations/001` and `005` leave NOT NULL: not a bar an artifact has to
     clear, a shape the row physically has. Everything else is nullable and an
     absence in it records as an absence.
+
+    `column` is the third spelling and exists for one reason: a declared absence
+    is stored against the field it is about, and `artifacts/intake.py insert`
+    compares it to the value in the row. Two spellings of one field is a
+    question somebody has to stop and resolve, so the translation lives here
+    beside the other one rather than in whichever caller noticed. Empty means
+    the name already is the column, which is true of everything but `sha256`.
     """
 
     name: str
@@ -129,6 +136,12 @@ class Spec:
     cast: str = "text"
     cannot_be_absent: bool = False
     aliases: tuple[str, ...] = ()
+    column: str = ""
+
+    @property
+    def stored(self) -> str:
+        """The name the row holds this under."""
+        return self.column or self.name
 
 
 # Order is the order the prompt lists them in and the order they are displayed.
@@ -157,7 +170,8 @@ SPECS: tuple[Spec, ...] = (
     Spec("shape", ("shape",)),
     Spec("dtype", ("dtype",)),
     Spec("l2_norm", ("l2_norm",), cast="number", aliases=("l2", "norm")),
-    Spec("sha256", ("sha256",), aliases=("artifact_sha256", "digest", "file_sha256")),
+    Spec("sha256", ("sha256",), column="artifact_sha256",
+         aliases=("artifact_sha256", "digest", "file_sha256")),
     Spec("activation_norm", ("activation_norm",), cast="number"),
     Spec("coeff_low", ("coeff_low",), cast="number",
          aliases=("coefficient_low", "alpha_low")),
@@ -945,17 +959,35 @@ def parse(text: str) -> Handoff:
     return Handoff(values=values, absent=absent, extra=extra, notes=notes)
 
 
+def stored_absences(absent: dict[str, str]) -> dict[str, str]:
+    """Declared absences keyed by the column the row stores, not the name asked for.
+
+    One translation, in the module that owns the three spellings. A name this
+    document does not know passes through untouched, which is the point: the
+    field side of an absence is an open string and a table of the ones we happen
+    to have met would be a list of which fields are allowed an explanation.
+    """
+    return {BY_NAME[name].stored if name in BY_NAME else name: reason
+            for name, reason in absent.items()}
+
+
 def received(text: str) -> dict:
     """One paste as the payload the form's paste region renders.
 
     Shaped like `artifacts/intake.py`'s other JSON answers: `display` is pairs
     the panel prints verbatim, and `fields` is keyed by `data-field` so the page
     fills its own inputs without knowing any of the names above.
+
+    `absent` is keyed by the column instead, because unlike `fields` it is not
+    filled into an input: it travels through the page to `/write` and lands in
+    the row as it stands. The page posting back a second spelling of a field
+    name is how the reason would get written against a field nothing else calls
+    by that name.
     """
     got = parse(text)
     return {
         "fields": got.values,
-        "absent": got.absent,
+        "absent": stored_absences(got.absent),
         "pinned": got.pinned,
         "display": got.display(),
         # Everything the parser had to decide rather than read. These were

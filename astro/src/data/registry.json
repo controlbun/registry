@@ -27,6 +27,7 @@
     {
       "claimants": [
         {
+          "absences": {},
           "activation_norm": 11.1111,
           "artifact_path": "fixtures/alice_kindness_v1.safetensors",
           "attacks": [
@@ -142,6 +143,7 @@
           "version": "v1"
         },
         {
+          "absences": {},
           "activation_norm": 11.1111,
           "artifact_path": "fixtures/bob_kindness_v1.safetensors",
           "attacks": [],
@@ -290,6 +292,7 @@
     {
       "claimants": [
         {
+          "absences": {},
           "activation_norm": 11.1111,
           "artifact_path": "fixtures/dana_refusal_v1.safetensors",
           "attacks": [],
@@ -344,6 +347,7 @@
           "version": "v1"
         },
         {
+          "absences": {},
           "activation_norm": 11.1111,
           "artifact_path": "fixtures/erik_refusal_v1.safetensors",
           "attacks": [],
@@ -397,6 +401,7 @@
           "version": "v1"
         },
         {
+          "absences": {},
           "activation_norm": 11.1111,
           "artifact_path": "fixtures/fern_refusal_v1.safetensors",
           "attacks": [],
@@ -560,16 +565,12 @@
     {
       "claimants": [
         {
+          "absences": {},
           "activation_norm": null,
           "artifact_path": "artifacts/soham/d_olmo3_L24_logistic.safetensors",
           "attacks": [],
           "author": "soham",
-          "axes": [
-            "approach",
-            "approach_probe",
-            "length_independent",
-            "valence"
-          ],
+          "axes": [],
           "chat_template_hash": null,
           "coeff_curve": null,
           "coeff_high": 32.0,
@@ -622,6 +623,7 @@
           "version": "L24"
         },
         {
+          "absences": {},
           "activation_norm": null,
           "artifact_path": "artifacts/soham/d_olmo3_logistic.safetensors",
           "attacks": [],
@@ -690,6 +692,7 @@
           "version": "logistic"
         },
         {
+          "absences": {},
           "activation_norm": null,
           "artifact_path": "artifacts/soham/d_olmo3_lda.safetensors",
           "attacks": [],
@@ -758,6 +761,7 @@
           "version": "lda"
         },
         {
+          "absences": {},
           "activation_norm": null,
           "artifact_path": "artifacts/soham/d_olmo3_v1.safetensors",
           "attacks": [],
@@ -1043,16 +1047,14 @@
     {
       "claimants": [
         {
+          "absences": {
+            "chat_template_hash": "A chat template was applied at capture (d61_capture_v2.py:1730, apply_chat_template with add_generation_prompt=True) but no hash of the template string is computed anywhere in the pipeline; the manifest's tokenizer_hash covers the tokenizer class, length, full vocab and special-token map, not the template, so it is not this value."
+          },
           "activation_norm": null,
           "artifact_path": "vectors/events/trauma_minus_neutral_expository.safetensors",
           "attacks": [],
           "author": "soham",
-          "axes": [
-            "approach",
-            "approach_probe",
-            "length_independent",
-            "valence"
-          ],
+          "axes": [],
           "chat_template_hash": null,
           "coeff_curve": null,
           "coeff_high": null,
@@ -1112,6 +1114,7 @@
         {
           "claimants": [
             {
+              "absences": {},
               "activation_norm": 11.1111,
               "artifact_path": "fixtures/alice_kindness_v1.safetensors",
               "attacks": [
@@ -1227,6 +1230,7 @@
               "version": "v1"
             },
             {
+              "absences": {},
               "activation_norm": 11.1111,
               "artifact_path": "fixtures/bob_kindness_v1.safetensors",
               "attacks": [],
@@ -1393,6 +1397,7 @@
         {
           "claimants": [
             {
+              "absences": {},
               "activation_norm": 11.1111,
               "artifact_path": "fixtures/dana_refusal_v1.safetensors",
               "attacks": [],
@@ -1447,6 +1452,7 @@
               "version": "v1"
             },
             {
+              "absences": {},
               "activation_norm": 11.1111,
               "artifact_path": "fixtures/erik_refusal_v1.safetensors",
               "attacks": [],
@@ -1500,6 +1506,7 @@
               "version": "v1"
             },
             {
+              "absences": {},
               "activation_norm": 11.1111,
               "artifact_path": "fixtures/fern_refusal_v1.safetensors",
               "attacks": [],
@@ -1661,16 +1668,12 @@
         {
           "claimants": [
             {
+              "absences": {},
               "activation_norm": null,
               "artifact_path": "artifacts/soham/d_olmo3_L24_logistic.safetensors",
               "attacks": [],
               "author": "soham",
-              "axes": [
-                "approach",
-                "approach_probe",
-                "length_independent",
-                "valence"
-              ],
+              "axes": [],
               "chat_template_hash": null,
               "coeff_curve": null,
               "coeff_high": 32.0,
@@ -1723,6 +1726,7 @@
               "version": "L24"
             },
             {
+              "absences": {},
               "activation_norm": null,
               "artifact_path": "artifacts/soham/d_olmo3_logistic.safetensors",
               "attacks": [],
@@ -1791,6 +1795,7 @@
               "version": "logistic"
             },
             {
+              "absences": {},
               "activation_norm": null,
               "artifact_path": "artifacts/soham/d_olmo3_lda.safetensors",
               "attacks": [],
@@ -1859,6 +1864,7 @@
               "version": "lda"
             },
             {
+              "absences": {},
               "activation_norm": null,
               "artifact_path": "artifacts/soham/d_olmo3_v1.safetensors",
               "attacks": [],
@@ -2114,16 +2120,14 @@
         {
           "claimants": [
             {
+              "absences": {
+                "chat_template_hash": "A chat template was applied at capture (d61_capture_v2.py:1730, apply_chat_template with add_generation_prompt=True) but no hash of the template string is computed anywhere in the pipeline; the manifest's tokenizer_hash covers the tokenizer class, length, full vocab and special-token map, not the template, so it is not this value."
+              },
               "activation_norm": null,
               "artifact_path": "vectors/events/trauma_minus_neutral_expository.safetensors",
               "attacks": [],
               "author": "soham",
-              "axes": [
-                "approach",
-                "approach_probe",
-                "length_independent",
-                "valence"
-              ],
+              "axes": [],
               "chat_template_hash": null,
               "coeff_curve": null,
               "coeff_high": null,

@@ -256,6 +256,33 @@ def test_a_declared_absence_is_kept_with_its_reason_and_fills_nothing():
     assert shown["model_revision"].startswith("absent: ")
 
 
+def test_the_payload_keys_an_absence_by_the_column_the_row_stores_it_under():
+    """`fields` is keyed for the page's inputs; `absent` is keyed for the row.
+
+    The difference is that a value gets typed into a box and edited, and a
+    reason travels through the page to `/write` as it stands. `sha256` is the
+    one field whose two spellings differ, and it is the one that would have
+    landed against a field nothing else calls by that name.
+    """
+    payload = handoff.received(block(CORE + "not-found: sha256 nobody hashed "
+                                            "the published file\n"))
+    assert set(payload["absent"]) == {"artifact_sha256"}
+    assert "nobody hashed" in payload["absent"]["artifact_sha256"]
+
+
+def test_a_reason_can_name_a_field_this_document_has_never_heard_of():
+    """The field side of an absence is open, the same as every value side.
+
+    A list of the fields allowed an explanation is the closed enumeration one
+    level down, so a name nothing here knows passes through rather than being
+    corrected to one that is known or dropped for not being.
+    """
+    payload = handoff.received(
+        block(CORE + "not-found: tokenizer_build_id the build id is not "
+                     "written into any manifest in that pipeline\n"))
+    assert "tokenizer_build_id" in payload["absent"]
+
+
 def test_a_quoted_reply_with_no_closing_marker_still_reads():
     quoted = "\n".join(
         "> " + line for line in block(CORE).splitlines()

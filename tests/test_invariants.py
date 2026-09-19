@@ -237,6 +237,31 @@ def test_no_check_constraint_enumerates_strings():
     )
 
 
+def test_no_column_pairs_an_explanation_to_one_named_field():
+    """The same closed set, arriving as a column rather than as a CHECK.
+
+    `schema/migrations/008` records why a field is absent, keyed by field name.
+    The version that reads as obvious is a column beside each field,
+    `chat_template_hash_reason` next to `chat_template_hash`, and it is the
+    trip-wire case wearing a schema hat: the set of fields allowed an
+    explanation becomes whatever somebody thought of, and the next person with
+    an absence worth explaining has to ask for a migration.
+
+    The generic association has no such set, and this is what keeps the next
+    convenient column from quietly reintroducing one. A bare `reason` is the
+    association's own and does not match.
+    """
+    ddl = strip_sql_comments(sql_text())
+    offenders = [
+        line.strip() for line in ddl.splitlines()
+        if re.match(r"\s*\w+_(reason|absence|absent|why)\b", line, re.I)
+    ]
+    assert not offenders, (
+        "An explanation bound to one named field enumerates which fields may "
+        "carry one. Key it by field name instead:\n" + "\n".join(offenders)
+    )
+
+
 # --------------------------------------------------------------------------- #
 # 5. Any label namespace permits an unlimited number of claimants.
 

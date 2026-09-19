@@ -1,0 +1,22 @@
+---
+// Why a field has no value, printed beside the absence.
+//
+// Authored prose, so it carries `data-authored` for the reason the 2026-09-19
+// decision gives: a reason names files, line numbers and sometimes figures, and
+// the falsifier reads every number outside a marked region as one this registry
+// derived. `falsifier/verify.py check_authored_regions_are_marked` fails the
+// build if one of these renders unmarked, so the attribute is a contract rather
+// than a class name.
+//
+// Renders nothing when there is no reason, which is the ordinary case. An
+// absence nobody accounted for is a state and not a gap, and a line saying "no
+// reason given" would turn it into one.
+interface Props {
+  reasons: Record<string, string>;
+  field: string;
+}
+const { reasons, field } = Astro.props;
+const reason = (reasons ?? {})[field];
+---
+
+{reason && <span class="absence-reason" data-authored>{reason}</span>}

@@ -108,6 +108,28 @@ refused by `registry.fetch.commit_sha`. A digest that disagrees is refused by
 
 No eval is written. A submission with none is a normal state.
 
+## What was looked for and is not there
+
+An absence is a positive statement with a reason, never an omission. The prompt
+handoff asks for one on a `not-found:` line, which takes the field name and the
+sentence, and the boxes those come back in sit under the paste region. Edit them,
+or clear one to drop it. They are recorded beside the row and render next to the
+absence on the page.
+
+The field name is an open string. `schema/migrations/008` keys a reason to
+whatever it is about and nothing enumerates which fields may carry one, so a
+reason about something this form has no box for is stored and shown rather than
+refused.
+
+Most absences have no reason and never will, and that is not a lesser record. An
+absence nobody accounted for renders exactly as it did before the table existed:
+the field says absent and says nothing else.
+
+A value and a reason for the same field is refused. Those are two claims about
+one field and nothing here can tell which was meant, so neither is written and
+the refusal names the field. Preferring either would delete one of your two
+sentences without saying so.
+
 ## The record, and `make site`
 
 Rows go into `registry.db` and into `artifacts/intake.jsonl`, which is the copy
@@ -118,18 +140,17 @@ the one function that turns an entry into rows, so the live write and the replay
 cannot come apart. That is the argument `artifacts/published.json` already makes
 about two columns, applied to twenty.
 
-After a rebuild:
+`make site` calls the replay itself, between the two seeders and the export:
 
 ```
 .venv/bin/python artifacts/intake.py replay
 ```
 
-**`make site` does not call this yet, on purpose.** `falsifier/verify.py` fails a
-row whose `artifact_path` has no file on disk, and every row this writes is one of
-those: the bytes are at a pinned remote and not here. Wiring the replay into the
-build needs that check to learn that a pinned remote with no local copy is a
-state rather than a missing file, which is a decision about the falsifier and not
-something to slip in through a form.
+That was a manual step for exactly as long as `falsifier/verify.py` failed any
+row whose `artifact_path` has no file on disk, which every row this writes is:
+the bytes are at a pinned remote and not here. `_pinned` tells a pin apart from
+a missing file, and the run prints how many rows it did not recheck. See
+`DECISIONS.md` 2026-09-19.
 
 ## Uploading
 

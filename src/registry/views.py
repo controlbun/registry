@@ -63,22 +63,8 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         for r in reports
         if r["evaluator"] != row["author"]
     ]
-    # Which axes were checked **on this artifact**, reached through the reports
-    # that actually point at it.
+    # Which axes were checked on this artifact.
     #
-    # This selected on `author` alone, which is a different question and a
-    # damaging one to answer by accident: it handed every submission by an
-    # author the axes from every suite that author had ever written. A real
-    # submission with no confound data at all rendered "Confound axes checked:
-    # approach, approach_probe, length_independent, valence", borrowed from the
-    # same author's unrelated work on another label and another model, two
-    # lines above a caption correctly saying no axes were checked.
-    #
-    # A page claiming a measurement nobody took is the one failure this project
-    # cannot absorb, and an author's own name is the last join anybody would
-    # think to distrust. `eval_report` is what ties a suite to an intervention,
-    # so that is the path, and an artifact nobody evaluated gets an empty list
-    # rather than somebody else's.
     # **A suite declares a battery; a report says what was actually run.** So
     # the axes read off the results, not off the suite: an axis is checked for
     # this artifact when this artifact's own report carries a number for it.
@@ -179,6 +165,11 @@ def claimant_view(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "support": support,
         "verifications": verifications,
         "recipe": recipe,
+        # Authored prose. It renders inside a `data-authored` region for the
+        # reason the 2026-09-19 decision gives: a reason carries file names,
+        # line numbers and sometimes figures, and the falsifier reads every
+        # number outside a marked region as one this registry asserts.
+        "absences": absences,
         "shape": iv["shape"] if iv else None,
         "dtype": iv["dtype"] if iv else None,
         "l2_norm": iv["l2_norm"] if iv else None,

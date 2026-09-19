@@ -1,0 +1,95 @@
+-- 008_absence_reason.sql
+--
+-- Why a field is absent, in the words of whoever looked for it.
+--
+-- Premise, restated because a premise stated in one migration gets violated in
+-- every other one: the registry never designates. That applies here twice over,
+-- once to which fields may carry a reason and once to what a reason may say.
+--
+-- **The hole this closes.** `artifacts/agent_handoff.py` has asked for this
+-- since it existed. Its central rule is that an absence is a positive statement
+-- with a reason and never an omission, the prompt's `not-found:` line takes the
+-- field name and the sentence, `parse` captures both and `received` hands both
+-- back. Then the page dropped the sentence on the floor and wrote the row
+-- without it. The first real submission is the case: it recorded
+-- `chat_template_hash` NULL and threw away
+--
+--   "A chat template was applied at capture (d61_capture_v2.py:1730,
+--    apply_chat_template with add_generation_prompt=True) but no hash of the
+--    template string is computed anywhere in the pipeline; the manifest's
+--    tokenizer_hash covers the tokenizer class, length, full vocab and
+--    special-token map, not the template, so it is not this value."
+--
+-- That is the difference between an absence a reader can act on and an empty
+-- cell. 005 said absence renders as absence and 007 said a row nobody recorded
+-- a host for is not backfilled; both are about not inventing a value. This is
+-- the other half: keeping the account of why there is none.
+--
+-- **An association keyed by field name, and that is the whole design.** A
+-- column per field, `chat_template_hash_reason` beside `chat_template_hash`,
+-- would be the closed enumeration wearing a schema hat: the set of fields
+-- allowed to carry a reason would be whatever somebody thought of, and the next
+-- person with an absence worth explaining would have nowhere to put it and
+-- would have to ask. `field` here is an open string. Nothing enumerates which
+-- names it may take, there is no CHECK, and no foreign key onto a column list,
+-- because a list of the fields we happen to have met is the same object
+-- `registry.ingest` refuses to write about file formats and `PinnedRepoFile`
+-- refuses to write about hosts.
+--
+-- Common values are the intervention's own nullable columns, documented and
+-- enforced nowhere: `model_revision`, `chat_template_hash`, `activation_norm`,
+-- `coeff_low`, `coeff_high`, `steering_position`, `license_status`,
+-- `artifact_repo`, `artifact_commit`, `artifact_host`,
+-- `artifact_url_template`, `artifact_sha256`. A name outside that set stores
+-- and renders; what it does not do is contradict a value, because there is no
+-- value of that name to contradict.
+--
+-- **A reason and a value are mutually exclusive, and the contradiction is
+-- refused rather than resolved.** A row saying both `chat_template_hash =
+-- '9f0c...'` and "there is no chat template hash anywhere in the pipeline" is
+-- two claims by one author about one field and nothing here can tell which was
+-- meant. Deciding a winner in the schema, or in the writer, would pick one of
+-- somebody's two sentences and delete the other silently. So neither wins:
+-- `artifacts/intake.py insert` refuses the whole entry and names the fields,
+-- which covers the live write and the replay because both call it. A CHECK
+-- cannot express this, since the value is in another table's row.
+--
+-- **Absence of a reason is the ordinary case and is not a lesser state.** Most
+-- absences have none and never will. No row here means nobody wrote one down,
+-- which renders exactly as it rendered before this migration: the field says
+-- absent and says nothing else. Requiring a reason would be the required field
+-- the trip-wire list names, arriving through a second table.
+--
+-- **`reason` is NOT NULL and that is not a required field.** A row exists here
+-- only because somebody wrote a sentence; an absence with no sentence is no
+-- row, not a row with a NULL in it. Neither column is a measurement, so neither
+-- carries an `-- eval-result` marker, exactly as 004, 006 and 007 say of their
+-- own columns.
+--
+-- **What this makes impossible to express.** A reason for an absence on
+-- anything but an intervention. A support card with no `observed`, an eval
+-- report with no transfer score and a submission with no recipe are all
+-- absences somebody might want to account for, and this table cannot hold any
+-- of them: it is keyed on `intervention_id` and carries a foreign key to it.
+-- Widening it means either dropping that key or naming the kind of subject,
+-- and naming the kind is an enumeration of the objects allowed to explain
+-- themselves. Left for whoever has the second case, with the shape of the
+-- problem written down here rather than discovered later.
+--
+-- Also impossible: two reasons for one field on one intervention. The primary
+-- key is the pair. One author, one field, one account of it; a second opinion
+-- about somebody else's absence is a different object, and the registry
+-- already has one for that in `attack`.
+
+CREATE TABLE intervention_absence (
+    intervention_id     TEXT    NOT NULL REFERENCES intervention (id),
+    -- Open string. Whatever the author's account is about. See above for the
+    -- common values and for why there is no list.
+    field               TEXT    NOT NULL,
+    -- The author's own prose. Rendered inside a `data-authored` region, per the
+    -- 2026-09-19 decision: it can carry file names, line numbers and figures,
+    -- and the falsifier scans every number outside a marked region as one this
+    -- registry asserts.
+    reason              TEXT    NOT NULL,
+    PRIMARY KEY (intervention_id, field)
+);

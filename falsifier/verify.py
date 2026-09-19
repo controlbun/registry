@@ -348,15 +348,38 @@ def check_published_numbers_are_accounted_for(payload: dict) -> None:
                                   "in the exported data")
 
 
+def _authored_texts(payload: dict) -> list[tuple[dict, str]]:
+    """Every run of prose the site attributes to a person, with whose it is.
+
+    Definitions and the reasons beside an absence. Both are one author's own
+    words and both carry numerals: a definition quotes its own measurements,
+    and a reason names the file and line where the value was looked for. The
+    second kind joined this list with `schema/migrations/008`, which is when
+    the first one existed.
+
+    Keyed off the export rather than off the page, so a region that stopped
+    being marked is found by its absence from the marked side rather than by
+    somebody remembering to look for it.
+    """
+    out: list[tuple[dict, str]] = []
+    for entry in payload["labels"]:
+        for claimant in entry["claimants"]:
+            out.append((claimant, " ".join((claimant.get("definition") or "").split())))
+            for reason in (claimant.get("absences") or {}).values():
+                out.append((claimant, " ".join((reason or "").split())))
+    return [(c, t) for c, t in out if t]
+
+
 def check_authored_regions_are_marked(payload: dict) -> None:
     """The exclusion in `text_of` is only as good as the marking, so: is it marked.
 
     Two ways this goes wrong and both are checked.
 
-    **A definition rendered without the attribute** puts the author's numbers
+    **Authored prose rendered without the attribute** puts the author's numbers
     back under the registry's own assertion, which is the thing the marking
-    exists to prevent. So every claimant definition in the export has to turn
-    up inside a marked region on some built page.
+    exists to prevent. So every claimant definition in the export, and every
+    reason recorded beside an absence, has to turn up inside a marked region on
+    some built page.
 
     **A page that marks everything** reads as entirely quoted and is scanned
     for nothing, which would let a template bug publish any figure it liked.
@@ -367,17 +390,17 @@ def check_authored_regions_are_marked(payload: dict) -> None:
     Neither is hypothetical in the way the rest of this file's checks are. The
     marking arrived the same day as the first definition containing numerals,
     which is to say the day the question could first be got wrong.
+
+    **An absence with no reason is nothing here.** Most absences have none and
+    never will, and there is nothing to mark for those, so they neither pass
+    nor fail this. A missing reason is not a finding anywhere in this project.
     """
     pages = sorted(DIST.rglob("index.html"))
     if not pages:
         fail("authored", "no built pages found; run `make site` before verifying")
         return
 
-    definitions = [
-        (claimant, " ".join((claimant.get("definition") or "").split()))
-        for entry in payload["labels"] for claimant in entry["claimants"]
-    ]
-    definitions = [(c, t) for c, t in definitions if t]
+    authored = _authored_texts(payload)
 
     # The question is not whether a definition is marked somewhere. It is
     # whether one is **rendered outside** a marked region, which is the state
@@ -390,11 +413,11 @@ def check_authored_regions_are_marked(payload: dict) -> None:
     # wraps and collapses whitespace and this is asking where the text sits,
     # not whether it survived character for character.
     unmarked = " ".join(" ".join(text_of(page).split()) for page in pages)
-    for claimant, text in definitions:
+    for claimant, text in authored:
         if text[:60] in unmarked:
             fail("authored",
                  f"{claimant['author']}/{claimant['label']}@"
-                 f"{claimant['version']}: the definition renders outside any "
+                 f"{claimant['version']}: {text[:60]!r} renders outside any "
                  "`data-authored` region, so its numbers are scanned as the "
                  "registry's own and a figure the author is quoting reads as "
                  "one this registry derived")

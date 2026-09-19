@@ -437,7 +437,11 @@ def test_a_pre_007_database_upgrades_and_resolves_the_same(server, tmp_path):
         "1,'t.safetensors','org/repo',?)", (SHA,))
     conn.commit()
 
-    assert db.migrate(conn) == ["007_any_host.sql"]
+    # The first thing applied, not the only thing. This asserted the whole list
+    # and so quietly became a claim about how many migrations exist after 007,
+    # which broke on 008 and had nothing to do with what is under test here.
+    applied = db.migrate(conn)
+    assert applied and applied[0] == "007_any_host.sql", applied
     row = conn.execute(
         "SELECT artifact_host, artifact_url_template FROM intervention"
     ).fetchone()

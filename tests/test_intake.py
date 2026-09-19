@@ -492,6 +492,227 @@ def test_an_unmeasured_field_records_as_absent_and_never_as_zero(tool):
 
 
 # --------------------------------------------------------------------------- #
+# An absence is a positive statement with a reason, and the reason has to land.
+#
+# `agent_handoff` has captured these since it existed and the write path dropped
+# them on the floor, so the first real submission recorded a NULL where its
+# author had written a paragraph about where he looked. These check the whole
+# run, because every hop in it was already correct on its own.
+
+
+# Not a measurement of anything and says so. The reason a fixture absence gets
+# is a sentence about this test suite, because `fixtures/SYNTHETIC.md` means
+# invented prose as much as invented numbers.
+WHY_NO_TEMPLATE = ("Written by the test suite. No chat template was applied to "
+                   "this synthetic ramp because nothing generated text with it.")
+
+
+def test_a_reason_for_an_absence_survives_the_row_the_record_and_the_replay(tool):
+    """The whole run: the page's paste region to a rebuilt database.
+
+    Every hop was correct before this and the reason still reached nothing,
+    because `/agent-paste` handed it to a page that did not pass it on.
+    """
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    assert code == 200, checked
+    code, written = tool.post_json("/write", {
+        "handle": checked["handle"],
+        "fields": link_fields(),
+        "absent": {"chat_template_hash": WHY_NO_TEMPLATE},
+    })
+    assert code == 200, written
+
+    row, = tool.rows()
+    assert row["chat_template_hash"] is None, "the value was invented from a reason"
+
+    def reasons(database) -> dict[str, str]:
+        conn = db.connect(database)
+        try:
+            return {r["field"]: r["reason"] for r in conn.execute(
+                "SELECT field, reason FROM intervention_absence"
+                " WHERE intervention_id = ?", (row["id"],))}
+        finally:
+            conn.close()
+
+    assert reasons(tool.database) == {"chat_template_hash": WHY_NO_TEMPLATE}
+
+    entry, = intake.read_record(tool.record)
+    assert entry["absent"] == {"chat_template_hash": WHY_NO_TEMPLATE}, (
+        "the reason is in the database and not in the record, so `make site` "
+        "drops it on the next rebuild. That is what `published.json` taught "
+        "about two columns and `intake.jsonl` about twenty."
+    )
+
+    Path(tool.database).unlink()
+    conn = db.connect(tool.database)
+    db.migrate(conn)
+    try:
+        intake.replay(conn, tool.record)
+    finally:
+        conn.close()
+    assert reasons(tool.database) == {"chat_template_hash": WHY_NO_TEMPLATE}
+
+
+def test_a_value_and_a_reason_for_the_same_field_is_refused_and_neither_wins(tool):
+    """Two claims about one field, and nothing here can tell which was meant.
+
+    Refused rather than resolved, because preferring the value deletes the
+    author's sentence and preferring the sentence deletes the author's value,
+    and both happen silently while the entry still reads correct to whoever
+    wrote it.
+    """
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    code, refused = tool.post_json("/write", {
+        "handle": checked["handle"],
+        "fields": link_fields(chat_template_hash="c" * 64),
+        "absent": {"chat_template_hash": WHY_NO_TEMPLATE},
+    })
+    assert code == 400, refused
+    assert "chat_template_hash" in refused["refused"]
+    assert not tool.rows(), "a contradiction was half written"
+    assert not intake.read_record(tool.record), (
+        "the record kept a line describing a row the database refused"
+    )
+
+
+def test_the_refusal_is_in_insert_so_a_hand_edited_record_cannot_walk_past_it(tool):
+    """`replay` is the other caller, and a rebuild is where this would slip.
+
+    A record is a text file somebody can correct. The check lives in the one
+    function both the live write and the rebuild go through, so a contradiction
+    typed into it is stopped at `make site` rather than written silently.
+    """
+    entry = {
+        "author": "probe", "label": "kindness", "version": "v1",
+        "definition": "A synthetic probe submission written by the test suite.",
+        "created_at": "2026-09-18T00:00:00Z",
+        "absent": {"model_revision": "Nobody recorded which weights these were."},
+        "intervention": {
+            "id": "iv_probe_v1", "kind": "direction",
+            "model_id": "placeholder/does-not-resolve-1b",
+            "model_revision": "d" * 40,
+            "layer": 3, "layer_convention": "block-0indexed",
+            "hook_point": "resid_post", "shape": "[8]", "dtype": "float32",
+            "artifact_path": REMOTE_PATH,
+        },
+    }
+    conn = db.connect(tool.database)
+    db.migrate(conn)
+    try:
+        with pytest.raises(intake.Refused) as refused:
+            intake.insert(conn, entry)
+    finally:
+        conn.close()
+    assert "model_revision" in str(refused.value)
+
+
+def test_a_reason_can_be_about_a_field_nothing_here_has_a_list_of(tool):
+    """The field side is an open string, which is the whole design.
+
+    A column per field would be the closed enumeration wearing a schema hat:
+    the set of fields allowed an explanation would be whatever somebody thought
+    of first, and the next person with an absence worth explaining would have
+    to ask. So a name this repository has never seen stores and comes back.
+    """
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    made_up = "tokenizer_build_id"
+    code, written = tool.post_json("/write", {
+        "handle": checked["handle"],
+        "fields": link_fields(),
+        "absent": {made_up: "Written by the test suite about a field nobody "
+                            "has declared anywhere."},
+    })
+    assert code == 200, written
+    conn = db.connect(tool.database)
+    try:
+        stored = [r["field"] for r in conn.execute(
+            "SELECT field FROM intervention_absence")]
+    finally:
+        conn.close()
+    assert stored == [made_up]
+
+
+def test_an_absence_with_no_reason_is_the_ordinary_case_and_writes_nothing(tool):
+    """Most absences have none and never will. That is not a lesser record.
+
+    A missing reason is not a finding anywhere in this project, so the row goes
+    in unchanged and the association table stays empty rather than gaining a
+    line saying nobody explained anything.
+    """
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    code, written = tool.post_json("/write", {
+        "handle": checked["handle"],
+        "fields": link_fields(),
+        # A blank one is dropped, not stored: an empty reason reads on a page
+        # exactly like a reason nobody gave, and only one of them is honest.
+        "absent": {"chat_template_hash": "   "},
+    })
+    assert code == 200, written
+    row, = tool.rows()
+    assert row["chat_template_hash"] is None
+    conn = db.connect(tool.database)
+    try:
+        assert conn.execute(
+            "SELECT COUNT(*) FROM intervention_absence").fetchone()[0] == 0
+    finally:
+        conn.close()
+    assert intake.read_record(tool.record)[0]["absent"] == {}
+
+
+def test_a_record_written_before_008_replays_untouched(tool):
+    """Every line in `artifacts/intake.jsonl` predates this feature.
+
+    An entry with no `absent` key at all is not an entry with a problem. It is
+    what the record looked like the day before, and the rebuild has to take it
+    without a backfill, which is 005's argument about `model_revision` and
+    007's about the host.
+    """
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    tool.post_json("/write", {"handle": checked["handle"],
+                              "fields": link_fields()})
+    entry, = intake.read_record(tool.record)
+    entry.pop("absent")
+    tool.record.write_text(json.dumps(entry, sort_keys=True) + "\n")
+
+    Path(tool.database).unlink()
+    conn = db.connect(tool.database)
+    db.migrate(conn)
+    try:
+        assert intake.replay(conn, tool.record) == ["probe/kindness@v1"]
+    finally:
+        conn.close()
+
+
+def test_the_page_carries_the_reasons_to_the_write_and_builds_them_from_the_paste(tool):
+    """The seam that was missing: the paste region had them and dropped them.
+
+    Read off the page rather than asserted about the server, because the server
+    was already right. What was wrong is the eighteen lines of script between
+    `/agent-paste` answering and `/write` being posted.
+    """
+    code, body = tool.call("/")
+    page = body.decode()
+    assert "res.body.absent" in page, (
+        "the page never reads the absences `/agent-paste` returns, which is "
+        "the hop where the author's account of an absence was lost"
+    )
+    assert "absent: absences()" in page, (
+        "the page reads them and does not post them, which is the same bug one "
+        "line further on"
+    )
+    assert "data-absent" in page and "[data-absent]" in page, (
+        "the reasons are not read back off the page the way `fields` is, so "
+        "there are two ways of getting a value out of this form"
+    )
+    assert "<select" not in page.lower()
+
+
+# --------------------------------------------------------------------------- #
 # Reachable from here and from nowhere else.
 
 

@@ -299,3 +299,47 @@ def test_every_definition_is_marked_as_the_authors_words():
         assert text[:60] not in unmarked, (
             f"a definition renders outside a `data-authored` region: {text[:60]!r}"
         )
+
+
+def test_a_reason_for_an_absence_renders_beside_the_absence_and_is_marked():
+    """An absence with an account of it reads as both, not as one or the other.
+
+    The absence still says absent, which is invariant 7 and must not change.
+    What is new is the sentence next to it, which is the author's own prose and
+    carries the file names and line numbers that make it worth anything, so it
+    sits inside a `data-authored` region like every other quoted run on this
+    site.
+
+    Skipped rather than asserted when no submission in the corpus records one:
+    most absences have none, no fixture invents one, and a test that demanded a
+    reason exist would be the required field arriving through the suite.
+    """
+    payload = json.loads(
+        (ROOT / "astro" / "src" / "data" / "registry.json").read_text())
+    accounted = [
+        (c, field, reason)
+        for entry in payload["labels"] for c in entry["claimants"]
+        for field, reason in (c.get("absences") or {}).items()
+    ]
+    if not accounted:
+        pytest.skip("no absence in the corpus carries a reason")
+
+    pages = {p: p.read_text() for p in every_page()}
+    for claimant, field, reason in accounted:
+        ref = f"{claimant['author']}/{claimant['label']}@{claimant['version']}"
+        text = " ".join(reason.split())
+        shown = [body for body in pages.values() if text[:60] in
+                 " ".join(text_of(body).split())]
+        assert shown, f"{ref}: nothing renders the reason recorded for {field}"
+        for body in shown:
+            assert text[:60] not in " ".join(
+                text_of(body, authored=False).split()), (
+                f"{ref}: the reason for {field} renders outside a "
+                "`data-authored` region, so its file names and line numbers "
+                "are scanned as figures this registry derived"
+            )
+            assert "not recorded" in body, (
+                f"{ref}: the reason replaced the absence instead of standing "
+                "beside it. An absence renders as its own state, and an "
+                "explanation is not a value."
+            )

@@ -150,6 +150,51 @@ def test_a_fabricated_figure_published_without_its_marker(tree):
         page.write_text(original)
 
 
+def test_a_reason_beside_an_absence_that_renders_unmarked(tree):
+    """The marking guard covers the other kind of authored prose too.
+
+    A reason names the file and the line where somebody looked for a value, so
+    it carries numerals the same way a definition quoting its own measurements
+    does. Rendered outside a `data-authored` region it goes under the number
+    scan as a figure this registry derived, which is the reading the 2026-09-19
+    decision exists to stop.
+
+    The reason here is a sentence this test wrote about a fixture, which is why
+    it says so: `fixtures/SYNTHETIC.md` covers invented prose as much as
+    invented numbers.
+    """
+    path = tree / "astro" / "src" / "data" / "registry.json"
+    original = path.read_text()
+    payload = json.loads(original)
+    claimant = payload["labels"][0]["claimants"][0]
+    reason = ("Written by the test suite about a fixture. Nothing hashed a "
+              "chat template here because nothing generated any text.")
+    claimant["absences"] = {"chat_template_hash": reason}
+    path.write_text(json.dumps(payload))
+
+    page = tree / "astro" / "dist" / "probe" / "index.html"
+    was = page.read_text()
+    try:
+        page.write_text(was.replace("</p>", f"</p><p>{reason}</p>"))
+        assert run(tree) == 1, (
+            "a reason rendered with no `data-authored` on it passed, so the "
+            "exclusion in `text_of` is worth less than the marking it assumes"
+        )
+        # Padded with ordinary page copy, because the other half of this guard
+        # fails a page that is more quoted prose than page and this stand-in
+        # page is one sentence long.
+        filler = " ".join(["The registry never designates and a consumer pins."] * 8)
+        page.write_text(was.replace(
+            "</p>", f"</p><p>{filler}</p><p data-authored>{reason}</p>"))
+        assert run(tree) == 0, (
+            "the same reason inside a marked region failed, so the guard is "
+            "refusing the prose rather than checking where it sits"
+        )
+    finally:
+        page.write_text(was)
+        path.write_text(original)
+
+
 def test_a_missing_artifact_is_not_silently_skipped(tree):
     held = tree / "fixtures" / "alice_kindness_v1.safetensors"
     moved = held.with_suffix(".held")

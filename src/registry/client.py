@@ -14,7 +14,9 @@ Three things it refuses to do, because the registry refuses to do them:
   use, so ranking on measured effect favors the confounded one.
 - **A missing measurement is `None`.** Never 0.0, never omitted from the object.
   You can ask whether something was measured; you cannot be handed a number that
-  nobody produced.
+  nobody produced. Where somebody wrote down why there is none, `absences`
+  carries that sentence, because an absence with a reason and an absence nobody
+  looked into are different states and only one of them tells you what to do.
 
 Deliberately not here: an nnsight or steering-vectors adapter. Neither library is
 installed, and writing an integration against a remembered API signature is how
@@ -126,6 +128,13 @@ class Submission:
     attacks: list[dict]
     verifications: list[dict]
     is_synthetic: bool
+    # Why a field on the contract has no value, keyed by the column it is
+    # about. Empty for almost every submission, which is the ordinary state:
+    # `contract.chat_template_hash is None` has always been answerable and this
+    # is the other question, whether anybody said why. See
+    # schema/migrations/008. Open on the field side, so a key here is whatever
+    # the author accounted for and not a member of a set this client knows.
+    absences: dict[str, str] = field(default_factory=dict)
     _artifact_path: str | None = None
     # Where the author published it, and where we serve a copy from, kept apart
     # on purpose. See 004_served_copy.sql: one pair of columns cannot express a
@@ -340,6 +349,7 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
         attacks=[dict(a) for a in view["attacks"]],
         verifications=view["verifications"],
         is_synthetic=view["is_synthetic"],
+        absences=view["absences"],
         _artifact_path=iv["artifact_path"] if iv else None,
         _artifact_repo=iv["artifact_repo"] if iv else None,
         _artifact_commit=iv["artifact_commit"] if iv else None,

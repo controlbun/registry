@@ -8,6 +8,7 @@
 // wrong and then appears not to work.
 import SweepChart from "./SweepChart.astro";
 import ConfoundChart from "./ConfoundChart.astro";
+import AbsenceReason from "./AbsenceReason.astro";
 
 interface Props {
   claimant: any;
@@ -16,6 +17,22 @@ interface Props {
 const { claimant: c, modelId } = Astro.props;
 const fmt = (v) => (v === null || v === undefined ? null : v.toFixed(4));
 const r = c.recipe;
+
+// Why a field has no value, in the author's words. Empty for almost every
+// submission and that is the ordinary state: an absence with nobody's account
+// of it renders as it always did, and a missing reason is not a finding.
+const absences = c.absences ?? {};
+
+// Which of them this card already prints beside the field itself. A layout
+// fact about this card, not a list of the fields allowed a reason: the schema
+// puts no set on the field name, so anything not named here still has to reach
+// the reader rather than being silently dropped. `elsewhere` is how.
+const beside = [
+  "model_revision", "chat_template_hash", "steering_position",
+  "coeff_low", "coeff_high", "l2_norm", "activation_norm", "license_status",
+  "shape", "dtype",
+];
+const elsewhere = Object.entries(absences).filter(([f]) => !beside.includes(f));
 ---
 
 <div class="card">
@@ -128,18 +145,27 @@ const r = c.recipe;
         <dt>revision</dt>
         <dd class="mono">
           {c.model_revision ?? <span class="absent">not recorded</span>}
+          <AbsenceReason reasons={absences} field="model_revision" />
         </dd>
         <dt>layer</dt><dd>{c.layer} <span class="meta">{c.layer_convention}</span></dd>
         <dt>hook point</dt><dd class="mono">{c.hook_point}</dd>
         <dt>chat template</dt>
-        <dd class="mono">{c.chat_template_hash ?? "not recorded"}</dd>
+        <dd class="mono">
+          {c.chat_template_hash ?? <span class="absent">not recorded</span>}
+          <AbsenceReason reasons={absences} field="chat_template_hash" />
+        </dd>
         <dt>steering position</dt>
-        <dd>{c.steering_position ?? <span class="absent">not recorded</span>}</dd>
+        <dd>
+          {c.steering_position ?? <span class="absent">not recorded</span>}
+          <AbsenceReason reasons={absences} field="steering_position" />
+        </dd>
         <dt>coefficient</dt>
         <dd>
           {c.coeff_low === null
             ? <span class="absent">not recorded</span>
             : `${c.coeff_low} to ${c.coeff_high}`}
+          <AbsenceReason reasons={absences} field="coeff_low" />
+          <AbsenceReason reasons={absences} field="coeff_high" />
         </dd>
       </dl>
       <p class="why">
@@ -152,13 +178,26 @@ const r = c.recipe;
     <div class="panel">
       <h3>Tensor</h3>
       <dl class="spec tight">
-        <dt>shape</dt><dd class="mono">{c.shape}</dd>
-        <dt>dtype</dt><dd class="mono">{c.dtype}</dd>
-        <dt>L2 norm</dt><dd>{c.l2_norm ?? <span class="absent">not recorded</span>}</dd>
+        <dt>shape</dt>
+        <dd class="mono">
+          {c.shape}
+          <AbsenceReason reasons={absences} field="shape" />
+        </dd>
+        <dt>dtype</dt>
+        <dd class="mono">
+          {c.dtype}
+          <AbsenceReason reasons={absences} field="dtype" />
+        </dd>
+        <dt>L2 norm</dt>
+        <dd>
+          {c.l2_norm ?? <span class="absent">not recorded</span>}
+          <AbsenceReason reasons={absences} field="l2_norm" />
+        </dd>
         <dt>activation norm</dt>
         <dd>
           {c.activation_norm ?? <span class="absent">not recorded</span>}
           <span class="meta">at that layer</span>
+          <AbsenceReason reasons={absences} field="activation_norm" />
         </dd>
         <dt>format</dt><dd class="mono">safetensors</dd>
       </dl>
@@ -175,7 +214,8 @@ const r = c.recipe;
         <dd>
           {c.license_status === "unresolved"
             ? <span class="uninterpretable">unresolved</span>
-            : c.license_status}
+            : c.license_status ?? <span class="absent">not recorded</span>}
+          <AbsenceReason reasons={absences} field="license_status" />
         </dd>
         <dt>downloads</dt><dd><span class="absent">not tracked</span></dd>
         <dt>stars</dt><dd><span class="absent">not tracked</span></dd>
@@ -186,5 +226,24 @@ const r = c.recipe;
         checked, and an artifact whose rights are unresolved cannot be served.
       </p>
     </div>
+
+    {elsewhere.length > 0 && (
+      <div class="panel">
+        <h3>Also accounted for</h3>
+        <dl class="spec tight">
+          {elsewhere.map(([field, reason]) => (
+            <>
+              <dt class="mono">{field}</dt>
+              <dd><span class="absence-reason" data-authored>{reason}</span></dd>
+            </>
+          ))}
+        </dl>
+        <p class="why">
+          Absences about fields this card has no line for. The schema puts no set
+          on which field a reason may be about, so there is nowhere to drop one
+          quietly: anything not printed beside its own field lands here.
+        </p>
+      </div>
+    )}
   </aside>
 </div>

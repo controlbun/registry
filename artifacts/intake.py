@@ -135,6 +135,42 @@ def append_record(entry: dict, path: Path | None = None) -> None:
         handle.write(json.dumps(entry, sort_keys=True) + "\n")
 
 
+def absences_of(entry: dict) -> dict[str, str]:
+    """The declared absences on one entry, keyed by the column each is about.
+
+    Absent from an entry written before `schema/migrations/008`, and empty on
+    most of the ones written after it. Neither is a lesser record: an absence
+    with nobody's account of it is the ordinary case and renders exactly as it
+    rendered before the column existed.
+
+    Read through one function because three callers ask the same question of a
+    key that is optional, and `entry["absent"]` on a 2026-09-18 line is a
+    KeyError rather than an empty answer.
+    """
+    return {field: reason for field, reason in (entry.get("absent") or {}).items()
+            if str(reason).strip()}
+
+
+def contradictions(entry: dict) -> list[str]:
+    """Fields this entry gives both a value and a reason for having none.
+
+    Two claims by one author about one field, and nothing here can tell which
+    was meant. Naming them is all this does; refusing is `insert`'s job and the
+    refusal is the whole point, because either way of resolving it deletes one
+    of somebody's two sentences without saying so.
+
+    A reason whose field is not a column in the row cannot contradict anything,
+    so it is not looked at. That is the open half: the field side of an absence
+    takes any string, and this asks about the ones the row happens to hold
+    rather than about a list of the ones it may hold.
+    """
+    iv = entry["intervention"]
+    return sorted(
+        field for field in absences_of(entry)
+        if field in iv and iv[field] is not None and str(iv[field]).strip() != ""
+    )
+
+
 def insert(conn: sqlite3.Connection, entry: dict) -> None:
     """Write one entry's submission and intervention rows.
 
@@ -148,8 +184,24 @@ def insert(conn: sqlite3.Connection, entry: dict) -> None:
     `apply_pins`, and the difference is that `seed.py` does not know the pin when
     it inserts and this does: the pin is what the form just checked, and it is
     the reason the row is being written at all.
+
+    **A value and a reason for having none is refused here and nowhere else.**
+    Here because this is where it is written, and both the live write and
+    `replay` come through it, so a hand-corrected record cannot get a
+    contradiction past the rebuild. Refused rather than resolved: preferring the
+    value would drop the author's sentence and preferring the sentence would
+    drop the author's value, and both happen silently while the entry still
+    reads correct to whoever wrote it.
     """
     iv = entry["intervention"]
+    both = contradictions(entry)
+    if both:
+        raise Refused(
+            f"{', '.join(both)} came back with a value and a reason for having "
+            "none. Those are two claims about one field and nothing here can "
+            f"tell which was meant, so neither is written. Drop whichever is "
+            "wrong from the record and replay."
+        )
     conn.execute(
         "INSERT INTO submission (author,label,version,definition,created_at,"
         "is_synthetic) VALUES (?,?,?,?,?,0)",
@@ -168,6 +220,15 @@ def insert(conn: sqlite3.Connection, entry: dict) -> None:
         + ",".join(columns) + ") VALUES (?,?,?,0," + ",".join("?" * len(columns)) + ")",
         (entry["author"], entry["label"], entry["version"],
          *(iv.get(c) for c in columns)),
+    )
+    # One row per field somebody accounted for, and no rows at all is the
+    # ordinary case. `executemany` over an empty sequence writes nothing, so
+    # there is no branch here saying an entry with no reasons is different.
+    conn.executemany(
+        "INSERT INTO intervention_absence (intervention_id,field,reason)"
+        " VALUES (?,?,?)",
+        [(iv["id"], field, reason)
+         for field, reason in sorted(absences_of(entry).items())],
     )
     conn.commit()
 
@@ -504,7 +565,8 @@ def _text(field: str, raw: str | None, *, why: str) -> str:
 
 def entry_from(form: dict[str, str], checked: Checked, *,
                repo: str, commit: str,
-               host: str | None = None, url_template: str | None = None) -> dict:
+               host: str | None = None, url_template: str | None = None,
+               absent: dict[str, str] | None = None) -> dict:
     """One form submission as the record line that will be replayed forever.
 
     The tensor facts come off `checked` and never off the form, because they are
@@ -512,6 +574,12 @@ def entry_from(form: dict[str, str], checked: Checked, *,
     already kept the stated value and proved the bytes agree with it, which is
     `_keep_the_claim`'s whole argument: a citation the bytes confirm is worth
     more than a number derived from the bytes it is compared against.
+
+    `absent` is the other half of that: what was looked for and is not there,
+    with the account of why. It sits beside `intervention` rather than inside
+    it because the columns it names are the intervention's and a key that is
+    both a column and a map of columns is a shape nobody reads twice the same
+    way. Empty is normal and is not a degraded record.
     """
     f = checked.facts
     author = _text("author", form.get("author"),
@@ -528,6 +596,14 @@ def entry_from(form: dict[str, str], checked: Checked, *,
         "author": author,
         "label": label,
         "version": version,
+        # Whatever came back, with the blank ones dropped and nothing added.
+        # No field name is checked against a list here, because there is no
+        # list: a reason about a field this row does not hold is somebody
+        # explaining something, and the only thing it cannot do is contradict a
+        # value, which `contradictions` asks about rather than asserts.
+        "absent": {field: str(reason).strip()
+                   for field, reason in (absent or {}).items()
+                   if str(reason).strip()},
         "definition": _text(
             "definition", form.get("definition"),
             why="It is load bearing twice: it feeds contrast-pair generation and "
@@ -857,6 +933,19 @@ fieldset > legend { display: none; }
 .said-quiet { font-size: .82rem; color: var(--dim); display: block; margin-bottom: .25rem; }
 .status { font-size: .84rem; color: var(--dim); margin: .6rem 0 0; }
 
+/* What was looked for and is not there, with the account of why. Set like the
+   form and not like a warning: an absence is a state this schema holds, and the
+   sentence beside it is the difference between one a reader can act on and an
+   empty cell. Editable because the operator is the one publishing the sentence,
+   and clearing one drops it rather than recording a blank. */
+#agent-absent { margin-top: .9rem; }
+#agent-absent .absence { margin-top: .5rem; }
+#agent-absent .absence label {
+  display: block; font-family: var(--mono); font-size: .8rem; color: var(--dim);
+  margin-bottom: .2rem;
+}
+#agent-absent textarea { min-height: 3.2rem; }
+
 /* What the parser worked out rather than read. Not styled as a warning: none
    of these is a fault and most pastes that produce them are fine. They are
    read like footnotes, so they are set like footnotes, and the rule down the
@@ -954,6 +1043,44 @@ function fields() {
     out[el.dataset.field] = el.value;
   }
   return out;
+}
+
+// The other half of the form: what was looked for and is not there. Read off
+// the boxes the paste built, exactly the way `fields` reads off the ones the
+// page declared, so there is one way of getting a value out of this page and
+// not two. A cleared box is a dropped reason and never a recorded blank.
+function absences() {
+  const out = {};
+  for (const el of document.querySelectorAll('[data-absent]')) {
+    if (el.value.trim()) out[el.dataset.absent] = el.value.trim();
+  }
+  return out;
+}
+
+// One box per field the paste accounted for, and the field names come from the
+// paste rather than from a list here. A field this page has no input for still
+// gets a box: an absence is about a column, and the reason is worth keeping
+// whether or not this form has somewhere to type the value.
+function showAbsences(absent) {
+  const box = q('agent-absent');
+  for (const old of box.querySelectorAll('.absence')) old.remove();
+  const names = Object.keys(absent || {}).sort();
+  box.hidden = names.length === 0;
+  for (const name of names) {
+    const row = document.createElement('div');
+    row.className = 'absence';
+    const label = document.createElement('label');
+    label.textContent = name;
+    label.htmlFor = 'absent-' + name;
+    const area = document.createElement('textarea');
+    area.id = 'absent-' + name;
+    area.dataset.absent = name;
+    area.spellcheck = false;
+    area.value = absent[name];
+    row.append(label, area);
+    box.append(row);
+  }
+  return names.length;
 }
 
 // The readout. `state` drives the rule down its left edge, so a result, a
@@ -1071,7 +1198,7 @@ q('write').addEventListener('click', async () => {
   say('written', 'busy', 'Writing the rows\\u2026');
   const res = await post('/write', {
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ handle, fields: fields() }),
+    body: JSON.stringify({ handle, fields: fields(), absent: absences() }),
   });
   if (!res.ok) {
     refuse('written', res.body.refused || 'no reason given');
@@ -1157,8 +1284,13 @@ q('agent-fill').addEventListener('click', async () => {
     const value = res.body.fields[el.dataset.field];
     if (typeof value === 'string') { el.value = value; filled += 1; }
   }
+  // The reasons were computed and then dropped on the floor here, which made
+  // the parser's central rule true of the paste and false of the row: an
+  // absence is a positive statement with a reason, and the reason went nowhere.
+  const declared = showAbsences(res.body.absent);
   const notes = res.body.notes || [];
-  agentSays(filled + ' fields filled from the paste. Every one of them is still '
+  agentSays(filled + ' fields filled from the paste, '
+    + declared + ' absences accounted for. Every one of them is still '
     + 'editable, and nothing is checked until you check the bytes.'
     + (notes.length ? ' Read these before you check: they are what the parser '
        + 'had to work out rather than read, and a value it worked out wrong '
@@ -1430,6 +1562,15 @@ def page(conn: sqlite3.Connection, *, token: str, repo: str, origin: str) -> byt
         '<div class="acts after">'
         '<button type="button" id="agent-fill">Fill the form from this</button>'
         '</div></div>'
+        # Built from whatever came back rather than declared here, because the
+        # field side of an absence is an open string and a fixed set of boxes
+        # would be the list of which fields are allowed an explanation. Empty
+        # and hidden until a paste declares one, which is the ordinary case.
+        '<div id="agent-absent" hidden>'
+        '<p class="said-quiet">What it could not find, and why. These are '
+        'recorded beside the row and render next to the absence. Clear one to '
+        'drop it; an absence with nobody\'s account of it is a normal state.</p>'
+        '</div>'
         '<p class="status" id="agent-status" hidden></p>'
         '</section>'
     )
@@ -1903,7 +2044,8 @@ class Handler(BaseHTTPRequestHandler):
                          "and no copy was made")
 
         entry = entry_from(form, checked, repo=repo, commit=commit,
-                           host=host, url_template=url_template)
+                           host=host, url_template=url_template,
+                           absent=payload.get("absent") or {})
         conn = self.intake.connect()
         try:
             insert(conn, entry)
@@ -1929,11 +2071,15 @@ class Handler(BaseHTTPRequestHandler):
             ("served copy", "none. Nothing here writes served_repo."),
             ("evals", "none recorded, which is a state and not a gap. Point one "
                       "at this submission whenever there is one."),
+            # Named rather than counted, and the fields listed, because a reason
+            # that travelled to the wrong field is invisible in a count. Nothing
+            # accounted for is the ordinary case and says so in those words.
+            ("absences accounted for",
+             ", ".join(sorted(absences_of(entry))) if absences_of(entry) else
+             "none. An absence with nobody's account of it is the ordinary "
+             "state and renders as absence, not as a gap."),
             ("recorded in", f"{_shown(RECORD)}, so it survives the rebuild "
                             "that drops registry.db"),
-            ("still to do", "make site does not replay the record yet. Until it "
-                            "does, run `artifacts/intake.py replay` after a "
-                            "rebuild."),
         ]}
 
     @staticmethod

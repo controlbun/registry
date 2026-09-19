@@ -2024,3 +2024,99 @@ definition. That is already true of the field and always was. What it buys is
 that the page stops implying the registry stands behind it.
 
 **Supersedes:** nothing.
+
+## 2026-09-19 An absence carries its reason, keyed by field name and never by column
+**Decided:** `schema/migrations/008` adds `intervention_absence`, one row per
+field somebody accounted for: `intervention_id`, an open `field`, and the
+author's prose. The reason travels from the paste region through `/write`, into
+the row, into `artifacts/intake.jsonl`, through `replay`, into the export and
+onto the page, where it renders beside the absence inside a `data-authored`
+region.
+
+**The hole it closes.** `artifacts/agent_handoff.py` has asked for this since it
+existed. Its central rule is that an absence is a positive statement with a
+reason and never an omission; the prompt's `not-found:` line takes the field
+name and the sentence, `parse` captures both, `received` returns both, and then
+nothing persisted them. The first real submission is the case. It recorded
+`chat_template_hash` NULL and threw away its author's account of where he
+looked: a template was applied at capture, at a named file and line, and no hash
+of the template string is computed anywhere in that pipeline, and the manifest's
+`tokenizer_hash` is not that value. That is the difference between an absence a
+reader can act on and an empty cell, and the project stated the premise without
+keeping it.
+
+**An association keyed by field name, and that is the whole design.** A column
+per field, `chat_template_hash_reason` beside `chat_template_hash`, is the
+closed enumeration wearing a schema hat: the set of fields allowed an
+explanation becomes whatever somebody thought of, and the next person with an
+absence worth explaining has to ask for a migration. `field` is an open string
+with no CHECK and no foreign key onto a column list, which is the argument
+`registry.ingest` makes about file formats and `PinnedRepoFile` makes about
+hosts, applied to the one place it had not been made. A name this repository has
+never seen stores and renders; what it cannot do is contradict a value, because
+there is no value of that name to contradict.
+
+`tests/test_invariants.py test_no_column_pairs_an_explanation_to_one_named_field`
+fails the build on the convenient version, because the convenient version is
+what arrives next.
+
+**A value and a reason are mutually exclusive, and the contradiction is refused
+rather than resolved.** A row saying both `chat_template_hash = '9f0c...'` and
+"there is no chat template hash anywhere in that pipeline" is two claims by one
+author about one field. Preferring the value deletes the sentence; preferring
+the sentence deletes the value; both happen silently while the entry still reads
+correct to whoever wrote it. So neither wins. `intake.insert` refuses the whole
+entry and names the fields, which covers the live write and the rebuild because
+both call it, so a contradiction typed into the record by hand is stopped at
+`make site` rather than written. A CHECK cannot express this: the value is in
+another table's row.
+
+**Absence of a reason is not a lesser state and must not render as one.** Most
+absences have none and never will. No row means nobody wrote one down, which
+renders exactly as it rendered before the table existed: the field says absent
+and says nothing else. A blank reason is dropped rather than stored, because an
+empty string on a page reads exactly like a reason nobody gave and only one of
+them is honest. Nothing anywhere treats a missing reason as a finding.
+
+**The reasons are authored prose and are marked as such.** They name files,
+lines and sometimes figures, so they sit inside `data-authored` for the reason
+the entry above this one gives. `check_authored_regions_are_marked` now reads
+definitions and reasons through one function, so a reason rendered unmarked
+fails the build. Proven to bite twice rather than assumed: dropping the
+attribute from `AbsenceReason.astro` and rebuilding fails the falsifier naming
+the real submission, and `tests/test_falsifier_bites.py` renders a reason both
+ways and checks the run goes red only for the unmarked one.
+The card prints a reason beside each absence it has a line for, and everything
+else lands in a panel of its own, because the schema puts no set on the field
+name and a card cannot assume it has seen them all.
+
+**The existing submission was corrected, not invented.** `artifacts/intake.jsonl`
+gained the one reason that was lost, quoted from the author's own reply in the
+conversation that produced the row, and the corpus was replayed. The two other
+absences that reply recorded, `artifact_repo` and `artifact_commit`, are
+satisfied now because the intake published the artifact, so nothing was written
+for them. No fixture absence got a reason: `fixtures/build.py` has no words for
+any of them, and inventing prose is the same failure as inventing a number.
+
+**What this makes impossible to express.** A reason for an absence on anything
+but an intervention. A support card with no `observed`, an eval report with no
+transfer score and a submission with no recipe are all absences somebody might
+want to account for, and this table holds none of them: it is keyed on
+`intervention_id` and carries a foreign key to it. Widening it means dropping
+that key or naming the kind of subject, and naming the kind is an enumeration of
+which objects are allowed to explain themselves. Left for whoever has the second
+case, with the shape written down rather than discovered later.
+
+Also impossible: two reasons for one field on one intervention, since the
+primary key is the pair. One author, one field, one account of it. A second
+opinion about somebody else's absence is a different object and the registry
+already has `attack` for that.
+
+**Nothing became required.** Every column stays as nullable as it was, no field
+gained a bar to clear, and a submission that accounts for nothing is the normal
+one. What changed is that an author who did the work of looking now has
+somewhere to put the answer.
+
+**Supersedes:** nothing. Pays off the `not-found:` line in
+`artifacts/agent_handoff.py`, which has been parsed and discarded since
+2026-09-18.
