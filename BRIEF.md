@@ -538,11 +538,22 @@ determines whether labs and academic groups engage at all, which determines
 whether reputable players' vectors ever actually show up. Treat it as a launch
 blocker, not a compliance chore.
 
-**3. Model license position.** A steering vector is derived from model weights, so
-redistributing one may be constrained by the source model's license. This is not a
-footnote: it decides which model families the registry can carry at all, and it
-belongs in the schema as `license_status` per artifact. Resolve it per family
-before adding support. OLMo is the safest starting point for exactly this reason.
+**3. Model license position.** Settled on 2026-09-19 and no longer a blocker.
+The author's position is that a direction is his own work, built against a model
+rather than derived from it: he wrote the contrast prompts, chose the layer and
+the estimator, and did arithmetic on activations he elicited. `DECISIONS.md`
+carries it with the case against it and with what it forecloses, and `CLAUDE.md`
+carries the working rule.
+
+What this paragraph used to say, and what was wrong with it: that a vector is
+derived from model weights, and that the question decides which model families
+the registry can carry at all. The first is the disputed premise rather than the
+settled fact. The second is a permitted-sources list, which this registry does not
+have and cannot have without becoming the thing it exists not to be. Rights stay
+per artifact in `license_status`, asserted by the author with a URL and a date,
+and where bytes cannot be redistributed the registry points and does not serve.
+OLMo is still the easiest starting point, because Apache-2.0 makes the question
+moot rather than because it is the one that passes.
 
 ---
 

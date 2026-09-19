@@ -1457,10 +1457,11 @@ WHY = {
         "Where in the sequence this is applied. An open string, and the other "
         "half of what somebody needs to apply this the way you did.",
     "license_status":
-        "For the source model. A steering vector is derived from model weights, "
-        "so what that model's license permits for derived artifacts is the "
-        "question, and unresolved redistribution rights mean the artifact cannot "
-        "be served.",
+        "For the source model. Whether its license reaches a direction read out "
+        "of it is open, and this registry does not answer it for you. Say what "
+        "the license says, where you read it and when, and say what is "
+        "unresolved. Unresolved rights mean the artifact is pointed at rather "
+        "than served.",
 }
 
 # Where each explanation above comes from, kept apart from the text so the page

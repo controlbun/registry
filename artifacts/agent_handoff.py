@@ -391,12 +391,13 @@ recommends. Absent if they did not sweep one.
 **steering_position** Where the intervention is applied during generation, in
 the author's words.
 
-**license_status** A steering vector is derived from model weights, so what the
-source model's license permits for a derived artifact is the question, not who
-ran the extraction. Read the license and say what you read, where you read it
-and when. If it is unresolved, say that: unresolved rights mean the artifact can
-be pointed at but not served, which is a fact the registry records rather than a
-reason to refuse it.
+**license_status** Whether a source model's license reaches a direction read out
+of it is open. This registry's own author takes the position that a direction is
+the work of whoever built it, and records the case against that position beside
+it; you are not bound by either. Read the source model's license and say what you
+read, where you read it and when. If something is unresolved, say that:
+unresolved rights mean the artifact can be pointed at but not served, which is a
+fact the registry records rather than a reason to refuse it.
 
 ## Where the artifact is, and the pin
 

@@ -110,9 +110,18 @@ is being audited, which is why the other two carry byte-identical blocks.
 ## License
 
 `allenai/Olmo-3-1125-32B` is apache-2.0, confirmed from the Hub model API on
-2026-09-14. A direction is derived from model weights, so redistribution is
-governed by the model's license rather than by who ran the extraction. That it
-resolves favorably here is a fact about OLMo-3 and not a general rule.
+2026-09-14 and again on 2026-09-19.
+
+This section used to say a direction is derived from model weights and that
+redistribution is therefore governed by the model's license rather than by who ran
+the extraction. The author's position is the other one, recorded in `DECISIONS.md`
+2026-09-19: a direction is his own work, built against a model. Either way these
+four files redistribute cleanly, which is why the sentence was never load-bearing
+here. Apache-2.0 reaches a derivative work only where the additions "represent, as
+a whole, an original work of authorship", and excludes works that "remain
+separable from" the Work; on the author's reading it never reaches at all. Both
+roads end in the same place for OLMo-3, and that is a fact about OLMo-3 rather
+than a general rule.
 
 ## What is not here
 

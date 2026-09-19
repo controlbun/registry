@@ -316,15 +316,12 @@ and link out to the feature pages.
   bulk-fetch behavior, rate limits, whether refusal-ablation artifacts are gated
   behind identity, takedown path. Sharper now that the arena runs a live
   anti-human board.
-- **Model license position.** Whether an activation-derived artifact is a
-  derivative of the weights it came from, and what each model's license permits for
-  redistribution. Belongs in the schema as per-artifact `license_status`, and
-  constrains which families the registry can carry. Prior practice, verified
-  2026-09-12: the Concept Sliders repo distributes pretrained LoRA adaptors derived
-  from open image models under MIT, with the disclaimer that "the models that you
-  use our methods with, might be on a different licenses." Adaptor MIT, source model
-  separate, disclosed rather than resolved. That is one worked precedent, not a
-  legal opinion.
+- **Model license position.** No longer blocking. Settled as a working position on
+  2026-09-19, "A direction is the author's own work, built against a model", which
+  carries the reasoning both ways, the four license instruments it was checked
+  against, and the precedent. It stays per-artifact in `license_status` and it does
+  not constrain which families the registry carries, because the registry does not
+  have a list of those. What remains blocking is the dual-use policy above.
 
 ## Open, not blocking
 
@@ -2415,3 +2412,185 @@ forks per model is a taxonomy nobody can read. Adding the column in this
 migration would have answered it by accident. Open.
 
 **Supersedes:** Submissions are versioned and immutable.
+
+
+## 2026-09-19 A direction is the author's own work, built against a model
+**Decided:** the project's working position is the author's, in his words:
+"artifacts are not derived from models rather built by user against a model." A
+direction is the work of whoever built it. He wrote the contrast prompts, chose
+the layer and the estimator, and did arithmetic on activations he elicited. The
+result carries no weights, cannot reconstruct any, and is better described as a
+measurement of a model than a piece of one. On that reading the author holds
+whatever rights exist in it and the source model's license does not reach it.
+
+**This is a position and not legal advice.** Nobody has litigated it. Searched
+three ways on 2026-09-19, no paper, post or commentary addressing specifically
+whether a steering vector is a derivative work of its model was found, which is
+an absence rather than a negative answer. Whether model weights attract copyright
+at all is contested: the Copyright Office's Part 3 report is read as recording the
+question as disputed while noting a "strong argument" that weights implicate the
+reproduction and derivative work rights where outputs are substantially similar to
+inputs (skadden.com/insights/publications/2025/05/copyright-office-report, dated
+2025-05-15, fetched 2026-09-19), and a practitioner piece arguing the restrictive
+side concedes in the same document that "[w]hether fine-tuning constitutes
+sufficient human authorship to generate copyright in the resulting weights is an
+open question" (wcr.legal/fine-tuned-model-license, dated 2026-03-07, fetched
+2026-09-19). A position taken where the underlying right may not exist is a
+position about a hypothetical, and it is recorded as one.
+
+**The case against, which is why this entry exists rather than a sentence.** Four
+things cut at it, and a reader who cannot see them has been handed an assertion.
+
+1. **One widely used license names activations in terms.** CreativeML Open
+   RAIL++-M, which governs SDXL, defines "Derivatives of the Model" to include
+   "any other model which is created or initialized by transfer of patterns of the
+   weights, parameters, **activations** or output of the Model, to the other
+   model, in order to cause the other model to perform similarly to the Model"
+   (huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/raw/main/LICENSE.md,
+   fetched 2026-09-19). The trailing qualifier is the answer available here, since
+   a direction does not cause another model to perform similarly to the source.
+   That is an argument, not a reading anyone has construed.
+2. **A lab with counsel published the opposite view on the same class of object.**
+   `Goodfire/Llama-3.3-70B-Instruct-SAE-l50` declares `license: llama3.3` and its
+   card says "By using Goodfire/Llama-3.3-70B-Instruct-SAE-l50 you agree to the
+   LLAMA 3.3 COMMUNITY LICENSE AGREEMENT" (fetched 2026-09-19). An SAE is trained
+   on activations, exactly as a direction is estimated from them.
+3. **The symmetry problem, which has no clean answer.** If a direction is its
+   author's own work because it is a handful of floats computed from activations,
+   the same reasoning runs for a LoRA, and practitioner commentary treats LoRA
+   adapters as bound by the base license because an adapter "only exists in
+   relationship to the base model" (wcr.legal, as above). "It is smaller" is not a
+   principled line. The line this project would draw is that a direction is not a
+   model and cannot be run, but that line is drawn here and not anywhere else.
+4. **The permissive practice this could lean on is uncounselled.** Several Hub
+   repos declare MIT or Apache-2.0 over artifacts derived from restrictively
+   licensed models with no stated reasoning. Citing them as precedent is citing
+   habit, and it reads as habit on inspection.
+
+**What the license texts actually say. Every one fetched 2026-09-19.**
+
+- **Apache-2.0**, which governs `allenai/Olmo-3-1125-32B` (`license: apache-2.0`
+  from the Hub model API, confirmed 2026-09-14 and again 2026-09-19) and
+  `Qwen/Qwen3-8B` (same API, `license: apache-2.0`). Moot either way. A Derivative
+  Work has to be one "for which the editorial revisions, annotations,
+  elaborations, or other modifications represent, as a whole, an original work of
+  authorship", and the definition "shall not include works that remain separable
+  from ... the Work". Four of the five real directions sit here, and both readings
+  end in the same place.
+- **Llama 3.3 Community License**, release date December 6, 2024, read at
+  developer.meta.com/ai/llama3_3/license (www.llama.com redirects there). It
+  defines "Llama Materials" as "Meta's proprietary Llama 3.3 and Documentation
+  (and any portion thereof) made available under this Agreement" and never defines
+  derivative work as a standalone term. Two clauses matter and they point in
+  opposite directions. Section 5.b: "with respect to any derivative works and
+  modifications of the Llama Materials that are made by you, as between you and
+  Meta, you are and will be the owner of such derivative works and
+  modifications." So even on the reading this entry rejects, ownership lands with
+  the author. Section 1.b.i reaches further than ownership: "If you use the Llama
+  Materials or any outputs or results of the Llama Materials to create, train,
+  fine tune, or otherwise improve an AI model, which is distributed or made
+  available, you shall also include 'Llama' at the beginning of any such AI model
+  name." **This entry does not resolve that clause and does not try.** The
+  `license_status` on `soham/trauma@d61-diffmeans-expository-L34` records it as
+  unresolved, read at the same URL on 2026-09-18, and it stays unresolved. The
+  trigger is creating an AI model and a direction is not one, which is the
+  author's reading and is the reading his row already declines to treat as
+  settled.
+- **Gemma Terms of Use**, last modified April 1, 2026, ai.google.dev/gemma/terms.
+  Cuts both ways in one definition. "Model Derivatives" means "all (i)
+  modifications to Gemma, (ii) works based on Gemma, or (iii) any other machine
+  learning model which is created by transfer of patterns of the weights,
+  parameters, operations, or Output of Gemma". Limb (iii) is confined to a machine
+  learning model and its list is "weights, parameters, operations, or Output",
+  which does not name activations. Limb (ii), "works based on Gemma", is
+  unqualified and is the broadest language in any of these four. Against that,
+  Google shipped its own activation-derived artifacts outside these terms
+  entirely: Gemma Scope carries `license: cc-by-4.0` and is ungated
+  (huggingface.co/google/gemma-scope), while `google/gemma-2-2b` carries
+  `license: gemma` and `gated: manual`. That is how the model's own vendor chose
+  to treat an artifact read out of its model's activations. It is a choice a
+  copyright holder is free to make about its own work rather than a statement
+  about what binds a third party, and it is recorded as evidence of practice.
+- **Qwen LICENSE AGREEMENT**, the terms on `Qwen/Qwen2.5-72B-Instruct`, which
+  differ from the Llama ones in the way that matters here: there is no naming
+  clause. Outputs get attribution rather than a name. "If you use the Materials or
+  any outputs or results therefrom to create, train, fine-tune, or improve an AI
+  model that is distributed or made available, you shall prominently display
+  'Built with Qwen' or 'Improved using Qwen' in the related product
+  documentation." The commercial threshold is 100 million monthly active users
+  against Llama 3.3's 700 million. Recorded because a position written against one
+  license is a position about that license.
+
+**Precedent, and the finding is mostly absence.** Concept Sliders (arXiv:2311.12092,
+Bau lab) distributes 23 pretrained SDXL sliders at
+`sliders.baulab.info/weights/xl_sliders/`, and **that directory states no license
+at all**, nor does the project page above it. The code is MIT. The repo README
+scopes the grant and pushes the question back: "The code and methods behind our
+work have been released under MIT. However, the models that you use our methods
+with, might be on a different licenses. Please read the model's license (the model
+you are using) carefully for more details." So the most cited project publishing
+this kind of artifact neither asserts the position this entry takes nor its
+opposite. It disclaims. The same shape holds across the Hub: several published
+control-vector and steering-vector repos state no license, and the ones that do
+state a code license by reflex. `vgel/repeng` is MIT on the code and silent on what
+a trained vector is. On SAEs, which are the closest large-scale analogue, practice
+splits three ways on the same base model family: Google CC-BY-4.0, EleutherAI MIT
+on Llama-trained SAEs, Goodfire the Llama agreement itself. **There is no settled
+practice to defer to, which is the actual state of the field and is why this is a
+position rather than a finding.**
+
+**What this forecloses.** Three things, and the third is the one that costs.
+
+First, neutrality. Until today the project had no house view and a contributor's
+`license_status` was the only assertion on the page. Now there is a stated position
+behind it, and a contributor who takes Goodfire's view writes their dissent into a
+field whose surrounding prose disagrees with them. `license_status` stays an open
+string that its author asserts and nothing validates it, so the disagreement is
+still expressible. What is gone is its being expressible without a house view in
+the room. That is the plurality cost and it is not zero.
+
+Second, the answer "we never took a view", if an indexed artifact is ever
+challenged. It has been traded for a dated record of what was read and when, which
+is the trade this project makes everywhere else.
+
+Third, and this is the expensive one: **the derivative reading was a free hook for
+the dual-use policy and this position removes it.** If artifacts inherited their
+model's terms, they would inherit the Llama Acceptable Use Policy and the Gemma
+Prohibited Use Policy with them, and misuse gating would have arrived as somebody
+else's contract rather than as this project's rule. Taking the author's position
+cuts that off. The dual-use policy now has to stand on its own reasoning, which is
+where it should have stood anyway, and it is still the launch blocker. Recorded
+here rather than resolved, per the standing instruction not to settle the
+open-contribution-against-misuse-gating tension quietly.
+
+**What it changes operationally, which is close to nothing, and that is the
+point.** Stated rather than left implied:
+
+- **The serving gate is unchanged.** 2026-09-13 stands: the registry serves a copy
+  only on an explicit affirmative in `license_status`, and silence or unresolved
+  means pointer only. This entry is a view about what the law is. That gate is a
+  policy about what we do when nobody has said, and it does not depend on the view.
+- **No schema change, and no field becomes closed.** `license_status` stays an open
+  string the author asserts. There is no enum, no validated vocabulary, and nothing
+  refuses a row for what it says there.
+- **No list of model families, and there never was one.** The registry indexes what
+  people submit. Where bytes cannot be redistributed it points and does not serve,
+  which is the structure that already existed and is why this question is less
+  urgent here than it would be for a host.
+- **Nothing in the corpus moves.** The four OLMo directions resolve the same way
+  under either reading. The Llama-derived one keeps its pointer, keeps its dated
+  reading, and keeps its unresolved clause.
+- **Docs that stated the old premise as fact were amended, not deleted.**
+  `CLAUDE.md`, `BRIEF.md`, `artifacts/REAL.md`, the intake form's help text for
+  `license_status`, the agent handoff, and the license caption on the artifact card.
+  Each now says what it used to say and why that changed, because the premise was
+  stated in six places and would otherwise have kept arguing the other way.
+- **One string was deliberately not touched.** `artifacts/source.py` writes the
+  `license_status` carried by the four OLMo interventions and it still states the
+  old premise. That is published corpus content under the author's name, and this
+  project's own rule is that correcting such a field means a new version rather
+  than an edit in place. Left for the author.
+
+**Supersedes:** nothing. It closes the "Model license position" item under "Open,
+blocking launch (not code)" above, which now points here, and it amends prose in
+CLAUDE.md, BRIEF.md and artifacts/REAL.md rather than an entry.

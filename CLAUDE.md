@@ -237,10 +237,27 @@ than shipping it.
 
 ## Legal, before it is expensive
 
-A steering vector is derived from model weights, so redistributing one may be
-constrained by that model's license. Check what each model's license permits for
-derived artifacts before adding support for it. This constrains which families the
-registry can carry at all, so it belongs in the schema discussion.
+**Working position, the author's: a direction is his own work, built by a user
+against a model rather than derived from the model.** He wrote the contrast
+prompts, chose the layer and the estimator, and did arithmetic on activations he
+elicited. The result carries no weights and cannot reconstruct any.
+`DECISIONS.md` 2026-09-19 records it with the case against it, the licenses it was
+checked against and what it forecloses. It is a position and not legal advice,
+nobody has litigated it, and whether weights attract copyright at all is contested.
+
+This sentence used to read that a vector **is** derived from model weights and
+that redistributing one **may be** constrained. The hedge was right and its
+premise was not, so the premise moved and the hedge stayed: a source model's
+license may still reach an artifact, because some of them define derivative work
+broadly enough to argue about, and an author who wants to redistribute should read
+the source license rather than rely on this file.
+
+So: read the source model's license, record what it says in that artifact's
+`license_status` with the URL and the date it was read, and record what is
+unresolved as unresolved. That is a per-artifact fact its author asserts. It is
+not a gate applied to a model family, and there is no list of families this
+project carries. The registry indexes what people submit; where bytes cannot be
+redistributed it points and does not serve, which is the structure it already has.
 
 Check dependency licenses. Flag copyleft.
 
