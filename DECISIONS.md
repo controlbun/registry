@@ -2594,3 +2594,49 @@ point.** Stated rather than left implied:
 **Supersedes:** nothing. It closes the "Model license position" item under "Open,
 blocking launch (not code)" above, which now points here, and it amends prose in
 CLAUDE.md, BRIEF.md and artifacts/REAL.md rather than an entry.
+
+## 2026-09-19 A signed-in submitter's namespace is their provider handle, and is not theirs to type
+**Decided:** when somebody submits through a signed-in path, the namespace is
+the handle their provider reported at sign-in. It is shown, not offered: no
+field, no default to override.
+
+**What this is not.** It is not "author becomes a verified account", which
+`V2.md` section 1 considers and rejects on three grounds, all of which still
+hold and none of which this touches. An indexed entry for somebody else's
+published direction has an author who never signed up, and that lane is
+deferred rather than reversed. Every row in the corpus today has an author with
+no account. An attack card, an independent evaluation and a support card each
+name a subject who is not the submitter. This rule binds one write path. It
+binds no schema column, forecloses no lane, and renames nothing.
+
+**Why.** `author` is free text and squatting has nothing standing in front of
+it. `V2.md` answers that with "the namespace is not the claim, the claim is the
+claim", and that stays true: a namespace still takes any number of claimants and
+a claim is still evidence somebody can argue with. What this adds is that the
+one path where identity is already known stops asking a question it can answer.
+Somebody signed in as `qwen-fan` cannot submit under `Qwen`.
+
+**Two consequences, recorded because neither is obvious.**
+
+The first real claim in this corpus is the first exception. Namespace `soham`,
+handle `sohampadia`. It predates this rule, was recorded from a real capture,
+and is pinned and published under that name, so it stands. The rule is for
+submissions that arrive signed in, and the corpus will hold both shapes.
+
+Handles are renameable, which is why a claim binds `sub` and not a handle.
+Under this rule a rename means the namespace string stays where it is while the
+handle moves, and somebody else may later sign in holding it. That produces two
+subjects claiming one namespace, which the schema already permits on purpose
+and which renders as two claims with their dates and evidence rather than as a
+conflict anybody has to resolve. It degrades into the plural case visibly. That
+is the intended behavior and not a hole to close later.
+
+**What this makes impossible to express.** A signed-in author publishing under a
+name other than their handle: a pseudonym, a lab name they hold no account for,
+or a namespace shared by several people who each sign in as themselves. The
+last is the one worth watching, because a research group is exactly the shape
+that wants it, and the answer today is that they claim a namespace rather than
+submit into one.
+
+**Supersedes:** nothing. Refines `V2.md` section 1, which stays correct: this
+constrains a write path and leaves `author` a free string everywhere else.
