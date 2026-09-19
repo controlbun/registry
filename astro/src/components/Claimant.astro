@@ -4,6 +4,8 @@
 // Which measurements exist, and whether a trait score may be shown at all, was
 // decided in Python and arrives here already settled as `score_state`. This
 // component never sees a number it is not allowed to print.
+import Prose from "./Prose.astro";
+
 interface Props {
   claimant: any;
 }
@@ -28,7 +30,7 @@ const fmt = (value) => (value === null ? null : value.toFixed(4));
     )}
   </div>
 
-  <p class="definition" data-authored>{c.definition}</p>
+  <Prose text={c.definition} class="definition" />
 
   <div class="measures">
     <div>

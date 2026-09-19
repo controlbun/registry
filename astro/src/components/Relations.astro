@@ -1,4 +1,5 @@
 ---
+import Prose from "./Prose.astro";
 // What authors say their labels are, and are not, relative to each other.
 //
 // Taxonomy from claims rather than from a committee. `distinguishes-from` and
@@ -30,7 +31,7 @@ const { relations, label } = Astro.props;
         <a class="mono" href={`/${r.to_author}/`}>{r.to_author}</a>
         <span class="mono">/{r.to_label}</span>
       </div>
-      {r.note && <p class="definition" data-authored>{r.note}</p>}
+      {r.note && <Prose text={r.note} class="definition" />}
     </div>
   ))
 )}

@@ -171,6 +171,16 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
   border-left: 2px solid var(--line);
   padding-left: .85rem;
 }
+
+/* Authored prose keeps the structure its author wrote. Paragraphs are
+   paragraphs and a bulleted list stays a list, because a definition arrived
+   with both and rendered as one unbroken block. Tight margins at the edges so
+   a block sits where the single `<p>` used to and nothing below it shifts. */
+.prose > :first-child { margin-top: 0; }
+.prose > :last-child { margin-bottom: 0; }
+.prose p { margin: 0 0 .7rem; }
+.prose ul { margin: 0 0 .7rem; padding-left: 1.1rem; }
+.prose li { margin: .3rem 0; }
 .measures { display: flex; gap: 2rem; flex-wrap: wrap; font-size: .88rem; }
 
 .absent { color: var(--faint); font-style: italic; }

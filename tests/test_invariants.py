@@ -373,12 +373,32 @@ def test_absent_eval_is_not_an_error():
 #    uninterpretable, never as a bare number.
 
 
+def _without_comments(text: str) -> str:
+    """A template with its comments taken out, because a comment renders nothing.
+
+    This scan asks whether a file draws a trait measure. It read the whole file,
+    so a component whose comment explained that a definition contains "a
+    bulleted list of what the trait is not" was accused of rendering a trait
+    score without a coherence measure beside it.
+
+    That is the third time in one day a rule here has caught a sentence instead
+    of the thing the sentence is about: `CLAUDE.md` records banning "best" and
+    catching the founding sentence, an ordinal scan matched "1st-person
+    retrospective reports" inside an author's methodology, and now this.
+    Stripping comments is not a loosening. It narrows the scan to the only part
+    of a file that can put a number on a page.
+    """
+    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
+    text = re.sub(r"<!--.*?-->", " ", text, flags=re.S)
+    return re.sub(r"(?m)^\s*//.*$", " ", text)
+
+
 def test_trait_score_never_renders_without_coherence():
     offenders = []
     for p in source_files():
         if p.suffix not in {".html", ".astro"}:
             continue
-        text = p.read_text()
+        text = _without_comments(p.read_text())
         # Any spelling of the trait measure, not just the column name. SweepChart
         # draws `p.trait` and ConfoundChart draws `r.value`; both passed vacuously
         # under a literal `trait_score` check.

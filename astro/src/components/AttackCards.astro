@@ -1,4 +1,5 @@
 ---
+import Prose from "./Prose.astro";
 // Attack cards: someone other than the author trying to break this artifact.
 //
 // The strongest evidence available, because it is the one kind the author did not
@@ -24,7 +25,7 @@ const { attacks, author } = Astro.props;
         <a class="mono" href={`/${a.attacker}/`}>{a.attacker}</a> ran
         {" "}<span class="mono">{a.method}</span>
       </div>
-      <p class="definition" data-authored>{a.author_response}</p>
+      <Prose text={a.author_response} class="definition" />
       <div class="provenance">
         Attacker calls it <em>{a.attacker_disposition}</em>; {author} calls it
         {" "}<em>{a.author_disposition}</em>. Both stand, and the registry does not

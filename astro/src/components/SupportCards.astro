@@ -1,4 +1,5 @@
 ---
+import Prose from "./Prose.astro";
 // Support cards: someone used this artifact in their own work and reports whether
 // it behaved the way the published contract said it would.
 //
@@ -53,7 +54,7 @@ const when = (iso) =>
         )}
       </div>
 
-      <p class="definition" data-authored>{s.purpose}</p>
+      <Prose text={s.purpose} class="definition" />
 
       <dl class="spec">
         <dt>expected</dt>

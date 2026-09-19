@@ -1,4 +1,5 @@
 ---
+import Prose from "./Prose.astro";
 // Who has frozen this submission, for what, and what they passed over.
 //
 // This is the distinction the whole project rests on. The registry never
@@ -34,7 +35,7 @@ const when = (iso) =>
         <strong>{p.pinned_by}</strong> pinned
         {" "}<span class="mono">{p.target}</span> on {when(p.pinned_at)}
       </div>
-      <p class="definition" data-authored>{p.purpose}</p>
+      <Prose text={p.purpose} class="definition" />
       {p.rationale && <p class="note">{p.rationale}</p>}
 
       <div class="passed-over">

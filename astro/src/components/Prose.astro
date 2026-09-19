@@ -1,0 +1,76 @@
+---
+/**
+ * Somebody's own words, rendered the way they wrote them.
+ *
+ * Every authored field went into a single `<p>`, which collapses whitespace, so
+ * a real definition arrived with paragraphs, a blank line between each, and a
+ * bulleted list of what the trait is not, and came out as one unbroken block.
+ * That field is the one this project calls the most important thing a
+ * submission carries, and it was the least readable thing on the page.
+ *
+ * **Not `white-space: pre-wrap`**, which was the one-line version. Authors hard
+ * wrap at seventy-odd characters, so preserving every newline reproduces their
+ * terminal width on a screen that is not their terminal and leaves a ragged
+ * right edge. What has to survive is the structure they meant, not the column
+ * they happened to be typing in.
+ *
+ * So: blank lines separate blocks, and inside a block the lines are rejoined.
+ * A block whose lines start with a dash is a list and stays one, with
+ * continuation lines folded into the item they belong to. Two rules, because
+ * those are the two things people actually do in a plain-text field, and a
+ * third rule would be this component deciding it knows markdown.
+ *
+ * Nothing here interprets markup. Astro escapes every interpolation, so an
+ * author writing `<script>` gets the characters they typed. This turns
+ * whitespace into structure and does nothing else.
+ *
+ * `data-authored` sits on the wrapper rather than on each paragraph, because it
+ * marks a region and the falsifier matches the whole element. See
+ * `DECISIONS.md` 2026-09-19: every number inside one of these is read as the
+ * author's claim rather than as something this registry derived, and the
+ * marking fails the build if it goes missing.
+ */
+interface Props {
+  text: string;
+  class?: string;
+}
+const { text, class: extra = "" } = Astro.props;
+
+type Block = { list: boolean; items: string[] };
+
+function blocks(source: string): Block[] {
+  const out: Block[] = [];
+  for (const chunk of (source ?? "").split(/\n\s*\n/)) {
+    const lines = chunk.split("\n").map((l) => l.trimEnd()).filter((l) => l.trim());
+    if (!lines.length) continue;
+
+    const bullet = /^\s*[-*•]\s+/;
+    if (lines.some((l) => bullet.test(l))) {
+      const items: string[] = [];
+      for (const line of lines) {
+        if (bullet.test(line)) items.push(line.replace(bullet, "").trim());
+        // A wrapped continuation of the item above. Folded in rather than
+        // dropped or promoted, which is what a hard-wrapped bullet looks like.
+        else if (items.length) items[items.length - 1] += " " + line.trim();
+        else items.push(line.trim());
+      }
+      out.push({ list: true, items });
+    } else {
+      out.push({ list: false, items: [lines.map((l) => l.trim()).join(" ")] });
+    }
+  }
+  return out;
+}
+
+const parts = blocks(text);
+---
+
+<div class={`prose ${extra}`.trim()} data-authored>
+  {parts.map((block) =>
+    block.list ? (
+      <ul>{block.items.map((item) => <li>{item}</li>)}</ul>
+    ) : (
+      <p>{block.items[0]}</p>
+    )
+  )}
+</div>

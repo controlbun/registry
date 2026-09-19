@@ -9,6 +9,7 @@
 import SweepChart from "./SweepChart.astro";
 import ConfoundChart from "./ConfoundChart.astro";
 import AbsenceReason from "./AbsenceReason.astro";
+import Prose from "./Prose.astro";
 
 interface Props {
   claimant: any;
@@ -38,7 +39,7 @@ const elsewhere = Object.entries(absences).filter(([f]) => !beside.includes(f));
 <div class="card">
   <div class="card-main">
     <h2>Definition</h2>
-    <p class="definition" data-authored>{c.definition}</p>
+    <Prose text={c.definition} class="definition" />
 
     <h2>Method</h2>
     {r ? (
@@ -57,7 +58,7 @@ const elsewhere = Object.entries(absences).filter(([f]) => !beside.includes(f));
         </dl>
 
         <h2>Author's theory</h2>
-        <p class="definition" data-authored>{r.theory}</p>
+        <Prose text={r.theory} class="definition" />
 
         <h2>Reproducing it</h2>
         <dl class="spec">
