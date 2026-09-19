@@ -72,9 +72,11 @@ makes this a distributor and needs the dual-use policy, which is deferred until
 a capability arrives (`DECISIONS.md`, 2026-09-17); the author publishing his own
 bytes under his own account is not that capability.
 
-**It is a model repo.** `fetch.hub_url` builds `{repo}/resolve/{commit}/{path}`,
-which is what the Hub serves models under. A dataset repo lives at
-`/datasets/{repo}/resolve/...` and that function cannot address it.
+**It is a model repo.** `record` writes `https://{host}/{repo}/resolve/{commit}/{path}`
+onto the row, which is what the Hub serves models under. That is a default and
+not a constraint: since `schema/migrations/007` the layout is a field, so a
+dataset repo at `/datasets/{repo}/resolve/...`, a GitHub repo, or a host nobody
+here has met is `--url-template` and not a code change.
 
 **The pin is a commit and lives in `artifacts/published.json`.** A branch moves,
 so `fetch.commit_sha` refuses anything that is not forty hex characters, and

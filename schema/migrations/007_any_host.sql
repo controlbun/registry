@@ -1,0 +1,95 @@
+-- 007_any_host.sql
+--
+-- A row can pin an artifact on any host, not only the Hugging Face Hub.
+--
+-- Premise, restated because a premise stated in one migration gets violated in
+-- every other one: the registry never designates. That applies to hosts.
+--
+-- **The asymmetry this closes.** The write path has been host-agnostic since
+-- `registry.ingest` existed: `PinnedRepoFile` takes a `host` and a
+-- `url_template` and all four real directions in this corpus came in through it
+-- with `host` github.com, because that is where the arena publishes. The read
+-- path was not. `fetch.resolve` sent both of its remote branches to one URL
+-- builder that knew one layout, and `intervention` had `artifact_repo` and
+-- `artifact_commit` with no column saying which host they were on. So
+-- `github.com/a/b` and `huggingface.co/a/b` were one string in the row, which is
+-- the collision `PinnedRepoFile` guards against on the way in. An author whose
+-- vectors live in a GitHub repo, which is most of them, could be ingested and
+-- could not be pinned.
+--
+-- **The row carries its own URL template, and there is no table of hosts.**
+-- `PinnedRepoFile`'s docstring settles why: "A table of the ones we happen to
+-- have met would be a list of where an artifact is allowed to come from, which
+-- is not ours to write." A host nobody here has met works by construction, with
+-- no code change and nobody's agreement. This is the same argument
+-- `registry.ingest` makes about file formats and 001 makes about `kind`, applied
+-- to the one field where it was still being made by a missing column rather than
+-- by a CHECK.
+--
+-- What this makes impossible to express is nothing. It is strictly an addition:
+-- what it removes is the schema's assertion that a legitimate artifact is one
+-- that lives on the Hub, which nobody decided.
+--
+-- **The four fields together are the pin.** `artifact_repo`, `artifact_commit`
+-- and `artifact_path` already exist. `artifact_host` says which host that repo
+-- is on, and `artifact_url_template` says how those turn into a URL. Both are
+-- needed and neither derives from the other: GitHub's LFS media host serves
+-- `media.githubusercontent.com/media/{repo}/{commit}/{path}`, which does not
+-- carry the host the repo is on anywhere in it, and the Hub's layout does.
+--
+-- Common templates, documented and enforced nowhere. `{host}`, `{repo}`,
+-- `{commit}` and `{path}` are the fields; a template may use any of them or
+-- none of them:
+--
+--   Hub                huggingface.co
+--                      https://{host}/{repo}/resolve/{commit}/{path}
+--   GitHub, LFS        github.com
+--                      https://media.githubusercontent.com/media/{repo}/{commit}/{path}
+--   GitHub, plain      github.com
+--                      https://raw.githubusercontent.com/{repo}/{commit}/{path}
+--
+-- Those are two hosts and three layouts, which is the whole argument for the
+-- column: GitHub needs two of them and serves a 404 on the wrong one. Confirmed
+-- with curl against soham-padia/steering-arena at b8b4721 on 2026-09-18: the
+-- media host returned the 22,424-byte object, the raw host returned the
+-- 130-byte LFS pointer for the same path, and the media host returned 404 for a
+-- file that is not LFS-tracked. Nothing here decides which of those is correct,
+-- because which one is correct is a fact about the file and its publisher.
+--
+-- **Nullable, and that is the load-bearing half.** Every row in this database
+-- today records no host, because there was nowhere to record one. Those rows are
+-- not broken and are not backfilled: `registry.fetch.hub_pin` is the default a
+-- row with no host of its own resolves under, so an existing row resolves after
+-- this migration exactly where it resolved before it. Absence renders as its own
+-- state, the same as an unmeasured eval and the same as `model_revision` in 005.
+-- Backfilling a host onto rows nobody recorded one for would be the mistake 005
+-- describes: it would produce a string, not a fact, and it would read exactly
+-- like a fact somebody checked.
+--
+-- Neither is an eval result, so no marker and no `-- eval-result` line, exactly
+-- as 004 and 006 say of their own columns.
+--
+-- **No CHECK on either.** A constraint listing the hosts a pin may name is the
+-- trip-wire case, and a constraint listing the URL layouts it may use is the
+-- same thing one level down. What keeps a template honest is not a list of
+-- permitted ones: `registry.fetch.pinned_url` requires the commit to survive
+-- into the URL it builds, which is the property a pin actually is, and refuses a
+-- scheme that is not a network fetch, which is refusing what cannot be verified.
+-- Both are checks on the pin and neither is a check on the host.
+--
+-- **The served pair gets the same two columns.** `served_repo` and
+-- `served_commit` are NULL everywhere and stay NULL until there is a dual-use
+-- policy, per 004. They are widened here anyway because `fetch.resolve` has two
+-- remote branches, and a resolver that is host-agnostic on one of them and
+-- Hub-only on the other is this same gap in half. Two nullable columns is the
+-- cheaper half of that trade, and it is not new capability: nothing writes
+-- either pair, which is the check `tests/test_intake.py` already makes.
+--
+-- Nullable columns add in place, so no table rebuild here, as in 004 and 006 and
+-- unlike 005.
+
+ALTER TABLE intervention ADD COLUMN artifact_host TEXT;
+ALTER TABLE intervention ADD COLUMN artifact_url_template TEXT;
+
+ALTER TABLE intervention ADD COLUMN served_host TEXT;
+ALTER TABLE intervention ADD COLUMN served_url_template TEXT;

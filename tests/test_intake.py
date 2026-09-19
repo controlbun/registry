@@ -79,11 +79,20 @@ def blob(tmp_path) -> bytes:
 
 @pytest.fixture
 def hub(blob):
-    """A stand-in Hub serving one file at one commit."""
+    """A stand-in host serving one file at one commit, under two layouts.
+
+    The Hub's, which is where a row recording no host of its own resolves, and
+    a second one shaped like GitHub's media host: the commit in a different
+    position and no mention of the host the repo is on. Two, because a server
+    that only knew one could not tell a form that passes the row's template
+    through from one that ignores it.
+    """
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802
-            if self.path == f"/{REPO}/resolve/{SHA}/{REMOTE_PATH}":
+            served = (f"/{REPO}/resolve/{SHA}/{REMOTE_PATH}",
+                      f"/media/{REPO}/{SHA}/{REMOTE_PATH}")
+            if self.path in served:
                 self.send_response(200)
                 self.send_header("Content-Length", str(len(blob)))
                 self.end_headers()
@@ -235,6 +244,82 @@ def test_link_mode_records_the_pointer_and_keeps_no_bytes(tool):
         "the pointer and not the bytes."
     )
     assert leftovers() == before
+
+
+def test_link_mode_takes_a_row_that_names_its_own_host(tool, hub):
+    """The gap this closes: an artifact published somewhere that is not the Hub.
+
+    The template below is shaped like GitHub's media host, which serves file
+    content from a host the repo does not live on. Nothing in the form, the
+    schema or `registry.fetch` has heard of it; the row carries it.
+    """
+    template = "http://{host}/media/{repo}/{commit}/{path}"
+    fields = link_fields(link_host=hub.split("//", 1)[1],
+                         link_url_template=template)
+
+    code, checked = tool.post_json("/check", {"mode": "link", "fields": fields})
+    assert code == 200, checked
+    code, written = tool.post_json("/write", {"handle": checked["handle"],
+                                              "fields": fields})
+    assert code == 200, written
+
+    row, = tool.rows()
+    assert row["artifact_host"] == hub.split("//", 1)[1]
+    assert row["artifact_url_template"] == template
+    assert (row["artifact_repo"], row["artifact_commit"]) == (REPO, SHA)
+    assert row["served_host"] is None and row["served_url_template"] is None
+
+
+def test_a_link_with_no_host_records_no_host(tool):
+    """Absence is a state. Nothing fills the Hub in behind the operator."""
+    code, checked = tool.post_json("/check", {"mode": "link",
+                                              "fields": link_fields()})
+    assert code == 200, checked
+    code, written = tool.post_json("/write", {"handle": checked["handle"],
+                                              "fields": link_fields()})
+    assert code == 200, written
+
+    row, = tool.rows()
+    assert row["artifact_host"] is None, (
+        "a host nobody stated was written onto the row, which is a provenance "
+        "claim that reads exactly like a checked fact"
+    )
+    assert row["artifact_url_template"] is None
+
+
+def test_changing_the_template_after_the_check_is_refused(tool, hub):
+    """It decides which bytes come back, so it is one of the frozen fields."""
+    fields = link_fields(link_host=hub.split("//", 1)[1],
+                         link_url_template="http://{host}/media/{repo}/{commit}/{path}")
+    code, checked = tool.post_json("/check", {"mode": "link", "fields": fields})
+    assert code == 200, checked
+
+    code, refused = tool.post_json("/write", {
+        "handle": checked["handle"],
+        "fields": {**fields, "link_url_template": "http://{host}/{repo}/resolve/{commit}/{path}"},
+    })
+    assert code != 200
+    assert "link_url_template" in json.dumps(refused)
+
+
+def test_a_template_that_loses_the_commit_is_refused(tool, hub):
+    """`registry.fetch` owns this and the form does not restate it."""
+    fields = link_fields(link_host=hub.split("//", 1)[1],
+                         link_url_template="http://{host}/media/{repo}/main/{path}")
+    code, refused = tool.post_json("/check", {"mode": "link", "fields": fields})
+    assert code != 200
+    assert "not a pinned fetch" in json.dumps(refused)
+
+
+def test_the_form_offers_hosts_and_templates_without_constraining_them(tool):
+    """Datalists, not a `<select>`. Three layouts across two hosts, suggested."""
+    page = tool.call("/")[1].decode()
+    assert "<select" not in page, "a closed list arrived as a control"
+    for shown in ("media.githubusercontent.com", "raw.githubusercontent.com",
+                  "{host}/{repo}/resolve/{commit}/{path}"):
+        assert shown in page, f"{shown} is not offered as a suggestion"
+    assert 'data-field="link_host"' in page
+    assert 'data-field="link_url_template"' in page
 
 
 def test_bytes_mode_publishes_and_records_only_the_pin(tool, blob, monkeypatch):

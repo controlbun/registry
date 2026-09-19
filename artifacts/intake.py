@@ -23,8 +23,9 @@ page the operator did not open. `tests/test_intake.py` holds all four.
 **Two modes, one end state.** Both finish as a row pointing at a pinned remote,
 and neither writes `served_repo`.
 
-    link    paste a repo, a commit and a path. The bytes are fetched into a
-            throwaway cache, checked, and dropped. What is kept is the pointer.
+    link    paste a repo, a commit and a path, on any host. The bytes are
+            fetched into a throwaway cache, checked, and dropped. What is kept
+            is the pointer.
     bytes   drop a file. It is converted to safetensors and checked outside this
             repository, pushed to the author's own namespace through
             `artifacts/publish.py upload`, and the pin is recorded. The staged
@@ -83,6 +84,7 @@ sys.path.insert(0, str(HERE))
 from registry import artifact, db, fetch, ingest  # noqa: E402
 import agent_handoff  # noqa: E402
 import publish  # noqa: E402
+import source  # noqa: E402
 
 # Loopback, and not a default. There is no flag that changes this and adding one
 # would be the whole argument in the docstring, undone in a line.
@@ -157,8 +159,8 @@ def insert(conn: sqlite3.Connection, entry: dict) -> None:
         "id", "kind", "model_id", "model_revision", "layer", "layer_convention",
         "hook_point", "chat_template_hash", "shape", "dtype", "l2_norm",
         "activation_norm", "coeff_low", "coeff_high", "steering_position",
-        "license_status", "artifact_repo", "artifact_commit", "artifact_path",
-        "artifact_sha256",
+        "license_status", "artifact_repo", "artifact_commit", "artifact_host",
+        "artifact_url_template", "artifact_path", "artifact_sha256",
     )
     conn.execute(
         "INSERT INTO intervention (author,label,version,is_synthetic,"
@@ -223,6 +225,11 @@ class Checked:
     repo: str | None = None
     commit: str | None = None
     path: str | None = None
+    # Which host that repo is on and how the four fields become a URL. Both
+    # empty is the ordinary case and means the Hub, which is where a row that
+    # records neither has always resolved. See `schema/migrations/007`.
+    host: str | None = None
+    url_template: str | None = None
 
     def display(self) -> list[tuple[str, str]]:
         """Pairs for the page. Absent is a sentence, never a blank and never a 0."""
@@ -261,7 +268,8 @@ def _claim(stated: dict[str, str]) -> artifact.Claim:
     )
 
 
-def check_link(repo: str, commit: str, path: str, stated: dict[str, str]) -> Checked:
+def check_link(repo: str, commit: str, path: str, stated: dict[str, str],
+               host: str = "", url_template: str = "") -> Checked:
     """Fetch a pinned file, check it, keep the pointer and drop the bytes.
 
     Through `fetch.resolve`, which is the consumer path verbatim: what an
@@ -270,6 +278,15 @@ def check_link(repo: str, commit: str, path: str, stated: dict[str, str]) -> Che
     branch it takes. The cache is swapped for a throwaway first, so this is a
     real download rather than a reread and so nothing is left behind. That is
     `artifacts/publish.py verify`'s trick and the reason is the same one.
+
+    `host` and `url_template` are both optional and both empty is the ordinary
+    case. Empty means the Hub, which is where a row recording neither has always
+    resolved, and nothing here fills them in: a host written onto a row nobody
+    stated one for would be a provenance claim that reads like a checked fact.
+    Nothing here validates either, either. Which hosts exist and what their URLs
+    look like is not this form's question, and the refusals that do apply are
+    `registry.fetch`'s: forty hex characters, a commit that survives into the
+    URL, and a scheme a fetch can happen over.
     """
     commit = fetch.commit_sha(commit)
     if not path:
@@ -282,6 +299,20 @@ def check_link(repo: str, commit: str, path: str, stated: dict[str, str]) -> Che
     # disk, and a row is the wrong place to find out that one of them will not.
     artifact.local_path(path, root=ROOT)
 
+    # The URL this is about to fetch, built by the same function `fetch` builds
+    # it with rather than described a second time here. Worth computing before
+    # the download for two reasons: a template that cannot be formatted, or that
+    # loses the commit, is refused before a byte moves, and the operator gets
+    # the exact URL on the page instead of a summary of it.
+    default_host, default_template = fetch.hub_pin()
+    fetched = fetch.pinned_url(
+        host=host or default_host,
+        repo=repo,
+        commit=commit,
+        path=path,
+        url_template=url_template or default_template,
+    )
+
     with tempfile.TemporaryDirectory(prefix="registry-intake-") as tmp:
         # Serialized by the caller's lock: this is a module global in
         # `registry.fetch` and two requests swapping it at once would restore
@@ -289,7 +320,9 @@ def check_link(repo: str, commit: str, path: str, stated: dict[str, str]) -> Che
         was, fetch.CACHE = fetch.CACHE, Path(tmp)
         try:
             blob = fetch.resolve(artifact_path=path, artifact_repo=repo,
-                                 artifact_commit=commit)
+                                 artifact_commit=commit,
+                                 artifact_host=host or None,
+                                 artifact_url_template=url_template or None)
         finally:
             fetch.CACHE = was
 
@@ -310,13 +343,15 @@ def check_link(repo: str, commit: str, path: str, stated: dict[str, str]) -> Che
 
     return Checked(
         mode="link",
-        where=f"{fetch.HUB}/{repo} at {commit}, path {path}. Fetched, checked, "
-              "and not kept: what this records is the pointer.",
+        where=f"{host or fetch.hub_pin()[0]}/{repo} at {commit}, path {path}, "
+              f"fetched from {fetched}. Checked and not kept: what this records "
+              "is the pointer.",
         facts=facts,
         tensor_name=_tensor_name(blob),
         header=artifact.metadata_of(blob),
         stated={k: v for k, v in stated.items() if v},
         repo=repo, commit=commit, path=path,
+        host=host or None, url_template=url_template or None,
     )
 
 
@@ -431,7 +466,8 @@ def _text(field: str, raw: str | None, *, why: str) -> str:
 
 
 def entry_from(form: dict[str, str], checked: Checked, *,
-               repo: str, commit: str) -> dict:
+               repo: str, commit: str,
+               host: str | None = None, url_template: str | None = None) -> dict:
     """One form submission as the record line that will be replayed forever.
 
     The tensor facts come off `checked` and never off the form, because they are
@@ -495,6 +531,12 @@ def entry_from(form: dict[str, str], checked: Checked, *,
             "license_status": form.get("license_status", "").strip() or None,
             "artifact_repo": repo,
             "artifact_commit": commit,
+            # None when nobody stated one, which is the ordinary case and means
+            # the row resolves where every row resolved before
+            # `schema/migrations/007`. Not filled in with the Hub here: that
+            # would write a host onto a row nobody recorded one for.
+            "artifact_host": host,
+            "artifact_url_template": url_template,
             "artifact_path": checked.path,
             "artifact_sha256": f.sha256,
         },
@@ -543,17 +585,48 @@ SUGGEST = {
                       " WHERE license_status IS NOT NULL AND license_status != ''"
                       " ORDER BY license_status",
     "author": "SELECT DISTINCT author FROM submission WHERE author != '' ORDER BY author",
+    "link_host": "SELECT DISTINCT artifact_host FROM intervention"
+                 " WHERE artifact_host IS NOT NULL AND artifact_host != ''"
+                 " ORDER BY artifact_host",
+    "link_url_template": "SELECT DISTINCT artifact_url_template FROM intervention"
+                         " WHERE artifact_url_template IS NOT NULL"
+                         " AND artifact_url_template != ''"
+                         " ORDER BY artifact_url_template",
 }
+
+
+# The corpus is the source for everything above and cannot be the source for
+# these two on the day the column is added, because no row carries one yet. So
+# these are seeded, and the seed is read out of code that already holds the
+# value rather than typed here: `registry.fetch` for the Hub's layout, which is
+# the one a row recording nothing resolves under, and `artifacts/source.py` for
+# GitHub's two, which is where all four real directions in this corpus came
+# from and which records when each was last checked against the live host.
+#
+# Three layouts across two hosts, which is the argument for the field rather
+# than a table: GitHub needs two of them and 404s on the wrong one. They are
+# documentation, they merge into whatever the corpus already holds, and they are
+# enforced nowhere. Anything typed in is taken.
+def _seeded() -> dict[str, list[str]]:
+    hub_host, hub_template = fetch.hub_pin()
+    return {
+        "link_host": [hub_host, source.HOST],
+        "link_url_template": [hub_template, source.MEDIA, source.RAW],
+    }
 
 
 def suggestions(conn: sqlite3.Connection) -> dict[str, list[str]]:
     """What this corpus already holds, per field. Never a constraint."""
     out: dict[str, list[str]] = {}
+    seeded = _seeded()
     for field, sql in SUGGEST.items():
         try:
-            out[field] = [r[0] for r in conn.execute(sql)]
+            found = [r[0] for r in conn.execute(sql)]
         except sqlite3.Error:
-            out[field] = []
+            found = []
+        # Seeded values first and duplicates dropped, so a corpus that grows
+        # into one of them does not offer it twice.
+        out[field] = list(dict.fromkeys(seeded.get(field, []) + found))
     return out
 
 
@@ -1010,8 +1083,28 @@ q('agent-fill').addEventListener('click', async () => {
 # the column is the one the person who made it meant.
 WHY = {
     "link_repo":
-        "owner/name on the Hub. The bytes stay there and never rest here; what "
-        "this records is the pointer. No size limit, because nothing is held.",
+        "owner/name, on whichever host the field below names. The bytes stay "
+        "there and never rest here; what this records is the pointer. No size "
+        "limit, because nothing is held.",
+    "link_host":
+        "Which host that repo is on, as a bare authority such as "
+        "<code>github.com</code>. May be empty, and empty means the Hub, which "
+        "is where every row written before migration 007 resolves. It is a "
+        "field rather than a list because a table of the hosts we happen to "
+        "have met would be a list of where an artifact is allowed to come from, "
+        "which is not ours to write. Nothing checks this against anything.",
+    "link_url_template":
+        "How <code>{host}</code>, <code>{repo}</code>, <code>{commit}</code> "
+        "and <code>{path}</code> become a URL. A template may use any of the "
+        "four or none of them: GitHub serves file content from a different host "
+        "than its repos live on, so its templates do not mention "
+        "<code>{host}</code> at all, and it needs two of them because the media "
+        "host serves LFS objects and 404s on everything else. May be empty, and "
+        "empty means the layout the Hub serves. What is checked is not which "
+        "host this names: <code>registry.fetch</code> requires the commit to "
+        "survive into the URL, because that is what a pin is, and refuses a "
+        "scheme a fetch cannot happen over, because a pin that resolves only on "
+        "the machine that wrote it is not one anybody else can check.",
     "link_commit":
         "Forty hex characters. <code>registry.fetch</code> resolves by commit "
         "only: a tag is movable by whoever owns the repo, so a pin to one is a "
@@ -1139,6 +1232,8 @@ WHY = {
 # can always put it last, whatever else got appended to the sentence.
 SOURCE = {
     "link_repo": "artifacts/INTAKE.md",
+    "link_host": "schema/migrations/007_any_host.sql",
+    "link_url_template": "schema/migrations/007_any_host.sql",
     "link_commit": "src/registry/fetch.py",
     "link_path": "artifacts/intake.py",
     "file": "src/registry/ingest.py",
@@ -1264,12 +1359,18 @@ def page(conn: sqlite3.Connection, *, token: str, repo: str, origin: str) -> byt
         '<p class="note">Fetched once into a throwaway cache, checked, and '
         'dropped. What is recorded is the pointer, so there is no size limit.</p>'
         '<div class="grid">'
-        + _field("link_repo", "Hub repo", "owner/name, a model repo.", string=True)
+        + _field("link_repo", "Repo", "owner/name.", string=True)
         + _field("link_commit", "Commit",
                  "Forty hex characters.", string=True)
         + '</div><div class="grid single">'
         + _field("link_path", "Path in the repo",
                  "Where the file sits inside that repo.", string=True)
+        + '</div><div class="grid">'
+        + _field("link_host", "Host", "Which host that repo is on.",
+                 suggest=s["link_host"], empty_ok=True, string=True)
+        + _field("link_url_template", "URL template",
+                 "How those four become a URL.",
+                 suggest=s["link_url_template"], empty_ok=True, string=True)
         + '</div></fieldset>'
 
         '<fieldset id="bytes-fields" hidden><legend>Bytes</legend>'
@@ -1635,12 +1736,14 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self._body(1 << 20) or b"{}")
             form = payload.get("fields", {})
             checked = check_link(
-                repo=_text("Hub repo", form.get("link_repo"),
+                repo=_text("repo", form.get("link_repo"),
                            why="owner/name, the repo the artifact is published in."),
                 commit=_text("commit", form.get("link_commit"),
                              why="Forty hex characters."),
                 path=form.get("link_path", "").strip(),
                 stated=self._stated(form),
+                host=form.get("link_host", "").strip(),
+                url_template=form.get("link_url_template", "").strip(),
             )
 
         handle = secrets.token_urlsafe(12)
@@ -1668,7 +1771,12 @@ class Handler(BaseHTTPRequestHandler):
         moved = {
             "bytes": {"bytes_path": checked.path},
             "link": {"link_repo": checked.repo, "link_commit": checked.commit,
-                     "link_path": checked.path},
+                     "link_path": checked.path,
+                     # Both of these change which bytes a fetch returns, so both
+                     # belong here. Compared against "" rather than None because
+                     # the form sends empty strings and the check stores None.
+                     "link_host": checked.host or "",
+                     "link_url_template": checked.url_template or ""},
         }[checked.mode]
         changed = sorted(
             field for field, was in moved.items()
@@ -1691,13 +1799,19 @@ class Handler(BaseHTTPRequestHandler):
                 or "Publish one steering artifact",
                 create=True,
             )
+            # Bytes mode uploads to the Hub, so the row records the Hub rather
+            # than leaving the host to the default. Read off `fetch` so a fork
+            # or a test that repoints it records what it actually pushed to.
+            host, url_template = fetch.hub_pin()
             published = f"pushed to {repo} at {commit}, {url}"
         else:
             repo, commit = checked.repo, checked.commit
+            host, url_template = checked.host, checked.url_template
             published = (f"already at {repo} at {commit}; nothing was uploaded "
                          "and no copy was made")
 
-        entry = entry_from(form, checked, repo=repo, commit=commit)
+        entry = entry_from(form, checked, repo=repo, commit=commit,
+                           host=host, url_template=url_template)
         conn = self.intake.connect()
         try:
             insert(conn, entry)
@@ -1715,6 +1829,11 @@ class Handler(BaseHTTPRequestHandler):
             ("artifact", published),
             ("pinned as", f"artifact_repo {repo}, artifact_commit {commit}, "
                           f"artifact_path {entry['intervention']['artifact_path']}"),
+            ("host", f"artifact_host {host}, artifact_url_template "
+                     f"{url_template}" if host or url_template else
+                     "none recorded, so this resolves against "
+                     f"{fetch.hub_pin()[0]}, which is where every row written "
+                     "before migration 007 resolves"),
             ("served copy", "none. Nothing here writes served_repo."),
             ("evals", "none recorded, which is a state and not a gap. Point one "
                       "at this submission whenever there is one."),

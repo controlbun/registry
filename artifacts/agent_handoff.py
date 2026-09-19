@@ -174,6 +174,13 @@ SPECS: tuple[Spec, ...] = (
     Spec("artifact_repo", ("link_repo",), aliases=("repo", "hub_repo")),
     Spec("artifact_commit", ("link_commit",), cast="commit",
          aliases=("commit", "commit_sha")),
+    # The other half of the pin since `schema/migrations/007`. Both droppable,
+    # and both empty means the Hub, which is where a row recording neither has
+    # always resolved. An agent sitting in the checkout the artifact was
+    # published from is exactly who knows which host that is.
+    Spec("artifact_host", ("link_host",), aliases=("host",)),
+    Spec("artifact_url_template", ("link_url_template",),
+         aliases=("url_template", "template")),
 )
 
 BY_NAME: dict[str, Spec] = {}
@@ -362,7 +369,8 @@ where it goes. Those are two different strings and only the second one belongs
 here.
 
 **artifact_repo** The repo the author published it in, as `owner/name`. Their
-own account, never the registry's.
+own account, never the registry's. Any host; most steering artifacts are in
+GitHub repos and that is not a lesser answer than a Hub one.
 
 **artifact_commit** Forty hex characters. A commit, never a branch and never a
 tag: whoever owns a repo can move a tag, so pinning to one pins to whatever is
@@ -371,6 +379,18 @@ you only have a branch, resolve it to the commit it points at right now and give
 that. If the artifact is not published anywhere yet, `not-found:` the repo and
 the commit and give the path anyway; the intake tool publishes the file to the
 author's own namespace and records the commit it made.
+
+**artifact_host** Which host that repo is on, as a bare authority:
+`huggingface.co`, `github.com`, anything. Droppable, and dropping it means the
+Hub.
+
+**artifact_url_template** How `{host}`, `{repo}`, `{commit}` and `{path}` become
+a URL that returns the file's bytes. A template may use any of the four or none
+of them. Do not guess this: fetch the URL you are about to give and check that
+what comes back is the artifact rather than a redirect page or a git-LFS pointer
+file, and say that you checked. GitHub needs two different layouts depending on
+whether the file is LFS-tracked, and the wrong one returns 404 or a 130-byte
+pointer rather than an error. Droppable, and dropping it means the Hub's layout.
 
 The file itself goes in as safetensors, holding exactly one tensor. A file
 holding several is refused, because nothing can tell which one is the artifact.
@@ -422,6 +442,8 @@ license_status: <what the model license permits, where you read it, when>
 artifact_path: <where it sits in the published repo, relative, not a local path>
 artifact_repo: <owner/name>
 artifact_commit: <forty hex characters>
+artifact_host: <the host that repo is on; drop the line for the Hub>
+artifact_url_template: <how host, repo, commit and path become a URL>
 not-found: <field name> <why there is no value, in a sentence>
 {END}
 """

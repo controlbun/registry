@@ -6,8 +6,9 @@ author runs himself and the other three are not.
     plan     what would go where, and under what path. Reads nothing remote.
     push     the upload. Needs `huggingface_hub` and a token, and is optional:
              the same commit can be made by hand in the web UI or by `hf upload`.
-    record   write `artifact_repo` and `artifact_commit` onto the rows, so
-             `fetch.resolve` takes the remote branch instead of the local file.
+    record   write `artifact_repo`, `artifact_commit`, `artifact_host` and
+             `artifact_url_template` onto the rows, so `fetch.resolve` takes the
+             remote branch instead of the local file.
     verify   fetch it back through `registry.fetch` with an empty cache and
              check the bytes against the local file and against the row.
 
@@ -36,6 +37,13 @@ only into a column is gone on the next build, and the artifact silently falls
 back to the local file on a machine that has one. `published.json` is the record
 and `apply_pins` is the only thing that writes those two columns; the rebuild and
 `record` both call it, so there is one of it rather than two.
+
+**A pin records its host.** `schema/migrations/007` gave the row a host and a
+URL template, so `record` writes four fields where it used to write two and
+`published.json` carries them. The defaults are the Hub's, because this uploader
+pushes to the Hub, and they are defaults rather than knowledge: `--host` and
+`--url-template` record a pin on GitHub, or anywhere else, without a line of
+code changing.
 
 **Resolving a branch to a commit lives here rather than in `registry.fetch`.**
 That module says in its own docstring that it does not resolve a branch or a
@@ -72,12 +80,11 @@ PINS = HERE / "published.json"
 # with `--repo`; the value that ends up in a row is whatever was recorded.
 DEFAULT_REPO = "sohampadia/pro-human"
 
-# A Hub model repo, because `fetch.hub_url` builds `{repo}/resolve/{commit}/{path}`
-# and that is the layout the Hub serves models under. A dataset repo lives at
-# `/datasets/{repo}/resolve/...` and the URL builder cannot address it. This is a
-# fact about one function, not a rule about where artifacts may live: point it at
-# another host by setting `REGISTRY_HUB`, and a layout neither of those serve
-# needs a line in `fetch.hub_url` rather than permission from anybody.
+# A Hub model repo, which is what this uploader makes. It is not a statement
+# about where an artifact may live. Since `schema/migrations/007` the layout is
+# a field on the row, so a dataset repo at `/datasets/{repo}/resolve/...`, or a
+# GitHub repo, or a host nobody here has met, is a different `--url-template`
+# and not a change to any code.
 REPO_TYPE = "model"
 
 # The namespace this registry itself owns. Uploading into it would write bytes
@@ -124,13 +131,19 @@ def apply_pins(conn, path: Path = PINS) -> list[tuple[str, str, str]]:
 
     Called by `artifacts/seed.py` after it inserts, and by `record` against a
     database that already exists. One implementation, because the rebuild and
-    the recording step are writing the same two columns from the same file and
-    two spellings of that is how the two go out of step.
+    the recording step are writing the same columns from the same file and two
+    spellings of that is how the two go out of step.
 
     A pin naming a path no row carries is an error rather than a no-op. The
     interesting way for this to be wrong is a renamed artifact, and a silent
     zero-row update would leave the row pointing at a local file forever while
     the record claimed it was published.
+
+    **`host` and `url_template` are read with `.get`, and absent is a state.**
+    An entry written before `schema/migrations/007` records neither, and a row
+    that records neither resolves where it always resolved, which is
+    `fetch.hub_pin`. Defaulting them to the Hub here instead would write a claim
+    about a host nobody recorded onto a row, which is the mistake 005 describes.
     """
     written: list[tuple[str, str, str]] = []
     for rel, pin in sorted(read_pins(path).items()):
@@ -140,9 +153,10 @@ def apply_pins(conn, path: Path = PINS) -> list[tuple[str, str, str]]:
         # refused at build time, which is the earliest anything reads it.
         commit = fetch.commit_sha(pin["commit"])
         cur = conn.execute(
-            "UPDATE intervention SET artifact_repo=?, artifact_commit=?"
+            "UPDATE intervention SET artifact_repo=?, artifact_commit=?,"
+            " artifact_host=?, artifact_url_template=?"
             " WHERE artifact_path=? AND is_synthetic=0",
-            (repo, commit, rel),
+            (repo, commit, pin.get("host"), pin.get("url_template"), rel),
         )
         if cur.rowcount == 0:
             raise PinError(
@@ -175,10 +189,22 @@ class Item:
     dtype: str
     repo: str | None
     commit: str | None
+    # Both None for a row pinned before `schema/migrations/007`, which resolves
+    # under `fetch.hub_pin` and is not a row missing something.
+    host: str | None = None
+    url_template: str | None = None
 
     @property
     def pinned(self) -> bool:
         return bool(self.repo and self.commit)
+
+    @property
+    def where(self) -> str:
+        """The pin as a line, with absence spelled out rather than left blank."""
+        at = f"{self.repo}@{(self.commit or '')[:12]}"
+        if not self.host and not self.url_template:
+            return f"{at}, no host recorded, so it resolves against the Hub"
+        return f"{at} on {self.host or 'a host nothing recorded'}"
 
 
 def select(conn, only: list[str] | None = None) -> list[Item]:
@@ -196,7 +222,8 @@ def select(conn, only: list[str] | None = None) -> list[Item]:
     """
     rows = conn.execute(
         "SELECT author, label, version, artifact_path, artifact_sha256, shape,"
-        " dtype, artifact_repo, artifact_commit FROM intervention"
+        " dtype, artifact_repo, artifact_commit, artifact_host,"
+        " artifact_url_template FROM intervention"
         " WHERE is_synthetic=0 AND artifact_path IS NOT NULL"
     ).fetchall()
 
@@ -227,6 +254,8 @@ def select(conn, only: list[str] | None = None) -> list[Item]:
             dtype=facts.dtype,
             repo=row["artifact_repo"],
             commit=row["artifact_commit"],
+            host=row["artifact_host"],
+            url_template=row["artifact_url_template"],
         ))
 
     missing = sorted(set(only or []) - {i.path for i in items})
@@ -323,7 +352,8 @@ def cmd_plan(args, conn) -> int:
         print(f"    bytes   {item.size}  sha256 {item.sha256}")
         print(f"    tensor  {item.shape} {item.dtype}, and the row agrees")
         if item.pinned:
-            print(f"    pinned  {item.repo}@{item.commit}")
+            print(f"    pinned  {item.where}")
+            print(f"    url     {item.url_template or 'the Hub layout'}")
         else:
             print("    pinned  not yet; the row resolves to the local file")
         print()
@@ -430,7 +460,16 @@ def cmd_push(args, conn) -> int:
 
 
 def cmd_record(args, conn) -> int:
-    """Write the pin into `published.json` and onto the rows."""
+    """Write the pin into `published.json` and onto the rows.
+
+    **The host and the template are recorded, not assumed.** `--host` and
+    `--url-template` default to `fetch.hub_pin`, because this uploader pushes to
+    the Hub, and both are fields rather than knowledge in the code: the same
+    command records a pin on any host by being given that host's layout, which
+    is `schema/migrations/007` and the reason the columns exist. Derived from
+    `fetch.HUB` rather than written out here, so a fork or a test that repoints
+    it records what it actually published to.
+    """
     items = select(conn, args.only)
     if not items:
         print("nothing to record")
@@ -448,15 +487,22 @@ def cmd_record(args, conn) -> int:
             "branch name is not recorded either way."
         )
 
+    hub_host, hub_template = fetch.hub_pin()
+    host = args.host or hub_host
+    url_template = args.url_template or hub_template
+
     files = read_pins()
     for item in items:
         was = files.get(item.path)
-        files[item.path] = {"repo": args.repo, "commit": commit}
+        files[item.path] = {"repo": args.repo, "commit": commit,
+                            "host": host, "url_template": url_template}
         if was and (was["repo"], was["commit"]) != (args.repo, commit):
             print(f"  repinned {item.path}")
             print(f"    was {was['repo']}@{was['commit']}")
     write_pins(files)
     print(f"wrote {PINS.relative_to(ROOT)}")
+    print(f"  host {host}")
+    print(f"  url  {url_template}")
 
     for rel, repo, sha in apply_pins(conn):
         print(f"  {rel} -> {repo}@{sha[:12]}")
@@ -492,12 +538,14 @@ def cmd_verify(args, conn) -> int:
         try:
             for item in items:
                 print(f"  {item.ref}")
-                print(f"    {item.repo}@{item.commit[:12]} : {item.path}")
+                print(f"    {item.where} : {item.path}")
                 try:
                     remote = fetch.resolve(
                         artifact_path=item.path,
                         artifact_repo=item.repo,
                         artifact_commit=item.commit,
+                        artifact_host=item.host,
+                        artifact_url_template=item.url_template,
                     )
                 except fetch.FetchError as unreachable:
                     print(f"    WRONG PIN  {unreachable}")
@@ -589,6 +637,15 @@ def main(argv: list[str] | None = None) -> int:
                             help="write the pin into the record and the rows")
     record.add_argument("--repo", default=DEFAULT_REPO)
     record.add_argument("--commit", help="forty hex characters")
+    record.add_argument(
+        "--host",
+        help="the host that repo is on, as a bare authority. Defaults to the "
+             "one this uploader pushes to.")
+    record.add_argument(
+        "--url-template", dest="url_template",
+        help="how host, repo, commit and path become a URL, e.g. "
+             "https://{host}/{repo}/resolve/{commit}/{path}. Any of the four "
+             "fields, or none of them. Defaults to the layout the Hub serves.")
     record.add_argument("--at-head", action="store_true",
                         help="ask the Hub what the branch points at and freeze it")
     record.add_argument("--branch", default="main")

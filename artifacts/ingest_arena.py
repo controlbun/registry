@@ -52,7 +52,7 @@ from registry.artifact import Claim, MismatchedArtifact, local_path  # noqa: E40
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from source import COMMIT, DIRECTIONS, LICENSE, MEDIA, REPO  # noqa: E402
+from source import COMMIT, DIRECTIONS, HOST, LICENSE, MEDIA, REPO  # noqa: E402
 
 OUT = "artifacts/soham"
 
@@ -104,7 +104,7 @@ def arena_payload(parsed: ingest.Parsed) -> ingest.Payload:
 def source_of(name: str, npz_sha: str) -> ingest.PinnedRepoFile:
     """The pin, as one object, so the URL and the provenance share their fields."""
     return ingest.PinnedRepoFile(
-        host="github.com",
+        host=HOST,
         repo=REPO,
         commit=COMMIT,
         path=f"data/directions/{name}",

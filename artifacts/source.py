@@ -11,6 +11,7 @@ from __future__ import annotations
 # manifest was generated, so this is not its HEAD: it is a commit at which all
 # three blobs verify, confirmed by reading the git-LFS pointer at that commit and
 # matching its oid against the sha256 below.
+HOST = "github.com"
 REPO = "soham-padia/steering-arena"
 COMMIT = "b8b472175b7a2af1b7a7ecd7a784e982a6a7453a"
 
@@ -19,10 +20,29 @@ COMMIT = "b8b472175b7a2af1b7a7ecd7a784e982a6a7453a"
 # commit-pinned path.
 #
 # A template rather than a prefix, because `registry.ingest.PinnedRepoFile`
-# formats it from the same fields it records as provenance. The commit appears
-# once, in COMMIT, so the URL that is fetched and the commit that is written
-# into the file's header cannot come apart.
+# formats it from the same fields it records as provenance, and since
+# `schema/migrations/007` an intervention row records one and
+# `registry.fetch.pinned_url` formats it from the same four fields on the way
+# back out. The commit appears once, in COMMIT, so the URL that is fetched and
+# the commit that is written into the file's header cannot come apart.
+#
+# Neither template carries `{host}`, because GitHub does not serve file content
+# from the host its repos are on. That is the reason a row records the host and
+# the template separately rather than deriving one from the other.
 MEDIA = "https://media.githubusercontent.com/media/{repo}/{commit}/{path}"
+
+# The other half of the same host, for a file git-LFS does not track. Nothing
+# here fetches through it: all four directions are LFS objects. It is recorded
+# because the intake form offers both as suggestions, and because the pair is
+# the evidence for the column: one host, two layouts, and each one 404s on the
+# other's files.
+#
+# Rechecked with curl on 2026-09-18, against REPO at COMMIT. The media host
+# returned the 22,424-byte object for `data/directions/d_olmo3_v1.npz`, whose
+# sha256 is the one recorded below; the raw host returned the 130-byte LFS
+# pointer naming the same oid; and the media host returned 404 for README.md,
+# which is not LFS-tracked.
+RAW = "https://raw.githubusercontent.com/{repo}/{commit}/{path}"
 
 # source filename, sha256 of the .npz at COMMIT, sha256 of the .safetensors
 # `ingest_arena.py` writes from it.

@@ -169,6 +169,25 @@ def test_a_pin_arrives_as_link_mode_and_no_pin_says_so():
     assert pinned.values["link_commit"] == SHA
 
 
+def test_a_pin_can_name_a_host_that_is_not_the_hub():
+    """The agent sits in the checkout, so it is the thing that knows this."""
+    template = "https://media.githubusercontent.com/media/{repo}/{commit}/{path}"
+    got = handoff.parse(block(
+        CORE + f"artifact_repo: author/directions\nartifact_commit: {SHA}\n"
+        f"artifact_host: github.com\nartifact_url_template: {template}\n"))
+    assert got.pinned
+    assert got.values["link_host"] == "github.com"
+    assert got.values["link_url_template"] == template
+
+
+def test_dropping_the_host_lines_is_not_a_missing_field():
+    """Absence is a state, and it means the Hub."""
+    got = handoff.parse(block(
+        CORE + f"artifact_repo: author/directions\nartifact_commit: {SHA}\n"))
+    assert "link_host" not in got.values
+    assert "link_url_template" not in got.values
+
+
 def test_a_repo_without_a_commit_is_not_a_pin_and_is_not_silent():
     got = handoff.parse(block(CORE + "artifact_repo: author/directions\n"))
     assert not got.pinned

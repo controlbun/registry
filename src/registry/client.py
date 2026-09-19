@@ -130,10 +130,21 @@ class Submission:
     # Where the author published it, and where we serve a copy from, kept apart
     # on purpose. See 004_served_copy.sql: one pair of columns cannot express a
     # mirror that has drifted from its origin.
+    #
+    # The host and the template travel with each pair rather than being known by
+    # this client, which is 007_any_host.sql: a row says which host its repo is
+    # on and how that turns into a URL, so an artifact published somewhere
+    # nobody here has met resolves without a code change. Both are None on every
+    # row written before that column existed, which is a state and not a gap:
+    # `fetch.from_repo` resolves those where they always resolved.
     _artifact_repo: str | None = None
     _artifact_commit: str | None = None
+    _artifact_host: str | None = None
+    _artifact_url_template: str | None = None
     _served_repo: str | None = None
     _served_commit: str | None = None
+    _served_host: str | None = None
+    _served_url_template: str | None = None
 
     @property
     def ref(self) -> str:
@@ -155,8 +166,12 @@ class Submission:
             artifact_path=self._artifact_path,
             served_repo=self._served_repo,
             served_commit=self._served_commit,
+            served_host=self._served_host,
+            served_url_template=self._served_url_template,
             artifact_repo=self._artifact_repo,
             artifact_commit=self._artifact_commit,
+            artifact_host=self._artifact_host,
+            artifact_url_template=self._artifact_url_template,
         ))
 
     def _check(self, blob: bytes) -> np.ndarray:
@@ -275,10 +290,14 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
     iv = conn.execute(
         # Named rather than `*`, so adding a column to the schema does not
         # silently start travelling through the client. Widened in 004 to carry
-        # both where the author published it and where we serve a copy from, and
-        # in 006 to carry the digest those bytes are checked against.
+        # both where the author published it and where we serve a copy from, in
+        # 006 to carry the digest those bytes are checked against, and in 007 to
+        # carry the host each pair is on and the template that turns it into a
+        # URL.
         "SELECT artifact_path, artifact_repo, artifact_commit,"
-        " served_repo, served_commit, artifact_sha256 FROM intervention"
+        " artifact_host, artifact_url_template,"
+        " served_repo, served_commit, served_host, served_url_template,"
+        " artifact_sha256 FROM intervention"
         " WHERE author=? AND label=? AND version=?",
         (row["author"], row["label"], row["version"]),
     ).fetchone()
@@ -324,8 +343,12 @@ def _build(conn: sqlite3.Connection, row: sqlite3.Row) -> Submission:
         _artifact_path=iv["artifact_path"] if iv else None,
         _artifact_repo=iv["artifact_repo"] if iv else None,
         _artifact_commit=iv["artifact_commit"] if iv else None,
+        _artifact_host=iv["artifact_host"] if iv else None,
+        _artifact_url_template=iv["artifact_url_template"] if iv else None,
         _served_repo=iv["served_repo"] if iv else None,
         _served_commit=iv["served_commit"] if iv else None,
+        _served_host=iv["served_host"] if iv else None,
+        _served_url_template=iv["served_url_template"] if iv else None,
     )
 
 

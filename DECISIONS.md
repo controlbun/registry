@@ -636,6 +636,11 @@ look.
 
 **Supersedes:** nothing.
 
+**Superseded by:** 2026-09-18 "The row carries its own URL template, so a pin
+can name any host". The host field this entry called the honest fix exists, and
+the columns are no longer Hub-shaped. Non-Hub provenance does not live in the
+recipe payload any more.
+
 ## 2026-09-14 The seed corpus is indexed, not submitted
 **Decided:** The corpus is populated by indexing artifacts that already exist,
 starting with the literature, and not by waiting for people to upload. Submissions
@@ -1810,6 +1815,10 @@ recipe payload, and that is a gap", which is the same kind of entry.
 **Found, not decided.** The write path is host-agnostic and the read path is
 not, so an artifact published on GitHub can be ingested and cannot be pinned.
 
+**Superseded by:** 2026-09-18 "The row carries its own URL template, so a pin
+can name any host", which is the fix. Everything below is the finding as it
+stood and the read path no longer works this way.
+
 **The asymmetry, exactly.** `ingest.PinnedRepoFile` takes a `host` and a
 `url_template` and its docstring already settles the principle: "A table of the
 ones we happen to have met would be a list of where an artifact is allowed to
@@ -1852,3 +1861,112 @@ carries one, so the read path stops knowing any host by name. That is migration
 **Supersedes:** nothing. Same kind of entry as 2026-09-18 "GAP: `layer` is one
 integer" and 2026-09-14 "Non-Hub provenance lives in the recipe payload, and
 that is a gap", which this partly explains.
+
+**Superseded by:** 2026-09-18 "The row carries its own URL template, so a pin
+can name any host", which is the fix and takes the shape this entry named.
+
+## 2026-09-18 The row carries its own URL template, so a pin can name any host
+**Decided:** `intervention` records `artifact_host` and `artifact_url_template`
+beside the repo, commit and path, and `served_host` and `served_url_template`
+beside the served pair. `registry.fetch` formats the row's own template and
+knows no host by name. There is no table mapping hosts to URL layouts and there
+will not be one.
+
+**Why:** `ingest.PinnedRepoFile` settled the principle on the write side and the
+read side had not caught up: "A table of the ones we happen to have met would be
+a list of where an artifact is allowed to come from, which is not ours to
+write." A host nobody here has met now works by construction, with no code
+change and no request to anybody. This is the same argument `registry.ingest`
+makes about file formats and 001 makes about `kind`; the only difference was
+that here the assertion was being made by a missing column rather than by a
+CHECK, which is why it survived the trip-wire list for four days.
+
+**What it makes impossible to express: nothing.** It is strictly an addition.
+What it removes is the schema's claim that a legitimate artifact is one that
+lives on the Hub, which nobody decided. All four real directions in this corpus
+came in from GitHub and could be ingested and not pinned.
+
+**Both fields, because neither derives from the other.** GitHub serves file
+content from a host its repos do not live on: the host is `github.com` and the
+URL is `media.githubusercontent.com/media/{repo}/{commit}/{path}`. And one host
+can need more than one layout. Checked with curl against
+`soham-padia/steering-arena` at `b8b4721` on 2026-09-18: the media host returned
+the 22,424-byte LFS object whose sha256 matches the one `artifacts/source.py`
+recorded, `raw.githubusercontent.com` returned the 130-byte LFS pointer for the
+same repo, commit and path, and the media host returned 404 for a file that is
+not LFS-tracked. Three layouts across two hosts, documented in migration 007 and
+offered in the intake form's datalists, enforced nowhere.
+
+**Absence is a state, and no row was backfilled.** Every row in this database
+records no host, because there was nowhere to record one. `fetch.hub_pin` is the
+default those resolve under, so an existing row resolves after 007 exactly where
+it resolved before. Writing `huggingface.co` onto them would produce a string
+rather than a fact and would read exactly like a fact somebody checked, which is
+the argument 005 makes about `model_revision`.
+
+**A template in a row is a fetch target that came out of data, and three things
+are checked about it.** None of them is who the host is.
+
+The commit has to survive into the URL's path or query, which is the property a
+pin actually is; that closes S2 in `V1.md`, where a repo containing a `?`
+silently turned the pin into a query string and fetched HEAD.
+
+The scheme has to be one a fetch can happen over, because a `file:` URL is a
+local read wearing a URL and resolves to different bytes on every machine, so
+nobody else can check it. That is refusing what cannot be verified. Any http or
+https host works, including ones nobody here has heard of, which is the point.
+
+Every placeholder has to be a bare `{name}`. `str.format` is more than
+substitution: `{repo:>200000000}` is seventeen characters of template and two
+hundred megabytes of allocation, measured, and `{host.__class__}` walks
+attributes of the value rather than printing it. The second reaches nothing
+here, because the four values are plain strings and the leak that makes this
+famous needs a rich namespace. The first is a real allocation out of a row. Both
+are refused, and a URL layout has no use for either.
+
+**What was checked and found not to apply.** A redirect cannot reach `file:`;
+`urllib.request.HTTPRedirectHandler.http_error_302` on Python 3.13.5 refuses any
+scheme but http, https and ftp, read from the installed source rather than
+recalled. No credentials are sent, so a hostile host gets a bare GET. `get_url`
+reads a response with no size cap, which is unchanged by this and now applies to
+a host a row named rather than to the Hub; worth a cap and not settled here.
+
+**What is not guarded, deliberately, and it is a tension rather than a
+conclusion.** A row can name a host on the reader's own network, so a consumer
+running `client.load(...).vector()` can be made to issue a GET somewhere
+internal. Blocking loopback and private ranges would break the `REGISTRY_HUB`
+override this project documents and every local stand-in server in the test
+suite, and it would be the first step of the host list this entry exists to
+avoid. What limits it today is that v0 accepts no uploads, so every row is
+written by the operator on their own machine; no credentials are sent; and the
+bytes go back to the caller who asked rather than to a third party. **A
+submission route changes that, and this belongs in the dual-use policy rather
+than being settled here.** Recorded now so it is not discovered later.
+
+**The cache is keyed on the resolved URL.** It was keyed on repo, commit and
+path, which collides across hosts, and also across templates: the media host and
+the raw host return different bytes for the same repo, commit and path, so the
+template has to be in the key too. That is not hypothetical, it is the check
+above. Keying on the URL also fixes a smaller bug it did not set out to: a
+`REGISTRY_HUB` pointed somewhere new used to read the old host's bytes back out
+of the cache.
+
+**Demonstrated end to end on 2026-09-18, against real hosts.**
+`fetch.resolve` with `host` github.com and the media template returned the
+22,424 bytes of `d_olmo3_v1.npz` at `b8b4721`, sha256 matching the one
+`artifacts/source.py` records; the same row with the raw template returned the
+130-byte pointer instead, which is the collision the cache key now carries. And
+`client.load(...).vector()` against a row pinned on `github.com` with the raw
+template returned the tensor, digest checked against the row. That second one
+used a scratch database and a public GitHub-hosted safetensors that is not a
+steering artifact, because there is no safetensors in a public GitHub repo of
+the author's to point at: the arena publishes `.npz`, and link mode records a
+pointer the client parses rather than converting it. **That is a gap and not a
+defect of this change.** A GitHub-published `.npz` still cannot be pinned in
+link mode; the ingest path converts it and the intake form's bytes mode
+publishes the conversion to the Hub. Worth deciding separately.
+
+**Supersedes:** 2026-09-18 "GAP: ingest reads any host, but a row can only pin
+the Hub", which is the entry that specified this, and 2026-09-14 "Non-Hub
+provenance lives in the recipe payload, and that is a gap", whose decision that
+the columns stay Hub-shaped is now false.

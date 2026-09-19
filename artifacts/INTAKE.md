@@ -68,9 +68,20 @@ in a sentence and the form works without them.
 
 Both finish as a row pointing at a pinned remote. Neither writes `served_repo`.
 
-**Link.** Paste a Hub repo, a commit and a path. The bytes are fetched into a
+**Link.** Paste a repo, a commit and a path. The bytes are fetched into a
 throwaway cache, checked, and dropped. What is recorded is the pointer. No size
 limit, because nothing is held.
+
+Two further fields say which host that repo is on and how the four values become
+a URL, and both may be empty. Empty means the Hub, which is where every row
+written before `schema/migrations/007` resolves. They are free text with
+suggestions rather than a menu, for the reason `registry.ingest.PinnedRepoFile`
+gives: a table of the hosts we happen to have met would be a list of where an
+artifact is allowed to come from. What is checked is not which host they name.
+`registry.fetch` requires the commit to survive into the URL, because that is
+what a pin is, and refuses a scheme a fetch cannot happen over, because a pin
+that resolves only on the machine that wrote it is not one anybody else can
+check.
 
 **Bytes.** Drop a file. It is converted to safetensors and checked in a temporary
 directory outside this repository, pushed to the namespace in the form through

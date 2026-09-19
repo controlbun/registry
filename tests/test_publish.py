@@ -212,8 +212,16 @@ def test_record_writes_the_file_and_the_rows(tree, hub):
         f"artifacts/soham/{p.name}"
         for p in (tree / "artifacts" / "soham").glob("*.safetensors")
     }
-    assert all(v == {"repo": REPO, "commit": SHA}
-               for v in recorded["files"].values())
+    # The host and the layout are half the pin since `schema/migrations/007`,
+    # and they are recorded rather than assumed: derived from the host this
+    # uploader actually pushed to, which under `REGISTRY_HUB` is the stand-in
+    # above. A recorded Hub is what makes a recorded GitHub possible.
+    host = hub.split("//", 1)[1]
+    assert all(
+        v == {"repo": REPO, "commit": SHA, "host": host,
+              "url_template": "http://{host}/{repo}/resolve/{commit}/{path}"}
+        for v in recorded["files"].values()
+    ), recorded["files"]
 
     written = rows(tree)
     assert all(written[p] == (REPO, SHA) for p in recorded["files"])
