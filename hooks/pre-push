@@ -1,4 +1,42 @@
 #!/bin/sh
 # Invariants are build-failing by design. An invariant that does not block a push
 # is a suggestion.
-exec make verify
+#
+# The deploy branch is an orphan whose root is the built site, so it carries no
+# Makefile and `make verify` from its worktree fails with "No rule to make
+# target". Run the gate from the main worktree, which has one, rather than from
+# wherever the push was issued. Skipping the hook for that push instead would
+# have left the one branch readers actually read as the only ungated one.
+set -e
+
+root=$(cd "$(git rev-parse --git-common-dir)/.." && pwd)
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX
+cd "$root"
+
+make verify
+
+# The whole argument for having no hosted build is that what is served is the
+# artifact that passed the gate on this machine. That was an assertion until
+# here. A deploy push now has to carry the astro/dist that make verify just
+# rebuilt, byte for byte, or it does not go.
+zero=0000000000000000000000000000000000000000
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/gh-pages) ;;
+    *) continue ;;
+  esac
+  [ "$local_sha" = "$zero" ] && continue
+
+  tmp=$(mktemp -d)
+  git archive "$local_sha" | tar -x -C "$tmp"
+  if diff -r -q "$tmp" "$root/astro/dist" >/dev/null 2>&1; then
+    echo "pre-push: gh-pages tree is the astro/dist that passed make verify"
+    rm -rf "$tmp"
+  else
+    echo "pre-push: the gh-pages tree being pushed is not the astro/dist that" >&2
+    echo "pre-push: just passed make verify. Differences:" >&2
+    diff -r -q "$tmp" "$root/astro/dist" >&2 || true
+    rm -rf "$tmp"
+    exit 1
+  fi
+done
