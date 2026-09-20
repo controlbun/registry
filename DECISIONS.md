@@ -2878,6 +2878,19 @@ probably more honest and is a larger change. Note that the first is not free:
 silently misapplied, so nullable must not become optional for the kinds that
 need them.
 
+**Noted 2026-09-20, and it inverts the obvious sequencing.** A token sequence
+needs no bytes. That removes every obstacle currently in front of a write path
+for tensors: no storage to choose, no HF repo scope to request, no digest of a
+file at a URL, and nothing held on somebody else's behalf. Signing in and
+pasting the sequence is the whole of it. So the instinct to treat this as the
+exotic case that waits until file artifacts work is probably backwards, and it
+may be the cheapest first thing a stranger can submit.
+
+What still has to hold: the text is the artifact and is hashed like one, so a
+reader can check that what they are reading is what was submitted. A sequence
+stored without a digest is a claim rather than an artifact, which is the same
+line every other kind here is held to.
+
 **Also unresolved, and smaller:** comparison. `_angle_between` refuses a pair
 that does not share model, revision, layer and hook point, which happens to
 refuse a token sequence for the right reason by accident. An angle between two
