@@ -3001,3 +3001,78 @@ personalized or counted. If a reason to know who a reader is ever appears, it
 will look like a feature and it is this entry it has to argue with.
 
 **Supersedes:** nothing. Names the boundary `V2.md` section 2 assumes.
+
+## 2026-09-19 There is a contact route, and the address is written out
+**Decided:** `/contact/` carries three things: the author's email as a plain
+`mailto:`, a link to `github.com/controlbun/registry`, and a sentence about what
+the corpus currently is, computed from the export rather than written down. It
+is linked from the site navigation on every page and from the byline on
+`/about/`. No form, and none later without the dual-use policy that a write path
+needs.
+**Why:** the site had exactly three outbound links, two to Hugging Face's
+sign-in and one to the bytes of the one pinned artifact. A reader who finished
+the argument and disagreed with it had nowhere to put that, and a reader who
+wanted to check a claim could not find the code. A registry is contributor-first
+and the reader worth hearing from is the one who would submit, thinks the design
+is wrong, or holds an artifact with nowhere to live; all three were being
+optimized against by accident.
+
+**The address is not obfuscated, which is a decision and not an oversight.** It
+is the git author identity on every commit in a public repository, so it is
+already fetchable from the GitHub API and hiding it on one page protects nothing
+that is not out. Entity-encoding and "name at domain" break the click for a
+reader using a mail client and stop no scraper written this decade, and
+assembling the address at runtime is script, which this site deliberately does
+not ship. Spam filtering is where that problem is actually handled.
+
+**In the navigation rather than only at the foot of `/about/`.** The reader who
+bounces off the home page never reaches `/about/`, and that is the reader most
+likely to have a response. A nav item is an offer, which is why "Sign in" is not
+one, and this offer the build can honor today: the address works and the
+repository is public.
+
+**What it costs.** A public inbox, and the expectation that mail is a way to
+submit. The page says it is not, in the same place it invites the person holding
+an artifact, because those two sentences have to sit together or the invitation
+reads as a route. An artifact arriving by mail is something the author received
+personally; nothing publishes it, and the dual-use question that a real
+submission path raises is still unanswered.
+
+**The off-site guard was widened rather than sidestepped.** `mailto:` is not an
+http URL, so `tests/test_pinned_page.py` did not see the first one: it would
+have shipped by being invisible to the check rather than by anybody deciding it
+should, which is the hole `AUTHORED_OFFSITE` exists to close for every other
+scheme. The scanner now counts a mailto as leaving the site, both of
+`/contact/`'s links are named in that dict against that page and no other, and
+the bite test carries an unaccounted address so a later narrowing turns red.
+**Supersedes:** nothing; completes `V1.md` B3, which was closed when `/about/`
+named the author and still gave nobody a way to reply.
+
+## 2026-09-20 `artifacts/signin.py` goes when the browser path lands
+**Decided:** the loopback sign-in tool is deleted as part of the work that makes
+signing in work in a browser, rather than kept alongside it.
+
+**Why it existed.** It was built to a brief that ruled out shipping anything
+into the site, because the return leg was undecided and the `astro/dist` guard
+stood in the way. Both of its real jobs were one-time and both are done: it
+proved the OAuth flow end to end, which is how `provider_token` returning and
+`orgs` arriving from userinfo stopped being assumptions, and it produced the one
+real capture that this corpus's namespace claim derives from.
+
+**Why it does not stay.** Two paths producing the same object is the failure
+this repository has hit more than any other, and its own module docstrings name
+the instances: `pairwise` against `similarity_matrix`, the two `<head>` blocks,
+the digest comparison in three places. A local capture and a browser capture in
+two shapes would be the next one, and keeping the local one "as a fallback" is
+how that drift starts rather than a hedge against it.
+
+**What has to survive the file.** The three-state handling of `orgs`, which was
+worked out against a real sign-in: a list is what the provider said, `[]` is
+membership of nothing and is a real answer, and `null` is the provider saying
+nothing about orgs at all, carried with a reason through `008`. The browser path
+inherits that rather than rediscovering it. `artifacts/claim.py` is the only
+live dependency and reads whatever the browser path writes instead.
+
+**Supersedes:** nothing. Ends the arrangement recorded in 2026-09-19 "The site
+signposts sign-in, receives nothing, and names no account of its own", which
+stays correct about the site as it stands today.
