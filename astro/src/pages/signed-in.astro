@@ -48,6 +48,17 @@ import Base from "../layouts/Base.astro";
 // `sessionStorage`, because a verifier has to survive a navigation by
 // definition, and it is removed the moment it is used.
 //
+// **This page does write one thing to the browser, and it is three display
+// facts.** The bar at the top ships both ways in and needs to know which to
+// show on a page this one did not render, so after an exchange it writes the
+// handle, the subject and the moment they were read under one key. `whoFrom`
+// builds that record by naming its fields, so a token cannot arrive in it when
+// the capture grows one. Remembering a handle is not holding a session: a
+// reader who comes back tomorrow gets a bar that says Add artifact and a page
+// that asks them to sign in again, because the token is gone and nothing here
+// can make a request without one. Sign out in the bar deletes the key, which is
+// all signing out is here.
+//
 // **The copy is drafted, not dictated.** Structure and accuracy are mine; every
 // sentence a reader sees is the author's to rewrite.
 
@@ -240,6 +251,7 @@ const CONTRACT = [
         organizations it says you belong to. It is not asked for write access to
         anything, and it is not asked for your email.
       </p>
+      <p id="remembered" hidden class="banner"></p>
       <p>
         <button type="button" id="begin" class="go">Sign in with Hugging Face</button>
       </p>
@@ -277,6 +289,16 @@ const CONTRACT = [
         One JSON file. It is the evidence a namespace claim is made from, and it
         carries no token.
       </span>
+    </p>
+    <p class="note">
+      Your handle and your subject are now kept in this browser, under one key,
+      so the bar at the top can offer <strong>Add artifact</strong> on the next
+      page instead of <strong>Sign in</strong>. No token is kept: the one this
+      tab holds lives in a variable and is gone the moment you reload or close
+      it. Keeping a handle is not holding a session, so coming back tomorrow
+      means signing in again. <strong>Sign out</strong> in the bar deletes the
+      key, which forgets the handle in this browser and does not end your
+      Hugging Face session.
     </p>
   </section>
 
@@ -447,11 +469,12 @@ const CONTRACT = [
   <h2>What this page is not</h2>
   <p class="note">
     It is not an account. It is not a queue, and nothing here is reviewed,
-    ranked, counted or ordered. It keeps no cookie and writes down no token. The
-    one thing it writes is the submission you send, and nobody else can read it.
-    A namespace takes any number of claimants, and two people claiming one name
-    render as two claims with their dates rather than as a conflict anybody here
-    resolves.
+    ranked, counted or ordered. It keeps no cookie and writes down no token. It
+    writes two things and they are different in kind: the submission you send,
+    which nobody else can read, and your handle in this browser, which is what
+    the bar at the top reads and what Sign out deletes. A namespace takes any
+    number of claimants, and two people claiming one name render as two claims
+    with their dates rather than as a conflict anybody here resolves.
   </p>
 
   <p>
@@ -488,6 +511,7 @@ const CONTRACT = [
     pkcePair,
     refuseOurNamespace,
     submissionFrom,
+    whoFrom,
     Refused,
   } from "../lib/handshake.mjs";
   import {
@@ -514,6 +538,10 @@ const CONTRACT = [
   // anything on its own: without the authorization code it exchanges for
   // nothing.
   const VERIFIER = "controlbun.pkce";
+  // The one thing that outlives this tab, and it is three display facts. What
+  // goes in is `whoFrom`'s output and nothing else, which is where the rule
+  // about what may be in it is enforced rather than here.
+  const WHO = "controlbun.who";
   // Names the window so a second press reuses it rather than stacking two
   // consent screens. Not used to recognize the window on the way back: see the
   // comment at the bottom of this file for why that cannot work.
@@ -710,6 +738,18 @@ const CONTRACT = [
     show("working", false);
     show("who", true);
     show("submit-section", Boolean(entry.preferred_username));
+
+    // What the bar at the top reads, on this page and on every page after it.
+    // Written after the render rather than before, so nothing is remembered
+    // about a reading that did not finish.
+    const who = whoFrom(entry);
+    if (who) {
+      localStorage.setItem(WHO, JSON.stringify(who));
+      // The bar decided what to show while this page was parsing, which was
+      // before any of this happened. Telling it is cheaper and more honest than
+      // a reload, and the same listener handles another tab doing it.
+      window.dispatchEvent(new Event("controlbun:who"));
+    }
   }
 
   // Whether the registry made the upload on this person's behalf. A fact about
@@ -950,6 +990,33 @@ const CONTRACT = [
       })
       .catch(stop);
   } else {
+    // A plain visit, which is what the Add artifact button in the bar produces.
+    // Somebody arriving that way may have a remembered handle and certainly has
+    // no session: the token died with the tab or the reload that ended the last
+    // one, and there is no way to get it back except asking again.
+    //
+    // Saying so is the point. A button in the bar that led to a page offering
+    // nothing but a second button, with no account of why, would read as the
+    // first press having failed.
+    let remembered = null;
+    try {
+      remembered = JSON.parse(localStorage.getItem(WHO) || "null");
+    } catch (unreadable) {
+      remembered = null;
+    }
+    if (remembered && remembered.handle) {
+      show("remembered", true);
+      say(
+        "remembered",
+        `This browser remembers the handle ${remembered.handle}, read ` +
+          `${remembered.recorded_at ?? "at a moment it did not record"}. That ` +
+          "is a name for the bar at the top and not a session: no token " +
+          "survives a reload, so sending a submission needs a fresh sign-in. " +
+          "Press the button and Hugging Face will ask again. Sign out in the " +
+          "bar forgets the handle in this browser and does not end your " +
+          "Hugging Face session.",
+      );
+    }
     show("start", true);
   }
 </script>

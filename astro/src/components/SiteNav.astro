@@ -12,6 +12,12 @@
 // outlined one survives any surface, which is why the favicon uses it. On a dark
 // page the plain one is better: its navy outline would sit at 1.6:1 against the
 // page and do nothing but blur the silhouette.
+//
+// It also carries the way in, which since 2026-09-20 is two affordances rather
+// than one. **There are no props and no imports here on purpose**, and the
+// block above the account markup says why: everything the bar knows about a
+// reader comes from one key in that reader's browser, and nothing it knows can
+// come from the page it happens to be sitting on.
 ---
 
 <header class="sitenav">
@@ -35,7 +41,45 @@
   </nav>
 
   <button class="themetoggle" type="button" id="theme">Dark theme</button>
+
+  {/* Both ways in ship in the HTML and CSS picks, off `data-who` on the root
+      element, which the head script sets before first paint.
+
+      **Nothing in this component's frontmatter feeds that choice, and that is
+      the property rather than an accident of how it was written.** There are no
+      props, no import of the corpus and no expression in the markup below. The
+      bar cannot say a reader is somebody because the page they are on is that
+      person's, which is the shape this would take the first time somebody made
+      it "smarter": a submission page knows an author's handle, and a bar that
+      read it would greet strangers by the name of whoever they were reading.
+
+      **Remembering a handle gates nothing.** "Sign in" is a link to the page
+      that explains signing in, that page links to the page that does it, and
+      the page that does it is where a submission is sent from. Somebody who has
+      never signed in reaches every one of those, so what changes here is which
+      door is named first and nothing about who may open it. */}
+  <div class="account whenout">
+    <a href="/sign-in/">Sign in</a>
+  </div>
+
+  <div class="account whenin">
+    <span class="handle" id="nav-handle"></span>
+    <a href="/signed-in/">Add artifact</a>
+    <button type="button" id="signout">Sign out</button>
+  </div>
 </header>
+
+{/* The receipt for a press, rather than a sentence sitting in the bar forever.
+    It says the two things somebody pressing Sign out is entitled to know, and
+    the second is the one they would otherwise get wrong.
+
+    Outside the header because it is a line of prose and the bar is a flex row,
+    and ignored by the search index because chrome that appears on every page
+    would otherwise be a hit on every page. */}
+<p class="navsaid" id="nav-said" hidden data-pagefind-ignore>
+  Signed out. That forgot the handle in this browser and did not end your
+  Hugging Face session.
+</p>
 
 <script is:inline>
   // Inline and unbundled, same reason as the script in the head: no waiting on a
@@ -64,5 +108,60 @@
       localStorage.setItem("theme", next);
       label();
     });
+  }());
+
+  // The handle, and the way to forget it. Same shape as the toggle above: three
+  // lines of work, inline and unbundled, so nothing waits on a module graph.
+  (function () {
+    // One key, and the only thing this file reads. It holds display facts
+    // written by `/signed-in/` after an exchange: the handle, the subject and
+    // when they were read. No token is in it, and `handshake.mjs` is where that
+    // is a property of a function rather than of this comment.
+    const WHO = "controlbun.who";
+    const root = document.documentElement;
+    const handle = document.querySelector("#nav-handle");
+    const out = document.querySelector("#signout");
+    const said = document.querySelector("#nav-said");
+
+    // The head script has already set the attribute, which is what CSS reads
+    // and what keeps the bar from flashing the wrong affordance. This fills in
+    // the one thing an attribute cannot: the text.
+    const show = () => {
+      const who = root.dataset.who;
+      if (handle) handle.textContent = who ? "@" + who : "";
+    };
+    show();
+
+    if (out) {
+      out.addEventListener("click", () => {
+        // Deleting the key is the whole of signing out. There is nothing to
+        // revoke here and nothing to tell anybody: the token died with the tab
+        // that made it, and the account at the identity provider is that
+        // provider's and untouched.
+        localStorage.removeItem(WHO);
+        delete root.dataset.who;
+        show();
+        if (said) said.hidden = false;
+      });
+    }
+
+    // Two ways the key changes under a page that is already open: `/signed-in/`
+    // finishing an exchange in this tab, and another tab signing in or out.
+    // Neither is common and both look like a bug when the bar disagrees with
+    // what the reader just did.
+    const again = () => {
+      const kept = localStorage.getItem(WHO);
+      let who = null;
+      try {
+        who = JSON.parse(kept || "null");
+      } catch (unreadable) {
+        who = null;
+      }
+      if (who && who.handle) root.dataset.who = who.handle;
+      else delete root.dataset.who;
+      show();
+    };
+    window.addEventListener("storage", again);
+    window.addEventListener("controlbun:who", again);
   }());
 </script>

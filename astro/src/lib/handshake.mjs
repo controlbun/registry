@@ -463,6 +463,47 @@ export function pendingRowFrom(user, record) {
   return { account: id, subject, handle, record };
 }
 
+// --------------------------------------------------------------------------
+// What the bar at the top is allowed to remember.
+
+export const WHO_SHAPE = "controlbun.registry/remembered-who@1";
+
+/**
+ * Display facts, and nothing a request could be made with.
+ *
+ * The bar at the top ships both ways in and one of them is wrong for whoever is
+ * reading. Deciding which needs something that outlives a page load, and the
+ * session does not: the access token lives in one variable in one tab and is
+ * gone on a reload, deliberately, and that is not moving.
+ *
+ * So what survives is three display facts, written here by name rather than by
+ * spreading a capture. A projection that names its fields cannot pick up a
+ * token when the capture grows one, which is the same reason `captureFrom`
+ * names its fields, and it is the property `tests/test_nav_account.py` checks
+ * by handing this a capture carrying three of them.
+ *
+ * **Remembering a handle is not holding a session and nothing here pretends
+ * otherwise.** It changes what the bar offers and it changes nothing about what
+ * anybody can do: `/signed-in/` asks for a fresh sign-in when the tab has no
+ * session, and that page is reachable, linked and usable by somebody who has
+ * never signed in at all.
+ *
+ * Null rather than a refusal when the provider named no handle. That is a real
+ * state, it is the one `captureFrom` records as `preferred_username: null`, and
+ * the honest reading of it is that there is nothing for the bar to show rather
+ * than that something went wrong.
+ */
+export function whoFrom(capture) {
+  const handle = capture && capture.preferred_username;
+  if (!handle) return null;
+  return {
+    shape: WHO_SHAPE,
+    handle,
+    subject: capture.sub ?? null,
+    recorded_at: capture.captured_at || nowStamp(),
+  };
+}
+
 /**
  * A file name to download, made of the thing it holds.
  *

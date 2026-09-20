@@ -292,6 +292,32 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
 /* Pushes the toggle to the far edge without a spacer element. */
 .sitenav .themetoggle { margin-left: auto; margin-top: 0; }
 
+/* Both ways in ship in the markup and CSS picks, off `data-who` on the root
+   element. The head script sets that attribute before first paint, for the same
+   reason it applies the saved theme there: anything deciding after paint shows
+   the wrong one for a frame.
+
+   `hidden` is not used for this, on purpose. It would need a CSS rule to
+   override it anyway, which is the decision taken in two places, and the pair
+   disagreeing is how an affordance ends up half shown. */
+.sitenav .account {
+  display: flex; align-items: center; gap: 1.1rem; font-size: .9rem;
+}
+.sitenav .account a { color: var(--dim); text-decoration: none; }
+.sitenav .account a:hover { color: var(--ink); text-decoration: underline; }
+.sitenav .account .handle {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .85rem; color: var(--faint);
+}
+.sitenav .account button {
+  font: inherit; font-size: .85rem; color: var(--dim);
+  background: none; border: 1px solid var(--line); border-radius: 3px;
+  padding: .25rem .6rem; cursor: pointer;
+}
+:root:not([data-who]) .sitenav .whenin { display: none; }
+:root[data-who] .sitenav .whenout { display: none; }
+.navsaid { color: var(--faint); font-size: .8rem; margin: 0 0 1.6rem; }
+
 /* Two files rather than one recolored, because the marks differ by more than a
    background: the light one carries a navy outline that would sit at 1.6:1
    against a dark page and blur the silhouette rather than define it. Both ship

@@ -94,6 +94,7 @@ Format:
 - `2026-09-20` GAP: nothing notices when a pin stops resolving  **[open gap]**
 - `2026-09-20` The site holds a session, submits to nobody, and uploads only where it is told  **[amended]**
 - `2026-09-20` The form posts, Postgres stamps who sent it, and a pull is the only way in
+- `2026-09-20` The bar offers one of two ways in, off a handle this browser keeps and a session it does not
 
 <!-- end index -->
 
@@ -3653,3 +3654,82 @@ uploads only where it is told", in the one section where it says a submission is
 handed over and the project exposes no table. Everything else in that entry,
 including the scope work and the guard rewrite, stands. Reverses the `/contact/`
 sentence added the same day, which was never a decision.
+
+## 2026-09-20 The bar offers one of two ways in, off a handle this browser keeps and a session it does not
+**Decided:** `SiteNav.astro` ships both affordances and CSS picks. Signed out is
+"Sign in", to `/sign-in/`. Signed in is the handle, "Add artifact" to
+`/signed-in/`, and "Sign out". What decides is one key in the reader's own
+browser, `controlbun.who`, written by `/signed-in/` after a successful exchange
+and holding three display facts: the handle, the subject, and when they were
+read. No token, no email, no cookie. `whoFrom` in `astro/src/lib/handshake.mjs`
+builds that record by naming its fields, so a capture that grows a token cannot
+push one into a browser.
+
+**Premise first, because this is the object that erodes it.** Plurality is the
+product and the registry never designates. Remembering a handle changes which
+door the bar names first and changes nothing about who may open it: `/sign-in/`
+is offered to somebody who has never signed in, it links to `/signed-in/`, and
+that page is where a submission is sent from. Nothing is behind the key. The
+failure this would become is an account that is the price of having a voice, and
+`test_publishing_never_requires_a_claim` already fails the build on the schema
+version of it.
+
+### Keeping a handle is not holding a session, and the page says so
+
+The access token still lives in one module variable for as long as the tab is
+open and is gone on a reload. That is not moving, and it is why there is a key
+at all: the bar has to answer on a page the return leg did not render, and the
+only thing that outlives the exchange is what gets written down. So the two come
+apart. A reader who comes back tomorrow gets a bar offering Add artifact and a
+page asking them to sign in again, and the gap is a thing to say rather than a
+thing to hide. `/signed-in/` says it in three places: on the reading, where it
+discloses what was kept and what Sign out does; on a plain arrival carrying a
+remembered handle, where it says no token survives a reload and the button
+starts a fresh authorization; and in "What this page is not", which said the
+submission was the one thing it wrote and is now two things, different in kind.
+
+### Decided before first paint, in the head, like the theme
+
+The head script reads the key and sets `data-who` on the root element, and CSS
+acts on it. A script that decided after paint would show the wrong affordance
+for a frame, which is the flash the theme script was written to prevent and the
+same fix. `hidden` is not used for this: it would need a CSS rule to override it
+anyway, which is one decision taken in two places.
+
+### Signing out is the key being deleted
+
+There is nothing to revoke. The token died with the tab that made it and the
+account is Hugging Face's, so the button removes the key, drops the attribute
+and shows a receipt saying it forgot the handle in this browser and did not end
+the Hugging Face session. That second half is the thing a reader would otherwise
+get wrong, so it is written where they are looking rather than only on a page
+they would have to go to.
+
+**What this makes impossible to express.** Being signed in on two devices
+without signing in twice, which was already true and is now visible. A bar that
+greets somebody by name on a machine they have never signed in on. And any
+reading of "signed in" that means more than "this browser remembers a handle",
+which is the one worth foreclosing: the word will be read as a standing the
+moment it can be, and there is nothing behind it here.
+
+### The invariants, held in `tests/test_nav_account.py`
+
+Two, both of which would be satisfied by prose and neither of which would then
+mean anything.
+
+**Nothing on this site writes a token to browser storage.** Held across every
+file in `astro/src` rather than per page, by resolving each written key to the
+literal it is and refusing one nobody accounted for. `MAY_KEEP` names the three:
+the theme, the PKCE verifier, and this. The resolver is shown catching a renamed
+constant and an expression it cannot read, because an enumeration that reads
+only the identifier goes inert the moment somebody moves the value.
+`tests/test_signed_in_page.py` holds the same rule one level down, on the bundle
+the return leg ships, and its count moved from one write to two with both named.
+
+**The bar's signed-in state never comes from anything the page asserts about a
+person.** `SiteNav.astro` has no props, no imports, no frontmatter and no
+expression in its markup, and both scripts read one key and nothing about the
+page. The edit this stops is the one that would look like an improvement: a
+submission page knows an author's handle, so a bar that read the page it was
+sitting on would greet a stranger by the name of whoever they were reading, and
+would do it on the pages where it looks most plausible.
