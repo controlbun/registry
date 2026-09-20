@@ -2966,3 +2966,38 @@ to fabricate.
 amended rather than replaced: the per-page marker stays exactly as decided and
 only the falsifier half of it changed, and the indexing deferral stands with one
 of its two recorded consequences now understated.
+
+## 2026-09-20 Reading is open, writing is signed, and that is the whole auth boundary
+**Decided:** an account is required to write and for nothing else. Browsing,
+searching, comparing, following a pin, downloading an artifact and checking its
+digest are all anonymous and stay that way. Signing in gates the objects that
+carry somebody's name: a submission, an attack, a support card, an independent
+evaluation.
+
+**Why it is worth writing down rather than leaving obvious.** The reasonable
+exceptions arrive one at a time and each is defensible alone. Rate limiting
+needs to know who you are. A download count needs a session. Personalization
+needs a profile. Every one of those is a reason to ask an anonymous reader for
+an identity, and the registry has no use for any of them: nothing is counted,
+nothing is ranked, no popularity signal is collected, and `fetch.py` sends no
+credentials by design because everything pointed at is public by construction.
+A reader who has to sign in to read is a reader who cannot check a claim without
+being known, which is the opposite of what a registry of checkable artifacts is
+for.
+
+**What signing in is actually for.** Binding a write to a namespace. Under the
+2026-09-19 rule the namespace is the provider handle, so signing in is not a
+gate somebody passes; it is where the author of a row comes from. A row with no
+author is not a row this schema can hold.
+
+**A consequence that stays true and is easy to lose.** Attacks, support cards
+and independent evaluations are written about other people's work. The writer
+signs in; the subject may have no account and may never. That is why `author`
+stays a free namespace string and why a namespace starts unclaimed, per
+`V2.md` section 1, and this entry does not disturb either.
+
+**What this makes impossible to express.** Any read that is metered, gated,
+personalized or counted. If a reason to know who a reader is ever appears, it
+will look like a feature and it is this entry it has to argue with.
+
+**Supersedes:** nothing. Names the boundary `V2.md` section 2 assumes.
