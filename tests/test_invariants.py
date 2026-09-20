@@ -687,7 +687,17 @@ def test_a_claim_is_bound_to_a_subject_and_never_to_a_handle():
                 cols = [c.strip().strip('"') for c in mm.group(1).split(",")]
                 if {"handle", "preferred_username"} & set(cols):
                     offenders.append(f"{kind} ({mm.group(1).strip()})")
-    offenders += scan(r"(WHERE|AND)\s+\w*(handle|preferred_username)\s*=")
+    # Comparing a handle column against the verified JWT claim is the opposite
+    # of the trap: it refuses a row whose display name disagrees with what the
+    # provider said, and the binding on that same row is the subject. A lookup
+    # keyed on a handle is the thing this catches, and asserting agreement with
+    # an authenticated claim is not one. Fifth pattern scan in this repository
+    # to catch a sentence rather than the thing the sentence is about; see
+    # `CLAUDE.md` on "best", and the ordinal and trait scans.
+    offenders += [
+        h for h in scan(r"(WHERE|AND)\s+\w*(handle|preferred_username)\s*=")
+        if "auth.jwt()" not in h
+    ]
     offenders += scan(r"claim\w*\[[\"']?(handle|preferred_username)[\"']?\]\s*==")
     assert not offenders, (
         "A handle is renameable, so a claim keyed on one either breaks on a "
