@@ -3089,3 +3089,49 @@ live dependency and reads whatever the browser path writes instead.
 **Supersedes:** nothing. Ends the arrangement recorded in 2026-09-19 "The site
 signposts sign-in, receives nothing, and names no account of its own", which
 stays correct about the site as it stands today.
+
+## 2026-09-20 A submission is a link, and a private repo is not a blocker
+**Decided:** the write path takes a pointer to a publicly readable artifact, not
+an upload. When a submitter's repository is private, the guidance leads with
+publishing the artifact alone to their own Hugging Face namespace.
+
+**Why a link and not an upload.** The HF app requests `openid`, `profile` and
+`read-memberships`, and the 2026-09-16 note says why it requests nothing else:
+"no repo scopes, because `fetch.py` sends no credentials by design." Taking an
+upload means either asking every person who signs in to grant write access to
+their repositories, or holding their bytes here, which is `served_copy` and a
+different question with its own entry. A pointer needs neither, and
+`V2.md` already says bytes are pointer-first.
+
+**The three paths, in the order the prompt should offer them.**
+
+*Publish the artifact alone.* One file in a new public repo under the namespace
+they just signed in with, while the research code stays private. This costs a
+submitter almost nothing precisely because of how they arrived, and it is what
+`soham/trauma` did: the bytes are in a Hub namespace and the capture script,
+the stimulus sets and the analysis are not.
+
+*Make the whole repository public.* Often impossible, and not this project's
+business to ask for. Named second because for some people it is simply the
+answer.
+
+*Submit the record with no resolvable pointer.* Coherent, and the deferred
+indexing lane is full of exactly this: entries for directions described in
+papers that nobody can download. But it changes what the entry is. With nothing
+to fetch there is no digest to check, so the row is a claim rather than a
+checkable artifact, and the page says that in those words.
+
+**What this must not become.** The third path quietly becoming the default. A
+registry whose pages mostly point at things nobody can fetch is a bibliography,
+and the checkable digest is most of what separates this from one. `fetch.py`
+already holds the line and states the reason: a 401 or 403 "is a fact about the
+artifact worth surfacing rather than a credential to go find."
+
+**What this makes impossible to express.** A submission whose bytes exist only
+on the submitter's machine. They have to put it somewhere a stranger can reach,
+or accept that the entry is a claim. That is a real cost for somebody with an
+artifact and no account anywhere, and the answer offered is a free account on a
+platform they already use.
+
+**Supersedes:** nothing. Settles the question `V2.md` section 2 left open by
+saying "upload preferred, pointer available", in the other direction.
