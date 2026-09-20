@@ -104,6 +104,7 @@ Format:
 - `2026-09-20` A sign-in survives a page navigation and a browser restart, and only one of its two credentials does
 - `2026-09-20` A sitemap and a robots.txt, neither of which ranks anything
 - `2026-09-20` The submit page offers the agent handoff, and the parser does not cross
+- `2026-09-20` `/submit/` asks which of the two ways in before it asks for anything else
 
 <!-- end index -->
 
@@ -4161,3 +4162,74 @@ function. What made this worth writing down is that it is not a rule about
 prompts. It is the same rule as "one thing in this project reads bytes",
 applied to a document: the thing that produces a format and the thing that
 consumes it are one source, or they drift.
+
+## 2026-09-20 `/submit/` asks which of the two ways in before it asks for anything else
+**Decided:** the page is a choice between two routes and then one route, rather
+than a single column holding a prompt to copy, a paste box, twenty-two fields,
+an absences box and an upload offer at the same level. Nothing it collects
+changed, no field was added, removed, renamed or reordered, and no sentence a
+reader sees was rewritten. What changed is what is on screen at once.
+
+**The two ways in are two `<details>` sharing a `name`**, which is HTML's own
+exclusive accordion: opening one closes the other, with no script and no state
+of ours. They are mutually exclusive in the record already, and `chosenRoute`
+refused the pair at the end, after somebody had filled in both. Saying it at
+the top costs nothing and is the same statement. Shipped in Chrome and Edge
+120, Safari 17.2, Firefox 130; an engine older than those renders two ordinary
+disclosures, which is what the page did on every engine the day before.
+
+**Neither is open on arrival.** A default would be the page naming the ordinary
+way to do this, on a page whose lede says neither is the better one. The cost
+is a press for everybody, and it is the press the page was asking for anyway.
+
+**The two banners stayed out of the disclosures.** The one about a paste not
+being checked until the author pulls it in is what a reader needs in order to
+pick, so it sits above the pair with the sentence about doing both, visible
+whichever route is open. The holding-table banner keeps its place at the top.
+Same rule this project applies to an absent eval: the statement is the point,
+so it does not go behind a click.
+
+**Being signed out is a state and not a warning.** Four of the five things this
+page can say before there is anything to fill in wore the amber warning
+surface, including "there is no session in this browser", which is the ordinary
+state of a first visit, and including the paragraph describing a session that
+was restored successfully. A failure keeps the warning surface. The rest take a
+neutral one. That is the absent-eval rule again, applied to the page's own
+states, and no wording changed.
+
+**The upload offer is inside the artifact fieldset.** It fills in the
+repository, the commit and the path, and it sat between the fields and the send
+button at the same level as both, where it read as a step everybody takes
+rather than an offer for somebody whose repository is private. Its own copy
+already said which it was.
+
+**A field that may be absent says so, and the flag is read off
+`submissionFrom`.** The nine it puts through `optional()` or `asNumber()` are
+the nine marked; the rest throw naming themselves. Not a judgment about the
+field and not a bar: it is whether a record can be built without it. The word
+is inside the `<label>`, so a screen reader reads it with the field.
+
+**The reason for a field sits beside it rather than under it.** Twenty-two
+fields each carrying a sentence underneath is a wall with no edge to scan. In
+two columns the left edge alternates label, box, label, box, and each `.why` is
+wired to its input with `aria-describedby`, which it was not before.
+
+**What this makes impossible to express.** Seeing both routes at once while
+deciding, and reading what the fields ask for before choosing to fill them in.
+Somebody who wants to know what they are in for has to open the fields to find
+out. A refusal that names a field in the closed route would also have named
+something invisible, so the build press opens whichever route holds anything
+typed into it, and drops the exclusive grouping when both do.
+
+**Three changes are site-wide and were taken deliberately.** `.go` was a class
+with no rule behind it on two pages, so the press each of those pages exists
+for rendered as whatever the platform draws; it now fills with the
+`--pop-active` pair, which is this site's one accent-filled surface and is
+already tuned for both themes. `:focus-visible` draws one ring everywhere
+rather than a different one per control. And the bar wraps: a row of inflexible
+items held the document wider than the window, so at a 500px viewport the
+document measured 549px and every page here scrolled sideways.
+
+**No test changed.** The page tests assert what the page says, what it refuses
+and what it does not do, so a layout pass passed them untouched. That is the
+property they were written for, and it is worth recording that it held.

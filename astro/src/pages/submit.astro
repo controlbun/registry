@@ -61,6 +61,49 @@ import agentPrompt from "../data/agent-prompt.json";
 //
 // **The copy is drafted, not dictated.** Structure and accuracy are mine; every
 // sentence a reader sees is the author's to rewrite.
+//
+// ---
+//
+// **2026-09-20, the layout pass. Nothing below changed what the page collects
+// or what it says.** The page went live as one column carrying a prompt to
+// copy, a paste box, twenty-two fields, an absences box and an upload offer,
+// all at the same level, so somebody arriving to publish one direction had to
+// work out which of those applied to them before they could start.
+//
+// **The two ways in are a choice the page makes, rather than one it refuses
+// after the fact.** They are mutually exclusive: `chosenRoute` refuses a
+// record that is both, and it refused it at the end, after somebody had filled
+// in both. They are now two `<details>` sharing a `name`, which is the
+// platform's own exclusive accordion: opening one closes the other, no script
+// runs, and an engine that does not know the attribute renders two ordinary
+// disclosures and loses nothing. Neither is open on arrival, because opening
+// one would be this page naming the ordinary way to do it, and the page's own
+// sentence says neither is the better one.
+//
+// **The banner about a paste not being checked did not move into a
+// disclosure.** It is the thing a reader needs in order to choose, so it sits
+// above the pair with the sentence about doing both, where it is visible
+// whichever way is open. Same for the holding-table banner, which is the other
+// statement on this page that has to survive skimming.
+//
+// **The upload offer is inside the artifact fieldset now.** It fills in the
+// repository, the commit and the path, and it sat between the fields and the
+// send button, at the same level as both, where it read as a step everybody
+// takes rather than an offer for somebody whose repository is private. Its own
+// copy already said so: "part of filling the fields in rather than something
+// to do beside a paste".
+//
+// **A field that may be absent says so on its label**, and the flag comes off
+// what `submissionFrom` does with it: the nine it passes through `optional()`
+// are the nine marked. A reader can now tell those from the ones a record
+// cannot be built without, which rendered identically. The word sits inside
+// the `<label>` rather than beside it, so a screen reader reads it with the
+// field rather than as a stray word in the row.
+//
+// **The explanations moved beside the fields rather than under them.** A note
+// under every one of twenty-two fields is a wall with nothing to scan; in a
+// second column the left edge is label, box, label, box, and the prose is
+// still there for whoever stops.
 
 const { url: supabaseUrl, key: supabaseKey, configured } = identityConfig();
 
@@ -72,6 +115,14 @@ const PROVIDER = "custom:huggingface";
 // The fields the schema takes, each with why it is there. Free text, every one
 // of them: nothing on this page checks a value against a set, and a value
 // nobody has used before is the ordinary way a corpus grows.
+//
+// The fifth column is whether the record can be built without this one, and it
+// is not a judgment about the field. It is `submissionFrom` read off: the nine
+// it puts through `optional()` or `asNumber()` accept nothing and record null,
+// and the rest throw naming themselves. Written here rather than derived from
+// the sentence beside it, because three of the nine do not say the word and
+// `license_status` says the opposite of short.
+const MAY_BE_ABSENT = true;
 const CONTRACT = [
   {
     group: "The submission",
@@ -96,7 +147,7 @@ const CONTRACT = [
       ["model_id", "model id", "text",
         "A direction has no meaning apart from the model it was read out of, which is why the model is part of the identity."],
       ["model_revision", "model revision", "text",
-        "Optional. Absent renders as absent rather than as an error."],
+        "Optional. Absent renders as absent rather than as an error.", MAY_BE_ABSENT],
       ["layer", "layer", "text",
         "A whole number. A band across several layers cannot be stated in this column at all, which is a recorded gap."],
       ["layer_convention", "layer convention", "text",
@@ -104,18 +155,23 @@ const CONTRACT = [
       ["hook_point", "hook point", "text",
         "An open string. Where in the block this acts."],
       ["chat_template_hash", "chat template hash", "text",
-        "Optional."],
+        "Optional.", MAY_BE_ABSENT],
       ["activation_norm", "activation norm", "text",
-        "Optional. A number, or nothing."],
-      ["coeff_low", "coefficient, low", "text", "Optional."],
-      ["coeff_high", "coefficient, high", "text", "Optional."],
-      ["steering_position", "steering position", "text", "Optional."],
+        "Optional. A number, or nothing.", MAY_BE_ABSENT],
+      ["coeff_low", "coefficient, low", "text", "Optional.", MAY_BE_ABSENT],
+      ["coeff_high", "coefficient, high", "text", "Optional.", MAY_BE_ABSENT],
+      ["steering_position", "steering position", "text", "Optional.", MAY_BE_ABSENT],
       ["license_status", "license status", "textarea",
-        "What the source model's license says about an artifact derived from it, with the URL and the date you read it. Yours to assert, not ours to decide."],
+        "What the source model's license says about an artifact derived from it, with the URL and the date you read it. Yours to assert, not ours to decide.",
+        MAY_BE_ABSENT],
     ],
   },
   {
     group: "The artifact, which is a link",
+    // The upload offer renders inside this fieldset. It fills in the three
+    // fields above it and nothing else, which is what makes it part of this
+    // group rather than a step of its own between the form and the send.
+    offer: true,
     fields: [
       ["repo", "repository", "text",
         "owner/name. The bytes stay yours and this records where they are."],
@@ -124,9 +180,9 @@ const CONTRACT = [
       ["path", "path in the repository", "text",
         "The same string the client will fetch by."],
       ["host", "host", "text",
-        "Optional. Empty means the Hub, which is where a row recording no host has always resolved."],
+        "Optional. Empty means the Hub, which is where a row recording no host has always resolved.", MAY_BE_ABSENT],
       ["url_template", "url template", "text",
-        "Optional, and how the four fields above become a URL on a host this project has never met."],
+        "Optional, and how the four fields above become a URL on a host this project has never met.", MAY_BE_ABSENT],
     ],
   },
 ];
@@ -160,13 +216,39 @@ const CONTRACT = [
     coding agent that already has your extraction scripts open.
   </p>
 
-  <p id="working" hidden class="note">Reading the session this browser kept.</p>
+  {/* Everything below this line is assembled and sent by a script, so with
+      scripting off the page is a heading and a lede. That was the whole of it
+      until now: no state, no words, nothing to do. This says which, and does
+      not offer a way round it, because there is not one. Mail is not a
+      submission route and the send path says so in those words. */}
+  <noscript>
+    <p class="state">
+      <strong>This page builds a submission in the browser, so it needs
+      JavaScript.</strong>{" "}
+      The record is assembled here and sent from here, and there is no page on
+      this site that receives one instead. Everything else here reads with
+      scripting off, including{" "}
+      <a href="/sign-in/">what signing in is for</a>.
+    </p>
+  </noscript>
 
-  <p id="failed" hidden class="banner"></p>
+  {/* The five states this page can be in before there is anything to fill in.
+      Reading a session and remembering one are progress, a refused renewal and
+      a failed exchange are failures, and having no session at all is neither.
+      Four of the five rendered in the same amber, next to a fifth amber block
+      about the holding table, so the one statement on this page that has to
+      survive skimming was competing with two that are not warnings at all.
+
+      Being signed out is the ordinary state of a first visit. Same rule this
+      project applies to an absent eval: a state gets a rendering of its own
+      rather than an error's. Nothing said here changed. */}
+  <p id="working" hidden class="state" role="status">Reading the session this browser kept.</p>
+
+  <p id="failed" hidden class="banner" role="alert"></p>
 
   {/* Nobody is signed in here. Its own state with its own words, and a way on
       rather than a dead end. */}
-  <p id="nosession" hidden class="banner">
+  <p id="nosession" hidden class="state">
     <strong>There is no session in this browser.</strong> A submission is sent
     as somebody, because the database stamps the namespace from the session
     rather than taking it from a field. <a href="/signed-in/">Sign in with
@@ -175,11 +257,11 @@ const CONTRACT = [
     needs none of it.
   </p>
 
-  <p id="remembered" hidden class="banner"></p>
+  <p id="remembered" hidden class="state" role="status"></p>
 
-  <p id="stale" hidden class="banner"></p>
+  <p id="stale" hidden class="banner" role="alert"></p>
 
-  <section id="submit-section" hidden>
+  <section id="submit-section" class="submitting" hidden>
     <p class="banner">
       <strong>A submission does not appear on this site until the author
       rebuilds and publishes it.</strong> The corpus is a file in git and the
@@ -204,166 +286,221 @@ const CONTRACT = [
       to your own account, with your permission, and then fill in the pin.
     </p>
 
-    <section id="handoff">
-      <h2>Hand it to your coding agent</h2>
-
-      <p>
-        An agent sitting in the checkout where the extraction happened can read
-        most of this off your own scripts, which is where the answers are. Copy
-        the prompt, run it there, and paste back what it produces. The prompt
-        tells it what each field is for and tells it, in the strongest terms the
-        text can manage, never to write a value it did not read.
-      </p>
-
-      <p class="banner">
-        <strong>A paste is not checked until the author pulls it in.</strong>
-        Nothing in this browser reads what you paste. The parser is one piece of
-        Python and it runs on the author's machine when the row is read in, so a
-        paste that is missing a field or carries a placeholder comes back to you
-        then, by mail, rather than the moment you paste it. The fields below are
-        the other way round: a mistake in one of those surfaces as you type. The
-        reason there is only one parser is that two of them drift, and a paste
-        that parsed in a browser and refused on the author's machine is worse
-        than waiting.
-      </p>
-
-      <p>
-        <button type="button" id="copy-prompt" class="go">Copy the prompt</button>{" "}
-        <span class="note" id="copy-said"></span>
-      </p>
-
-      <details id="prompt-shown">
-        <summary>Read the prompt first</summary>
-        <p class="note">
-          This is the whole of what gets copied. It is generated from the same
-          field list the parser reads, so what it asks for and what the parser
-          takes cannot come apart.
-        </p>
-        <pre id="agent-prompt-text" data-pagefind-ignore>{agentPrompt.prompt}</pre>
-      </details>
-
-      <div class="field">
-        <label for="f-pasted">what your agent produced</label>
-        <textarea id="f-pasted" rows="8" spellcheck="false"></textarea>
-        <p class="why">
-          Paste the whole reply, including anything it wrote to you around the
-          block. The parser finds the block inside surrounding prose and reads
-          past the rest, so explanation costs nothing.
-        </p>
-      </div>
-
-      <p class="note">
-        Pasting and filling the fields in at once is refused, and neither is
-        preferred. Those are two accounts of one submission and nothing here can
-        tell which was meant, which is the same reason a field cannot carry both
-        a value and a reason for having none.
-      </p>
-    </section>
-
-    <h2>Or fill it in yourself</h2>
+    {/* The banner that has to survive being skimmed, and the sentence about
+        doing both, sit above the choice rather than inside the half of it they
+        describe. A reader picking between the two needs the asymmetry between
+        them before they pick, and the banner is what states it. The constraint
+        is the same one `CLAUDE.md` puts on an absent eval: the statement is the
+        point, so it does not go behind a click. */}
+    <p class="banner">
+      {/* The space is written rather than left to the newline: Astro drops the
+          leading whitespace of a text node that starts a line, and this banner
+          rendered as "pulls it in.Nothing in this browser" on the live site. */}
+      <strong>A paste is not checked until the author pulls it in.</strong>{" "}
+      Nothing in this browser reads what you paste. The parser is one piece of
+      Python and it runs on the author's machine when the row is read in, so a
+      paste that is missing a field or carries a placeholder comes back to you
+      then, by mail, rather than the moment you paste it. The fields below are
+      the other way round: a mistake in one of those surfaces as you type. The
+      reason there is only one parser is that two of them drift, and a paste
+      that parsed in a browser and refused on the author's machine is worse
+      than waiting.
+    </p>
 
     <p class="note">
-      Every field is an open string. Nothing here is checked against a list of
-      permitted values, and a value nobody has used before is the ordinary way
-      this corpus grows.
+      Pasting and filling the fields in at once is refused, and neither is
+      preferred. Those are two accounts of one submission and nothing here can
+      tell which was meant, which is the same reason a field cannot carry both
+      a value and a reason for having none.
     </p>
 
-    <div id="fields">
-      {CONTRACT.map((group) => (
-        <fieldset>
-          <legend>{group.group}</legend>
-          {group.fields.map(([name, title, kind, why]) => (
-            <div class="field">
-              <label for={`f-${name}`}>{title}</label>
-              {kind === "textarea" ? (
-                <textarea id={`f-${name}`} name={name} rows="3"></textarea>
-              ) : (
-                <input id={`f-${name}`} name={name} type="text" />
-              )}
-              <p class="why">{why}</p>
+    {/* Two `<details>` sharing a `name`, which is HTML's exclusive accordion:
+        opening one closes the other, with no script and no state of our own.
+        Shipped in Chrome and Edge 120, Safari 17.2, Firefox 130 (MDN
+        browser-compat-data, html/elements/details.json, read 2026-09-20). An
+        engine older than those ignores the attribute and renders two ordinary
+        disclosures, which is what this page did on every engine yesterday, so
+        the floor is the previous behavior rather than a broken one.
+
+        Neither carries `open`. A default here would be the page naming the
+        ordinary way to do this, on a page whose own lede says neither is the
+        better one.
+
+        Closed is not unreachable: find-in-page opens a closed `<details>` in
+        Chrome and Edge 97+, Firefox 139+ and Safari 26.2 (same source, the
+        `search_match_opens` subfeature), and the text is in the document
+        either way for anything reading the page rather than rendering it. */}
+    <div class="routes">
+      <details class="route" id="handoff" name="route" data-route>
+        <summary><h2>Hand it to your coding agent</h2></summary>
+        <div class="route-body">
+          <p>
+            An agent sitting in the checkout where the extraction happened can
+            read most of this off your own scripts, which is where the answers
+            are. Copy the prompt, run it there, and paste back what it
+            produces. The prompt tells it what each field is for and tells it,
+            in the strongest terms the text can manage, never to write a value
+            it did not read.
+          </p>
+
+          <p class="act">
+            <button type="button" id="copy-prompt" class="go">Copy the prompt</button>{" "}
+            <span class="note" id="copy-said" role="status"></span>
+          </p>
+
+          <details id="prompt-shown">
+            <summary>Read the prompt first</summary>
+            <p class="note">
+              This is the whole of what gets copied. It is generated from the
+              same field list the parser reads, so what it asks for and what the
+              parser takes cannot come apart.
+            </p>
+            <pre id="agent-prompt-text" data-pagefind-ignore>{agentPrompt.prompt}</pre>
+          </details>
+
+          <div class="field stacked">
+            <label for="f-pasted">what your agent produced</label>
+            <textarea id="f-pasted" rows="8" spellcheck="false"
+                      aria-describedby="why-pasted"></textarea>
+            <p class="why" id="why-pasted">
+              Paste the whole reply, including anything it wrote to you around
+              the block. The parser finds the block inside surrounding prose and
+              reads past the rest, so explanation costs nothing.
+            </p>
+          </div>
+        </div>
+      </details>
+
+      <details class="route" id="byhand" name="route" data-route>
+        <summary><h2>Or fill it in yourself</h2></summary>
+        <div class="route-body">
+          <p class="note">
+            Every field is an open string. Nothing here is checked against a
+            list of permitted values, and a value nobody has used before is the
+            ordinary way this corpus grows.
+          </p>
+
+          <div id="fields">
+            {CONTRACT.map((group) => (
+              <fieldset>
+                <legend>{group.group}</legend>
+                {group.fields.map(([name, title, kind, why, mayBeAbsent]) => (
+                  <div class="field">
+                    {/* The space is an expression because Astro emits the two
+                        adjacent ones with nothing between them, and a screen
+                        reader then reads "model revisionoptional". */}
+                    <label for={`f-${name}`}>
+                      {title}{" "}
+                      {mayBeAbsent && <span class="may">optional</span>}
+                    </label>
+                    {kind === "textarea" ? (
+                      <textarea id={`f-${name}`} name={name} rows="3"
+                                aria-describedby={`why-${name}`}></textarea>
+                    ) : (
+                      <input id={`f-${name}`} name={name} type="text"
+                             aria-describedby={`why-${name}`} />
+                    )}
+                    <p class="why" id={`why-${name}`}>{why}</p>
+                  </div>
+                ))}
+
+                {group.offer && (
+                  <details id="offer">
+                    <summary>The file is not at a public URL yet</summary>
+                    <p>
+                      This registry can put one file in{" "}
+                      <strong id="offer-namespace"></strong>, your own account,
+                      in a new public repository, and then fill in the
+                      repository, the commit and the path above. The bytes go to
+                      your account and never to this project's, which is a
+                      different column in the schema and a different question.
+                    </p>
+                    <p>
+                      Hugging Face will ask you for one more permission at that
+                      point and not before: creating repositories for this app,
+                      which cannot reach any other repository you own. It asks
+                      every time, including on a visit where this browser
+                      already had your session, because the token that
+                      permission returns is the one credential here that is
+                      never stored, logged or written anywhere. It lives in one
+                      variable for the length of the upload.
+                    </p>
+                    <p class="note">
+                      Taking this offer fills three fields in, so it is part of
+                      filling the fields in rather than something to do beside a
+                      paste. An agent that knows where the file will be
+                      published answers those three itself.
+                    </p>
+                    <div class="field">
+                      <label for="f-upload-name">repository to create</label>
+                      <input id="f-upload-name" type="text"
+                             aria-describedby="why-upload-name" />
+                      <p class="why" id="why-upload-name">A new one, under your
+                        namespace. An existing one stops the offer rather than
+                        being written into.</p>
+                    </div>
+                    <div class="field">
+                      <label for="f-upload-path">path inside it</label>
+                      <input id="f-upload-path" type="text"
+                             aria-describedby="why-upload-path" />
+                      <p class="why" id="why-upload-path">The same string the
+                        client will fetch by, so it is also the path recorded on
+                        the row.</p>
+                    </div>
+                    <div class="field">
+                      <label for="f-upload-file">the file</label>
+                      <input id="f-upload-file" type="file"
+                             aria-describedby="why-upload-file" />
+                      <p class="why" id="why-upload-file">It is read in this tab
+                        and sent to Hugging Face. It does not reach this site,
+                        which has nowhere to receive it.</p>
+                    </div>
+                    <p class="act">
+                      <button type="button" id="do-upload">Ask permission and
+                        publish it to my account</button>
+                    </p>
+                    <p id="upload-said" class="note" role="status"></p>
+                  </details>
+                )}
+              </fieldset>
+            ))}
+          </div>
+
+          <details id="absences">
+            <summary>Something is absent and you want to say why</summary>
+            <p class="note">
+              An absence is a positive statement with a reason, never an
+              omission and never an error. One line per field, as{" "}
+              <code>field: your sentence</code>. The field name is any string;
+              it is not checked against a list. An agent writes these itself, on
+              the <code>not-found:</code> lines the prompt asks for, so this box
+              belongs to the fields above.
+            </p>
+            <div class="field stacked">
+              <label for="f-absent">absences</label>
+              <textarea id="f-absent" rows="3" aria-describedby="why-absent"></textarea>
+              <p class="why" id="why-absent">A field cannot carry both a value
+                above and a reason for having none. That is two claims about one
+                field, and the author's rebuild refuses it rather than picking
+                one.</p>
             </div>
-          ))}
-        </fieldset>
-      ))}
+          </details>
+        </div>
+      </details>
     </div>
 
-    <details id="offer">
-      <summary>The file is not at a public URL yet</summary>
-      <p>
-        This registry can put one file in <strong id="offer-namespace"></strong>,
-        your own account, in a new public repository, and then fill in the
-        repository, the commit and the path above. The bytes go to your account
-        and never to this project's, which is a different column in the schema
-        and a different question.
-      </p>
-      <p>
-        Hugging Face will ask you for one more permission at that point and not
-        before: creating repositories for this app, which cannot reach any other
-        repository you own. It asks every time, including on a visit where this
-        browser already had your session, because the token that permission
-        returns is the one credential here that is never stored, logged or
-        written anywhere. It lives in one variable for the length of the upload.
-      </p>
-      <p class="note">
-        Taking this offer fills three fields in, so it is part of filling the
-        fields in rather than something to do beside a paste. An agent that
-        knows where the file will be published answers those three itself.
-      </p>
-      <div class="field">
-        <label for="f-upload-name">repository to create</label>
-        <input id="f-upload-name" type="text" />
-        <p class="why">A new one, under your namespace. An existing one stops the
-          offer rather than being written into.</p>
-      </div>
-      <div class="field">
-        <label for="f-upload-path">path inside it</label>
-        <input id="f-upload-path" type="text" />
-        <p class="why">The same string the client will fetch by, so it is also
-          the path recorded on the row.</p>
-      </div>
-      <div class="field">
-        <label for="f-upload-file">the file</label>
-        <input id="f-upload-file" type="file" />
-        <p class="why">It is read in this tab and sent to Hugging Face. It does
-          not reach this site, which has nowhere to receive it.</p>
-      </div>
-      <p>
-        <button type="button" id="do-upload">Ask permission and publish it to my
-          account</button>
-      </p>
-      <p id="upload-said" class="note"></p>
-    </details>
-
-    <details id="absences">
-      <summary>Something is absent and you want to say why</summary>
-      <p class="note">
-        An absence is a positive statement with a reason, never an omission and
-        never an error. One line per field, as <code>field: your sentence</code>.
-        The field name is any string; it is not checked against a list. An agent
-        writes these itself, on the <code>not-found:</code> lines the prompt asks
-        for, so this box belongs to the fields above.
-      </p>
-      <div class="field">
-        <label for="f-absent">absences</label>
-        <textarea id="f-absent" rows="3"></textarea>
-        <p class="why">A field cannot carry both a value above and a reason for
-          having none. That is two claims about one field, and the author's
-          rebuild refuses it rather than picking one.</p>
-      </div>
-    </details>
-
-    <p>
+    <p class="act finish">
       <button type="button" id="build-record" class="go">Build my submission</button>
     </p>
-    <p id="record-said" class="banner" hidden></p>
+    <p id="record-said" class="banner" hidden role="alert"></p>
 
-    <div id="record-out" hidden>
+    <div id="record-out" class="outcome" hidden>
       <h3>Your submission</h3>
       <p>
         Nothing has been sent yet. This is the record. Read it, then send it.
       </p>
       <pre id="record-json"></pre>
-      <p>
+      <p class="act">
         <button type="button" id="send-record" class="go">Send it</button>{" "}
         <button type="button" id="keep-record">Download a copy</button>
       </p>
@@ -385,10 +522,10 @@ const CONTRACT = [
       </p>
     </div>
 
-    <section id="sent" hidden>
+    <section id="sent" class="outcome" hidden>
       <h3>Received</h3>
       <p class="banner">
-        <strong>It is in the holding table and it is not on the site.</strong>
+        <strong>It is in the holding table and it is not on the site.</strong>{" "}
         It appears when the author reads it in, rebuilds the corpus and
         publishes, because the corpus is a file in git. Nothing was approved and
         nothing was ranked.
@@ -412,7 +549,7 @@ const CONTRACT = [
         another submission. Mail the author if you need one removed.
       </p>
     </section>
-    <p id="send-said" hidden class="banner"></p>
+    <p id="send-said" hidden class="banner" role="status"></p>
   </section>
 
   <h2>What this page is not</h2>
@@ -432,25 +569,174 @@ const CONTRACT = [
 </Base>
 
 <style>
+  /* `--rule` and `--tint` were referenced here with hex fallbacks and neither
+     is declared anywhere in this project, so every border and every code block
+     on this page was drawing the fallback: a fixed #ddd and #f5f5f5 that stayed
+     light while the rest of the page went dark. The tokens below are the ones
+     `app.css` declares for both themes. */
+
+  /* A form is prose-width work, not a table. `main` is uncapped because the
+     list pages are wide, which left a text input running the width of a 27
+     inch display.
+
+     Two measures, and they are two different things rather than a rounding
+     error. Sentences take the 46rem every other page here gives them, so the
+     banners line up with the lede above them instead of running a centimetre
+     past it. The cards take the wider one, because a field and the reason for
+     the field sit side by side inside them and that needs the room. */
+  .submitting { max-width: 54rem; }
+  .submitting > p, .route-body > p { max-width: 46rem; }
+
   .said { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; }
   .said dt { font-weight: 600; }
   .said dd { margin: 0; overflow-wrap: anywhere; }
-  fieldset { border: 1px solid var(--rule, #ddd); border-radius: 0.3rem;
-    margin: 1.2rem 0; padding: 0.6rem 1rem 1rem; }
-  legend { font-weight: 600; padding: 0 0.4rem; }
-  .field { margin: 0.9rem 0; }
-  .field label { display: block; font-weight: 600; }
-  .field input, .field textarea { width: 100%; box-sizing: border-box;
-    font: inherit; padding: 0.35rem 0.5rem; }
-  .why { margin: 0.25rem 0 0; font-size: 0.85em; opacity: 0.75; }
-  pre { overflow-x: auto; padding: 0.8rem; background: var(--tint, #f5f5f5);
-    border-radius: 0.3rem; }
-  #agent-prompt-text { max-height: 24rem; overflow-y: auto; white-space: pre-wrap;
-    font-size: 0.85em; }
-  details { margin: 1.2rem 0; }
-  summary { cursor: pointer; font-weight: 600; }
-  #handoff { border: 1px solid var(--rule, #ddd); border-radius: 0.3rem;
-    padding: 0.2rem 1rem 1rem; margin: 1.6rem 0; }
+
+  /* A state that is not a failure: the same metrics as `.banner` so the page
+     keeps one rhythm, on the neutral surface rather than the warning one. */
+  .state {
+    background: var(--wash);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: .65rem .9rem;
+    font-size: .85rem;
+    margin-bottom: 1.6rem;
+    max-width: 46rem;
+  }
+
+  /* ------------------------------------------------------------ the choice */
+
+  .routes { margin: 1.5rem 0 0; }
+
+  .route {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin: 0 0 .7rem;
+  }
+  .route > summary {
+    display: flex; align-items: center; gap: .65rem;
+    padding: .85rem 1rem;
+    cursor: pointer;
+    border-radius: 6px;
+    /* Both are needed to suppress the platform triangle: the marker pseudo in
+       every current engine, the WebKit one for older Safari. Suppressed rather
+       than accepted because a flex summary drops it in some engines and keeps
+       it in others, which is a control that moves between browsers. */
+    list-style: none;
+  }
+  .route > summary::-webkit-details-marker { display: none; }
+  .route > summary::before {
+    content: ""; flex: none;
+    width: .5rem; height: .62rem;
+    background: var(--dim);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+  .route[open] > summary::before { transform: rotate(90deg); }
+  /* The one moment of motion this page has, and it answers a press. Same
+     disposition as the picker on the home page, which is the only other
+     animation on this site. */
+  @media (prefers-reduced-motion: no-preference) {
+    .route > summary::before { transition: transform .12s ease-out; }
+  }
+  .route > summary h2 { margin: 0; font-size: 1.05rem; letter-spacing: -.005em; }
+  .route > summary:hover { background: var(--wash); }
+  .route[open] > summary {
+    background: var(--wash);
+    border-bottom: 1px solid var(--line);
+    border-radius: 6px 6px 0 0;
+  }
+  .route-body { padding: .2rem 1rem 1.2rem; }
+  .route-body > p:first-child { margin-top: .9rem; }
+
+  /* ------------------------------------------------------------ the fields */
+
+  fieldset {
+    border: 1px solid var(--line); border-radius: 6px;
+    margin: 1.3rem 0; padding: .1rem 1rem .8rem;
+  }
+  legend { font-weight: 600; padding: 0 .4rem; }
+
+  /* Label and box down the left, the reason for the field beside them. Twenty
+     two fields each carrying a sentence underneath is a wall with no edge to
+     scan; in two columns the left edge alternates label, box, label, box, and
+     the prose is still there for whoever stops on a row. */
+  .field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 19rem);
+    grid-template-areas: "name why" "control why";
+    column-gap: 1.6rem;
+    padding: .7rem 0;
+  }
+  .field + .field, .field + details, details + .field {
+    border-top: 1px solid var(--line);
+  }
+  .field label { grid-area: name; display: block; font-weight: 600; margin-bottom: .25rem; }
+  /* Quiet, and inside the label rather than beside it, so a screen reader
+     reads "model revision, optional" as one thing. The word is the one the
+     field's own sentence already uses. */
+  .field label .may {
+    font-weight: 400; font-size: .75rem; color: var(--faint); margin-left: .45rem;
+  }
+  .field input, .field textarea {
+    grid-area: control; width: 100%; font: inherit;
+    color: var(--ink); background: var(--wash);
+    border: 1px solid var(--line); border-radius: 4px;
+    padding: .35rem .5rem;
+  }
+  .field input[type="file"] {
+    background: none; border: 0; padding: .2rem 0; font-size: .9rem;
+  }
+  .field .why { grid-area: why; align-self: center; margin: 0; }
+  .why { font-size: .8rem; line-height: 1.5; color: var(--dim); }
+
+  /* The two boxes somebody writes into rather than fills in. Full width, with
+     the reason under them, because a paste is eight rows tall and a note
+     floating beside it belongs to nothing. */
+  .field.stacked {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "name" "control" "why";
+  }
+  .field.stacked .why { margin-top: .35rem; max-width: 46rem; }
+
+  @media (max-width: 54rem) {
+    .field {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "name" "control" "why";
+    }
+    .field .why { align-self: start; margin-top: .35rem; }
+  }
+
+  /* ------------------------------------------------- disclosures and presses */
+
+  pre {
+    overflow-x: auto; padding: .8rem; background: var(--wash);
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+  #agent-prompt-text {
+    max-height: 24rem; overflow-y: auto; white-space: pre-wrap; font-size: .85em;
+  }
+
+  #prompt-shown, #offer, #absences { margin: 1.2rem 0; }
+  #offer { margin-bottom: .4rem; padding-top: .9rem; }
+  #prompt-shown > summary, #offer > summary, #absences > summary {
+    cursor: pointer; font-weight: 600; font-size: .92rem;
+  }
+  #offer > summary { color: var(--dim); }
+
+  .act { margin: 1.1rem 0 0; }
+  /* The end of the form, marked as the end. */
+  .finish { border-top: 1px solid var(--line); padding-top: 1.2rem; margin-top: 1.6rem; }
+  .submitting button:not(.go) {
+    font: inherit; font-size: .9rem; line-height: 1.3; color: var(--dim);
+    background: none; border: 1px solid var(--line); border-radius: 4px;
+    padding: .45rem .9rem; cursor: pointer;
+  }
+  .submitting button:not(.go):hover { color: var(--ink); border-color: var(--dim); }
+
+  .outcome {
+    border-left: 2px solid var(--accent-fill); padding-left: 1.1rem;
+    margin-top: 1.8rem;
+  }
+  .outcome h3 { margin-top: 0; }
 </style>
 
 <script>
@@ -790,6 +1076,30 @@ const CONTRACT = [
     );
   });
 
+  // A refusal names fields, and the two routes are disclosures, so it can name
+  // a field nobody can see. This opens whichever route holds anything typed
+  // into it, which is the one the message is about.
+  //
+  // The `name` attributes come off first when more than one is holding
+  // something, because that is the browser's exclusive accordion and it would
+  // close each one as the next opened. That case is exactly the refusal for
+  // pasting and filling at once, where the reader has to see both to decide
+  // which to clear. Nothing typed anywhere opens both for the same reason: the
+  // message says neither is filled in, and a closed pair does not show that.
+  function revealWhereTheValuesAre() {
+    const routes = [...document.querySelectorAll("details[data-route]")];
+    const holding = routes.filter((route) =>
+      [...route.querySelectorAll("input, textarea")].some(
+        (box) => box.type !== "file" && box.value.trim() !== "",
+      ),
+    );
+    const opening = holding.length ? holding : routes;
+    if (opening.length > 1) routes.forEach((route) => route.removeAttribute("name"));
+    opening.forEach((route) => {
+      route.open = true;
+    });
+  }
+
   let record = null;
   document.getElementById("build-record").addEventListener("click", () => {
     try {
@@ -817,6 +1127,10 @@ const CONTRACT = [
       document.getElementById("send-record").disabled = false;
     } catch (problem) {
       show("record-out", false);
+      revealWhereTheValuesAre();
+      // Shown before it is written, in that order: the element carries
+      // `role="alert"`, and text set on a node that is not in the
+      // accessibility tree yet is text nothing announces.
       show("record-said", true);
       say("record-said", problem.message ?? `${problem}`);
     }
@@ -885,8 +1199,10 @@ const CONTRACT = [
     // row rather than a duplicate of the first one by accident. Re-enabled on
     // failure, because a failure means nothing was written.
     button.disabled = true;
-    say("send-said", "Sending.");
+    // Shown first and written second, so the live region has something to
+    // announce. It was the other way round, which said it silently.
     show("send-said", true);
+    say("send-said", "Sending.");
     send()
       .catch((problem) => {
         button.disabled = false;
