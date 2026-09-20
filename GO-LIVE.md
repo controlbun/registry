@@ -1,5 +1,11 @@
 # Go live: the ordered list
 
+> **Status 2026-09-20. Spent, and do not run it again.** Every step in this
+> runbook was carried out on 2026-09-19 and 2026-09-20. Steps 5 through 9 flip
+> repository visibility, enable Pages and point DNS, all of which are done and
+> none of which wants doing twice. Kept as the record of what was done;
+> `minor_updates.md` carries the result and the audit that gated it.
+
 Written 2026-09-19 against tip `b8d1579`. This is a runbook, not a plan. `V1.md`
 section A is the plan and `DECISIONS.md` is authoritative on conflict.
 

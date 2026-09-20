@@ -1,8 +1,22 @@
 # Minor updates
 
-One line per change too small for `DECISIONS.md` and not worth editing `CLAUDE.md`
-for. Newest last. Editing `CLAUDE.md` invalidates the manifests; this file is where
-that churn goes instead.
+> **Status 2026-09-20.** Live. Newest last. The history audits live here, and
+> each one is dated rather than standing: the newest is the only one that
+> describes the repository as it is.
+
+One entry per change too small for `DECISIONS.md` and not worth editing
+`CLAUDE.md` for. Newest last.
+
+The original reason for this file was that editing `CLAUDE.md` invalidated the
+manifests, so churn came here instead. That reason went on 2026-09-12, three
+entries down: the anchored manifests date the design and git carries everything
+after, so a document edit implies no restamp. The file kept going because the
+other half of its job turned out to be the durable one. A history audit is a
+dated statement rather than a standing one, and this is where the dated ones
+sit in order.
+
+"One line" is also no longer true and is not being enforced. The audits run long
+because what they rule out is the content.
 
 - 2026-09-12 Manifests and proofs moved from the repo root to `_attest/`. Verify from the repo root, e.g. `shasum -a 256 -c _attest/MANIFEST_FINAL_2026-09-12_0020.sha256`, since `shasum -c` resolves listed paths against the working directory and not the manifest's location.
 - 2026-09-12 Seed documents are direction, not specification. `BRIEF.md`, `DECISIONS.md` and `VALIDATION.md` inform intent; they are not a spec to conform to and their inconsistencies are not defects to reconcile before building. The tests in `tests/test_invariants.py` remain hard constraints, which is the whole reason the premise survives the docs being loosened.

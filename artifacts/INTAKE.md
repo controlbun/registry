@@ -1,5 +1,10 @@
 # Getting one artifact into the corpus, from a form on this machine
 
+> **Status 2026-09-20.** Live. The loopback form is still how an artifact the
+> author is entering himself gets into the corpus. What changed on 2026-09-20 is
+> that it is no longer the only way in: the published site now sends a
+> submission to Postgres, and `intake.py pull` reads it from there.
+
 Premise, restated because a premise stated in one document gets violated in every
 other one: the registry never designates, consumers pin, visibly. Nothing in this
 form ranks, scores or approves anything. Every field it collects is open, the
@@ -30,14 +35,29 @@ Four things, all in `tests/test_intake.py`:
 - `Origin` and `Sec-Fetch-Site` are checked, because a page you did not open, in
   the same browser, can post to a loopback port
 
-The same file also reads `astro/dist` and fails if the built site ever ships a
-form, a POST target, a file input or a loopback address. That is the way this
-leaks: not somebody rebinding the socket, but a form appearing on the published
-site months from now with nothing failing.
+The same file also reads `astro/dist`, and what it looks for there changed on
+2026-09-20. It used to fail if the built site shipped a form or a POST target of
+any kind. The site now sends a submission, so the question a guard can usefully
+ask is where a request is aimed rather than whether one exists. `ALWAYS_REFUSED`
+still fails the build on a loopback address, a `sendBeacon` or a multipart post;
+`MAY_SEND_TO` names every destination the site's own script can reach and why,
+so a new one is an edit somebody made rather than a line that arrived; and
+`test_nothing_on_the_site_posts_to_this_site` holds the original property, which
+is that a build emitting files runs no route and cannot be posted to.
 
-A submission route is one of the three capabilities that fire the dual-use trigger
-(`DECISIONS.md`, 2026-09-17). The policy does not exist, so the thing that must not
-exist is a listener anyone but the operator can reach.
+That is still the way this leaks. Not somebody rebinding the socket, but a
+request appearing on the published site months from now with nothing failing.
+
+**Why the bind stays loopback, now that the reason it was written down is gone.**
+This paragraph used to say a submission route fires one of the three dual-use
+capability triggers, so the listener must be unreachable until the policy exists.
+`DECISIONS.md` 2026-09-19 lifted those triggers and decided no policy is
+required, and a submission route exists on the public site. The constraint here
+survives on its own footing: this process writes to the corpus the build
+replays, with no identity behind it and nothing stamping who sent what. The
+published path has Postgres stamping the sender from a verified session, which
+is the property that makes it safe to expose. This one has nothing of the kind,
+so it stays where only the person running it can reach it.
 
 ## Reading the form
 

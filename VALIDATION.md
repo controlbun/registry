@@ -1,5 +1,9 @@
 # Direction validity
 
+> **Status 2026-09-20.** Live, and the one document here that is not waiting on
+> a build. The research question is open, deliberately, and the registry is
+> designed so that it can stay open.
+
 The research core of this project. Not because one criterion has to be settled
 before the registry can exist, which would contradict the plurality premise in
 `BRIEF.md`, but for two narrower reasons:

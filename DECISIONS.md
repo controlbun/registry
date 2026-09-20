@@ -1,5 +1,10 @@
 # Decisions
 
+> **Status 2026-09-20.** Live, and authoritative over every other document here.
+> Entries are kept after they stop being true, so check one for a
+> `**Superseded by:**` or `**Amended by:**` line before acting on it. The index
+> below marks them.
+
 Authoritative. If this file and a conversation disagree, this file wins. Add an
 entry whenever something is settled, with the date and a one-line reason. Do not
 silently reverse an entry; supersede it with a new dated one and say why.
@@ -94,6 +99,7 @@ Format:
 - `2026-09-20` GAP: nothing notices when a pin stops resolving  **[open gap]**
 - `2026-09-20` The site holds a session, submits to nobody, and uploads only where it is told  **[amended]**
 - `2026-09-20` The form posts, Postgres stamps who sent it, and a pull is the only way in
+- `2026-09-20` Every document says whether it still instructs, and a test enforces it
 
 <!-- end index -->
 
@@ -3660,3 +3666,52 @@ uploads only where it is told", in the one section where it says a submission is
 handed over and the project exposes no table. Everything else in that entry,
 including the scope work and the guard rewrite, stands. Reverses the `/contact/`
 sentence added the same day, which was never a decision.
+
+## 2026-09-20 Every document says whether it still instructs, and a test enforces it
+**Decided:** Every tracked document at the repo root and under `artifacts/` and
+`brand/` opens with a status block: `> **Status <ISO date>.**` followed by what
+the document is and whether it is still to be acted on.
+`tests/test_doc_status.py` fails the build when one is missing, dated in the
+future, or pushed below the first twelve lines.
+
+**Why.** `GO-LIVE.md` is a ten-step runbook whose steps flip repository
+visibility, enable Pages and point DNS. It was executed on 2026-09-19 and
+2026-09-20 and nothing in the file said so, so it read as live instructions to
+anybody arriving cold, and an agent that reads instructions executes them.
+`V1.md` is a plan that shipped and reads the same way. The quieter version of the
+same drift ran through the live documents: `CLAUDE.md` forbade the upload route
+the project had already built, `V2.md` named two gates that no longer exist, and
+`BRIEF.md` opened by saying the name was undecided.
+
+**Why a test and not a convention.** `minor_updates.md` 2026-09-13 records an
+anchor-file drift audit that found two stale `BRIEF.md` lines and deliberately
+left them, which was the right call under "seed documents are direction, not
+specification" and is also exactly how a convention rots. The property worth
+enforcing is not that the claims are true, which no test can establish. It is
+that somebody stated a state on a date.
+
+**What the date means.** When the status was last stated, not a certificate that
+every sentence below it was re-verified. `WHAT-IT-DOES.md` is the document that
+carries per-claim checks, and this is a weaker and more honest thing than that.
+
+**What this makes impossible to express.** A document that declines to say what
+it is. That is the whole cost and it is small, but it is worth naming: a file
+that is genuinely mid-thought now has to say so rather than sitting silent, and
+"unsettled, do not act on this yet" is a status like any other.
+
+**What is deliberately not constrained.** The word after the date. A fixed
+vocabulary of document states would be a closed enum on the one field here that
+is prose, and "spent, and do not run it again" carries more than a token from a
+list ever would. The test reads the date and the shape and nothing else.
+
+**What was corrected in the same pass, none of which is a decision.** The two
+`CLAUDE.md` paragraphs, propagated from the entries that had already superseded
+them. `BRIEF.md` on the name, on v0 accepting no uploads, and on the dual-use
+policy as a launch blocker. `V2.md` on its two gates. `artifacts/INTAKE.md` on
+the 2026-09-17 capability triggers and on what the `astro/dist` scan looks for
+now that the site is a client. `minor_updates.md` on its own stated reason for
+existing, which its third entry had voided. The `Makefile` header, which said
+there is no CI because the repo is not on GitHub; the repo has been on GitHub
+since 2026-09-19 and there is still no CI, which is now a choice rather than a
+circumstance. And `README.md`, which was three lines on the front door of a
+public repository.

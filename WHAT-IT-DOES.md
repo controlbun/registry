@@ -1,5 +1,9 @@
 # What this does, and what it does not
 
+> **Status 2026-09-20.** Live, and the document to read first if you want to know
+> what the running system does today. Every claim carries the check that
+> produced it.
+
 Facts about the running system, not commitments. Every claim carries the check
 that produced it, so rerun them rather than trusting them. Last checked
 2026-09-20 against `main`.

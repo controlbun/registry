@@ -1,5 +1,11 @@
-# Local build gate. This repo is not on GitHub, so there is no CI; these targets
-# are the enforcement. `make hooks` wires them to pre-push so they are not optional.
+# Local build gate. These targets are the enforcement, and `make hooks` wires them
+# to pre-push so they are not optional.
+#
+# This used to say there is no CI because the repo is not on GitHub. The repo has
+# been on GitHub since 2026-09-19 and there is still no CI, which is now a choice
+# rather than a circumstance: Pages serves a locally built `astro/dist`, so the
+# artifact a reader gets is the one that passed this gate, and a hosted build
+# would quietly break that by having the falsifier check a different build.
 
 PY := .venv/bin/python
 

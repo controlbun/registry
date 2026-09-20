@@ -1,7 +1,15 @@
 # Project brief: a registry for steering vectors
 
-Working title: undecided, and deliberately so. Deferred until it is known whether
-this lives inside an existing ecosystem's naming conventions.
+> **Status 2026-09-20.** Live, as direction rather than as specification. Written
+> before any of it existed, so parts of it describe a plan that has since been
+> taken, changed or dropped; `DECISIONS.md` wins on conflict and the sections
+> that stopped being true are marked in place rather than rewritten.
+
+Working title, when this was written: undecided, and deliberately so, deferred
+until it was known whether this lived inside an existing ecosystem's naming
+conventions. It is `controlbun`, decided by 2026-09-13 and public since
+2026-09-20 at `controlbun.com`. The deferral is recorded rather than deleted
+because the reasoning still applies to the next name this project needs.
 
 See `CONTEXT.md` for compute, upstream state and prior art. See `VALIDATION.md` for the
 direction-validity problem, which is the research core of this project.
@@ -436,8 +444,14 @@ beats mandated comparability on a thin one.
 
 **Nothing blocks starting.** v0 is software: schema, storage, client, Comparison,
 and the rendering. It needs no new extraction, no validated direction, and no
-finished policy, because v0 accepts no uploads and serves nothing publicly. The
-open items in `DECISIONS.md` gate *launch*, not code.
+finished policy.
+
+*The reason given here was that v0 accepts no uploads and serves nothing
+publicly, and both halves are spent.* The site has been public since 2026-09-20
+and a submission posts to Postgres. What survives is the claim itself, which was
+never resting on that reason: the schema records what an author asserts and does
+not adjudicate it, so no research question gates the build. `DECISIONS.md`
+2026-09-19 removed the policy gate outright.
 
 Content arrives when it arrives. The arena's Season 3 direction is an obvious early
 submission and can be imported at any point; it is not a prerequisite, and waiting
@@ -512,9 +526,10 @@ stays closed until the policy is written and published.
 
 ## Three things to settle before launch, not before code
 
-These gate accepting uploads and serving artifacts publicly. None of them gate
-building the schema, the client, the Comparison layer or the views, because v0 does
-neither of those things.
+*Launch happened on 2026-09-20 with one of the three settled, one decided away
+and one still open, so read this as what was thought to be blocking rather than
+as what is.* The heading and the framing are kept because the reasoning under
+item 1 is unchanged and item 2 is worth seeing beside the decision that ended it.
 
 **1. Direction validity.** See `VALIDATION.md`. Not a code blocker: the schema
 records any criterion an author uses rather than asserting one. What is open is
@@ -545,6 +560,16 @@ artifacts gated behind identity, and what is the takedown path. This also
 determines whether labs and academic groups engage at all, which determines
 whether reputable players' vectors ever actually show up. Treat it as a launch
 blocker, not a compliance chore.
+
+**Decided against on 2026-09-19, and the site launched without one.** Drafting
+the document was what killed it: most of what came out was a description of what
+the system does rather than a rule governing a decision, which is why `POLICY.md`
+became `WHAT-IT-DOES.md`. A policy governs decisions, and the decisions it would
+govern do not exist. The concrete questions above still have answers and the
+answers are in `WHAT-IT-DOES.md`: there is no bulk path, there is no API, and
+nothing is gated behind identity because nothing is gated. What is genuinely
+given up is a prepared answer to the first question a safety-adjacent reader
+asks, and `DECISIONS.md` records that as the cost rather than arguing it away.
 
 **3. Model license position.** Settled on 2026-09-19 and no longer a blocker.
 The author's position is that a direction is his own work, built against a model

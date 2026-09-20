@@ -1,5 +1,7 @@
 # brand
 
+> **Status 2026-09-20.** Live. Source artwork and where each file is used.
+
 Source artwork. Tracked, not deployed: `astro/public/` carries only the sizes the
 site links.
 

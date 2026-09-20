@@ -1,5 +1,8 @@
 # Publishing the real artifacts to the Hub
 
+> **Status 2026-09-20.** Live. The author's own path for putting artifacts on the
+> Hub and recording the pin. Nothing here runs on anyone else's behalf.
+
 The four directions under `artifacts/soham/` go to a Hub repo in the author's own
 namespace, and the registry records a pinned pointer to them. After that,
 `client.load("soham/pro-human@L24").vector()` works without a checkout, because

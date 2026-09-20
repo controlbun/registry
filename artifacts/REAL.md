@@ -1,5 +1,8 @@
 # Everything in this directory is real
 
+> **Status 2026-09-20.** Live. What is in this directory, what each recorded
+> number means, and what none of them is evidence for.
+
 This was the counterpart of `fixtures/SYNTHETIC.md`, which is gone: the whole
 corpus is real now, per `DECISIONS.md` 2026-09-19. Every number attached to
 these artifacts was produced by running a model. None is fabricated and none is

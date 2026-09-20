@@ -1,5 +1,10 @@
 # Working agreement
 
+> **Status 2026-09-20.** Live. The working agreement, and the only document an
+> agent is guaranteed to read. `DECISIONS.md` is authoritative where the two
+> disagree, and this file does go stale against it: two paragraphs here forbade
+> things the project had already decided to do, and were amended on 2026-09-20.
+
 Project brief is in `BRIEF.md`. Settled decisions are in `DECISIONS.md`, which is
 authoritative: do not contradict it, and add to it whenever something is decided.
 
@@ -148,6 +153,13 @@ design. Tests that fail the build:
   session for that reason. Where the stamped identity and the record's own copy
   disagree, the stamped one is used and the disagreement is surfaced rather
   than either being preferred silently
+- Every document says at the top whether it still instructs, and on what date it
+  said so. `tests/test_doc_status.py` fails the build on a missing block, a date
+  in the future, or one pushed below the first twelve lines. The word after the
+  date is free prose and is not checked, because a fixed vocabulary of document
+  states would be a closed enum on the one field here that is prose. A spent
+  runbook that does not say it is spent gets run again, and two of the steps in
+  the one this came from are not reversible
 
 Add one whenever a new invariant is settled. An invariant that is only in prose
 is not an invariant.

@@ -1,5 +1,9 @@
 # Context
 
+> **Status 2026-09-20.** Live. Upstream state and prior art, each fact carrying
+> the date it was checked. Nothing here has been re-verified since the date on
+> the claim itself, and this space moves fast.
+
 Upstream project state and prior art. Facts verified as of 2026-09. Re-check
 anything load-bearing before relying on it; this space moves fast.
 
