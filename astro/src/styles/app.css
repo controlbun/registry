@@ -79,6 +79,41 @@
 
 * { box-sizing: border-box; }
 
+/* One focus ring for the whole site, rather than whatever each engine draws.
+   The site has custom-styled buttons in five places and text inputs in three,
+   and a reader driving any of them from the keyboard was getting a different
+   ring on each. `:focus-visible` and not `:focus`, so a mouse press on a button
+   does not leave a ring sitting behind it.
+   `--accent` rather than `--accent-fill`: this is a thing to read the position
+   of, and the text value is the one measured against the surfaces text lands
+   on. */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The press a page exists for. Used on `/signed-in/` and `/submit/`, on an `a`
+   in one and a `button` in the other, so it has to render the same as either.
+   It was a class with no rule behind it until 2026-09-20: both pages shipped
+   their primary action as whatever the platform draws, which on a serif page
+   reads as a leftover.
+
+   The fill is `--pop-active` / `--pop-on-active` rather than a second pair.
+   Those two already are this site's "filled with the accent" pair, tuned once
+   for both themes: #3066FF with white on light, #95B1FF with near-black on
+   dark. A new pair here would be a second place to get that wrong, and the
+   light one is the value the palette comment above measured at 4.70:1.
+
+   Hover and focus draw the same ring, which is the one above. An opacity or a
+   brightness step on a filled button moves the text contrast with it, and this
+   one has 0.20 of headroom over AA to spend. */
+.go {
+  font: inherit; font-size: .9rem; line-height: 1.3;
+  display: inline-block; text-decoration: none;
+  background: var(--pop-active); color: var(--pop-on-active);
+  border: 1px solid transparent; border-radius: 4px;
+  padding: .45rem .9rem; cursor: pointer;
+}
+.go:hover { outline: 2px solid var(--accent); outline-offset: 2px; }
+.go[disabled] { cursor: default; opacity: .5; }
+
 body {
   font: 15px/1.6 ui-serif, Georgia, "Times New Roman", serif;
   color: var(--ink);
@@ -271,8 +306,15 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
 
 /* ---------------------------------------------------------------- site nav */
 
+/* The bar wraps, and until 2026-09-20 it did not. A row of inflexible items
+   held the document wider than the window on a phone: at a 500px viewport,
+   which is the narrowest this machine's headless Chrome will lay out, the
+   document measured 549px and the overflowing element was the account block
+   at the end of the bar. Every page on this site scrolled sideways there, and
+   the bar was the only thing asking for the width. Two declarations, and they
+   change nothing at any width where the row already fits. */
 .sitenav {
-  display: flex; align-items: center; gap: 1.6rem;
+  display: flex; align-items: center; gap: 1.6rem; flex-wrap: wrap;
   margin: 0 auto 2.2rem;
   padding-bottom: .9rem;
   border-bottom: 1px solid var(--line);
@@ -286,7 +328,7 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: .95rem; letter-spacing: -.02em; font-weight: 600;
 }
-.sitenav nav { display: flex; gap: 1.1rem; font-size: .9rem; }
+.sitenav nav { display: flex; gap: 1.1rem; font-size: .9rem; flex-wrap: wrap; }
 .sitenav nav a { color: var(--dim); text-decoration: none; }
 .sitenav nav a:hover { color: var(--ink); text-decoration: underline; }
 /* Pushes the toggle to the far edge without a spacer element. */
