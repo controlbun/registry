@@ -8,8 +8,13 @@
 # would quietly break that by having the falsifier check a different build.
 
 PY := .venv/bin/python
+UID := $(shell id -u)
+AGENT := com.controlbun.autopublish
+AGENT_PLIST := $(HOME)/Library/LaunchAgents/$(AGENT).plist
+JOB_DIR := $(HOME)/Library/Logs/controlbun
 
-.PHONY: verify test invariants manifests hooks site licenses serve falsifier links
+.PHONY: verify test invariants manifests hooks site licenses serve falsifier links \
+        pull pull-dry deploy autopublish-install autopublish-stop autopublish-now
 
 # The site is built before the tests, not after. Both the falsifier and the page
 # tests read `astro/dist`, so building later meant they checked the previous
@@ -81,3 +86,50 @@ manifests:
 hooks:
 	git config core.hooksPath hooks
 	@echo "pre-push gate active"
+
+# --------------------------------------------------------------------------- #
+# What `/submit/` received, onto the site, with nobody typing anything.
+#
+# `artifacts/AUTOPUBLISH.md` is the operator document. It carries the Keychain
+# line, the log path, how to stop this and how to take something down.
+#
+# `pull` is deliberately not a prerequisite of `site`, and that has not changed.
+# `site` runs inside `verify` which runs in the pre-push hook, so a network call
+# needing a secret there would break the build for anyone without the key and
+# make it depend on a remote service being up.
+
+# The secret key comes from the login Keychain and from nowhere else. It is put
+# into one child process's environment, and `artifacts/intake.py` reads it from
+# the environment and from nowhere else.
+pull:
+	$(PY) artifacts/autopublish.py pull
+
+pull-dry:
+	$(PY) artifacts/autopublish.py pull --dry-run
+
+# The sequence `GO-LIVE.md` section 4 has typed by hand. Runs `make verify`
+# itself, then pushes `main` and `gh-pages` in one invocation so the hook runs
+# the gate once more and diffs the pushed tree against the `astro/dist` that
+# just passed. Never `--no-verify`: a locally built `astro/dist` is the whole
+# argument for having no hosted build, and pushing past the gate deletes it.
+deploy:
+	$(PY) artifacts/autopublish.py deploy
+
+# Writes into ~/Library/LaunchAgents, which is why it is a target the owner runs
+# rather than something a script did on its own. `bootout` first, so reinstalling
+# over a loaded agent replaces it instead of failing.
+autopublish-install:
+	mkdir -p $(JOB_DIR) $(HOME)/Library/LaunchAgents
+	$(PY) artifacts/autopublish.py plist > $(AGENT_PLIST)
+	plutil -lint $(AGENT_PLIST)
+	-launchctl bootout gui/$(UID)/$(AGENT) 2>/dev/null
+	launchctl bootstrap gui/$(UID) $(AGENT_PLIST)
+	@echo "installed. It fires every 15 minutes, starting within 15 minutes."
+	@echo "log: $(JOB_DIR)/autopublish.log"
+
+autopublish-stop:
+	launchctl bootout gui/$(UID)/$(AGENT)
+	@echo "stopped. The plist is still at $(AGENT_PLIST); delete it to be sure."
+
+autopublish-now:
+	launchctl kickstart -p gui/$(UID)/$(AGENT)

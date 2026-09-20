@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  A template, not an installed agent. `artifacts/autopublish.py plist` fills the
+  placeholders in with this machine's paths and `make autopublish-install`
+  writes the result into ~/Library/LaunchAgents. Nothing writes there on its own:
+  an agent that fires every fifteen minutes and pushes to a public site is
+  something the owner installs on purpose.
+
+  launchd rather than cron, because cron on a laptop that is asleep does not run
+  and does not catch up. StartInterval fires on wake.
+
+  RunAtLoad is false. Installing the agent is not a request to publish this
+  second, and `launchctl kickstart` is there for when it is. AUTOPUBLISH.md has
+  the line.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>@LABEL@</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>@PYTHON@</string>
+        <string>@SCRIPT@</string>
+        <string>run</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>@ROOT@</string>
+
+    <!-- launchd gives a job /usr/bin:/bin:/usr/sbin:/sbin and nothing else.
+         `make site` runs npm, which is not on that path on this machine, so a
+         job without this fails at the build every time it fires. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>@PATH@</string>
+    </dict>
+
+    <key>StartInterval</key>
+    <integer>@INTERVAL@</integer>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- Both to one file, in the order things happened. The job prints a line
+         per event and nothing on a run that published nothing, so this grows
+         with events rather than with firings. -->
+    <key>StandardOutPath</key>
+    <string>@LOG@</string>
+    <key>StandardErrorPath</key>
+    <string>@LOG@</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>LowPriorityIO</key>
+    <true/>
+    <key>Nice</key>
+    <integer>5</integer>
+</dict>
+</plist>

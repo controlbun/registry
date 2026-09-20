@@ -106,6 +106,7 @@ Format:
 - `2026-09-20` The submit page offers the agent handoff, and the parser does not cross
 - `2026-09-20` Animation is CSS, and Motion is a named option rather than a dependency
 - `2026-09-20` `/submit/` asks which of the two ways in before it asks for anything else
+- `2026-09-20` Publishing is automatic end to end, and nobody types anything
 
 <!-- end index -->
 
@@ -4271,3 +4272,111 @@ document measured 549px and every page here scrolled sideways.
 **No test changed.** The page tests assert what the page says, what it refuses
 and what it does not do, so a layout pass passed them untouched. That is the
 property they were written for, and it is worth recording that it held.
+
+## 2026-09-20 Publishing is automatic end to end, and nobody types anything
+**Decided:** a submission made at `/submit/` reaches the public site with no
+human in the path. A launchd agent fires every fifteen minutes, reads
+`pending_submission` with the secret key, hands each row to `take`, runs `make
+verify`, commits the three tracked paths a pull plus a build changes, and pushes
+`main` and `gh-pages`. `artifacts/autopublish.py` is the whole of it and
+`artifacts/AUTOPUBLISH.md` is the operator document.
+
+**The owner decided this knowing what it means and it is recorded here so it is
+not reopened.** A stranger's text goes live under his name and on his domain
+before he has read it. That is not an oversight in the design, it is the design,
+and an approval flag, a hold queue or a quality check added later would reverse
+it silently. `DECISIONS.md` 2026-09-17 already records why a review step with no
+stated rule fills with the reviewer's taste; this goes one step further and
+removes the step rather than leaving it empty.
+
+### What it forecloses
+
+Anything that needs a person between the row and the page. No editing a
+submission on its way in, no writing back to ask a submitter for a field, no
+holding one while a question is answered, no publishing in batches at a time
+that suits anybody. A submitter's only feedback is the page appearing or the row
+sitting unpulled, and the second one is silent from their side.
+
+It also forecloses a queue growing into a ranking. Nothing counts rows, orders
+them by anything but arrival, or reads a position off one, which was already
+true of `pending_submission` and is now true of the thing that drains it.
+
+### The two things it does not solve, stated rather than implied
+
+**A stranger's text is live under the owner's name until he notices.** The
+notification is how he finds out, and a notification is not a review: it arrives
+after the push. Between the submission and his reading it, `controlbun.com`
+serves whatever somebody typed, with his name on the footer and his domain in
+the address bar. Fifteen minutes is the firing interval, not the exposure, and
+the exposure is however long it takes him to look.
+
+**The corpus is a file in git, so a later removal is a new commit.** Taking a
+submission down means deleting a line from `artifacts/intake.jsonl` and
+redeploying. That stops it being served. It does not unpublish it: the commit
+that carried it is in `main`, the built page is in the `gh-pages` history, and
+the repository is public, so anybody who cloned either still has both.
+`AUTOPUBLISH.md` says this in the section on taking something down rather than
+leaving the owner to discover it while wanting something gone.
+
+### The misuse tension, raised rather than resolved
+
+`CLAUDE.md` says to flag anything that widens misuse surface and not to resolve
+the tension with open contribution silently. This widens it. A
+refusal-removal direction or a malicious-persona artifact submitted at
+`/submit/` is on a public site under the owner's domain within fifteen minutes,
+with nothing between it and a reader. Before today the same row sat in a table
+until he ran a command, which was not a review either but was a person noticing.
+That is a real reduction and it is the price of the decision, not an argument
+against it; it is written down so the next person to touch this knows what was
+traded.
+
+### The advocate pass, for the plural reading
+
+The case for automation is the plurality premise rather than convenience. A
+registry whose second claimant on a label depends on its owner being at a
+keyboard is a registry where his availability is a filter on whose work appears,
+and an availability filter is a designation made by accident: the submissions
+that get published are the ones that arrived when he was around. Ten people
+extracting `kindness` is the content, and the content cannot wait on one
+person's week. Automation is the only version of this that does not quietly
+centralize.
+
+### What the refusals foreclose, asked the other way
+
+Every refusal in `autopublish.py` is about the machine and never about a
+submission, and each one still costs something. Refusing a dirty tree means the
+job stops while the owner has anything uncommitted, so a week of work in
+progress is a week of nothing publishing; that is chosen over a commit that
+sweeps up half of what he was doing. Refusing a change to a path outside the
+three it stages means a build that starts writing a fourth tracked file stops
+publishing until somebody adds it deliberately, which is a decision somebody
+made rather than a line that arrived. Refusing a checkout not on `main` means a
+deploy cannot be issued from one of the agent worktrees, which is the case it
+was written for.
+
+### The gate runs twice per deploy and that is not redundancy
+
+`deploy` runs `make verify` and then pushes; `hooks/pre-push` runs it again and
+diffs the pushed tree against the `astro/dist` that just passed. The first run
+decides whether to commit at all, so a red gate commits nothing. The second
+binds the bytes being pushed to the bytes that passed, which is the property the
+whole no-hosted-build argument rests on. It is only meaningful because the build
+is byte-deterministic, which was checked rather than assumed: `make site` run
+twice over an unchanged corpus produced the same `astro/dist`, file for file and
+sha256 for sha256, on 2026-09-20. Had it not, the hook's diff would fail every
+deploy and the invariant would read as flaky rather than as broken.
+
+**Supersedes:** nothing. `DECISIONS.md` 2026-09-20 "The form posts, Postgres
+stamps who sent it, and a pull is the only way in" stands unchanged; the pull is
+still the only way in and this is what runs it.
+
+### What was checked rather than recalled
+
+`security add-generic-password -h` on this machine, for `-w` last prompting and
+`-U` updating. `launchctl help` for `bootstrap`, `bootout` and `kickstart`, and
+the `gui/<uid>` domain form. `plutil -lint` on the rendered agent. `make verify`
+twice over an unchanged corpus for the determinism the hook's diff needs. No
+`timeout` binary exists on this machine, so the Keychain read is bounded by
+`subprocess.run(timeout=...)` rather than by a shell wrapper: an access prompt
+with nobody there to click it is a job that hangs holding the lock, logging
+nothing and notifying nothing, which is worse than one that fails.
