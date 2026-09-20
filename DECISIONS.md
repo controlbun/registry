@@ -7,6 +7,95 @@ silently reverse an entry; supersede it with a new dated one and say why.
 Format:
 
 ```
+
+<!-- index: generated, do not edit by hand -->
+
+- `2026-09-11` Arena is upstream, registry is a separate project
+- `2026-09-11` The registry never designates; consumers pin, visibly
+- `2026-09-11` Direction validity is the blocking research question  **[superseded]**
+- `2026-09-11` Out-of-template transfer is a required eval field  **[superseded]**
+- `2026-09-11` Evidence is recorded, not required
+- `2026-09-11` The registry needs no compute
+- `2026-09-11` Eval judge is local weights, not an API
+- `2026-09-11` Falsifier pattern is ported from the arena
+- `2026-09-11` Schema object is Intervention, not Vector  **[amended]**
+- `2026-09-11` Attack is a first-class object
+- `2026-09-11` No user ratings, rank on precision and attack survival  **[superseded]**
+- `2026-09-11` Popularity drives the audit queue
+- `2026-09-11` Plurality is the product
+- `2026-09-11` No closed enums; extension points are profiles
+- `2026-09-11` Recipe is optional
+- `2026-09-11` Submissions are versioned and immutable  **[superseded]**
+- `2026-09-11` Running someone else's eval is a first-class action
+- `2026-09-11` No ranking by default, sorting is user-chosen  **[superseded]**
+- `2026-09-11` safetensors on ingest, always
+- `2026-09-11` Canonical traits, free-form tags on top  **[superseded]**
+- `2026-09-11` v0 is unblocked; the open items gate launch, not code
+- `2026-09-11` A judged score without a coherence measure is uninterpretable
+- `2026-09-12` No comparable registry exists; Neuronpedia has storage, not this
+- `2026-09-12` Non-identifiability conditions every behavioral criterion
+- `2026-09-12` SQLite for v0, not Postgres
+- `2026-09-12` A default ordering is allowed; no ordering derives from an eval result
+- `2026-09-12` SAEs get cards and evidence; the registry still does not hold them
+- `2026-09-12` SAE-latent provenance lives in the recipe, not the schema
+- `2026-09-13` Adoption comes from the client being easy, not from the ordering
+- `2026-09-13` The ordering control computes what its caption says it computes
+- `2026-09-13` The Jinja frontend is retired; Astro is the frontend
+- `2026-09-13` The site is published on GitHub Pages, when the repo goes public
+- `2026-09-13` An owner is someone who took part, not someone who published
+- `2026-09-13` Dates render in UTC
+- `2026-09-13` Upload preferred, pointer available; SAEs are pointer only
+- `2026-09-13` The artifact kinds are not a list, and the code does not read them
+- `2026-09-14` The synthetic marker is per page, not per corpus  **[amended]**
+- `2026-09-14` `model_revision` is nullable, and absence renders as absence
+- `2026-09-14` The submission URL carries its version
+- `2026-09-14` Non-Hub provenance lives in the recipe payload, and that is a gap  **[superseded]**
+- `2026-09-14` The seed corpus is indexed, not submitted
+- `2026-09-14` The consumer surface is a package, and it is how this gets used
+- `2026-09-14` Scanned code is discovered, not listed
+- `2026-09-15` A bare `author/label` refuses when the author has several current versions  **[amended]**
+- `2026-09-15` One comparability rule, not two
+- `2026-09-15` An artifact path is repo-relative, and leaving the repo is refused
+- `2026-09-15` The license audit runs in the gate, and refuses an empty scan
+- `2026-09-15` Every manifest on disk has to be in all three inventories
+- `2026-09-15` v1 is the site going public, and it is scoped in `V1.md`
+- `2026-09-15` The dual-use policy is deferred past launch, knowingly
+- `2026-09-15` OPEN: contribution goes through Supabase, not through the site or HF  **[amended]**
+- `2026-09-15` Indexing is deferred; the lane without it comes first  **[amended]**
+- `2026-09-16` Recipes are namespaced, anyone publishes, and there is no list
+- `2026-09-16` Attacks can be attacked
+- `2026-09-16` IDEA: `controlbun.agentContext` ships the manual to whatever writes the code
+- `2026-09-16` Fetched bytes are checked against a recorded digest, where there is one
+- `2026-09-17` The picker's two open fields are a combobox built over the datalist, not instead of it
+- `2026-09-17` A writer states what it claims about an artifact and the bytes confirm it
+- `2026-09-17` Ingest takes bytes from anywhere, and the converters are not a permission list
+- `2026-09-17` No dual-use policy yet, and the trigger is a capability rather than a date  **[amended]**
+- `2026-09-18` The author publishes his own artifacts, and the registry records the pin
+- `2026-09-18` Intake is a form on 127.0.0.1, and the binding is what keeps it clear of the dual-use trigger
+- `2026-09-18` GAP: `layer` is one integer, so a band cannot be stated at all  **[open gap]**
+- `2026-09-18` GAP: ingest reads any host, but a row can only pin the Hub  **[superseded]**
+- `2026-09-18` The row carries its own URL template, so a pin can name any host
+- `2026-09-19` `make site` replays intake, and authored prose is marked as authored
+- `2026-09-19` An absence carries its reason, keyed by field name and never by column
+- `2026-09-19` No dual-use policy is required, and what review does is a later question
+- `2026-09-19` A namespace is claimed by an account, and a claim is never a rank  **[amended]**
+- `2026-09-19` The page points at the artifact, and the URL is built once in Python
+- `2026-09-19` A submission is identified by author, model, label and version
+- `2026-09-19` A direction is the author's own work, built against a model
+- `2026-09-19` A signed-in submitter's namespace is their provider handle, and is not theirs to type
+- `2026-09-19` A claim is derived from a capture, and the record is what survives the rebuild
+- `2026-09-19` The site signposts sign-in, receives nothing, and names no account of its own  **[superseded]**
+- `2026-09-19` GAP: `kind` is open and the columns around it are not, so a token sequence cannot be stored  **[open gap]**
+- `2026-09-19` The synthetic corpus is removed, and plurality is now demonstrated zero times
+- `2026-09-20` Reading is open, writing is signed, and that is the whole auth boundary
+- `2026-09-19` There is a contact route, and the address is written out
+- `2026-09-20` `artifacts/signin.py` goes when the browser path lands
+- `2026-09-20` A submission is a link, and a private repo is not a blocker
+- `2026-09-20` GAP: nothing notices when a pin stops resolving  **[open gap]**
+- `2026-09-20` The site holds a session, submits to nobody, and uploads only where it is told
+
+<!-- end index -->
+
 ## YYYY-MM-DD Short title
 **Decided:** what.
 **Why:** one or two lines.
@@ -2766,6 +2855,14 @@ fixture claim, seven unclaimed namespaces, and no real one" was true for about
 an hour, and that is what the amendment corrects.
 
 ## 2026-09-19 The site signposts sign-in, receives nothing, and names no account of its own
+**Superseded by:** 2026-09-20 The site holds a session, submits to nobody, and
+uploads only where it is told. The return leg exists, `/signed-in/` holds a
+session, and `/sign-in/` is the explainer beside it rather than the whole of it.
+What survives is that this registry still creates no account, that `/sign-in/`
+still ships no script, and that the site still has no origin that receives. The
+`https://huggingface.co/login` anchor this entry put in `AUTHORED_OFFSITE` is
+gone, because it sent somebody to a login that returned them to Hugging Face.
+
 **Decided:** `/sign-in/` ships on the published site. It carries two outbound
 anchors to Hugging Face's own registration and login pages, an internal link to
 `/about/`, and nothing else: no field, no form, no script of its own, no
@@ -3200,3 +3297,193 @@ stays, the reader is told, and nothing is withdrawn on an author's behalf.
 
 **Supersedes:** nothing. Same kind of entry as the `layer`, host and
 token-sequence gaps.
+
+## 2026-09-20 The site holds a session, submits to nobody, and uploads only where it is told
+**Decided:** `/signed-in/` ships. It receives the redirect after Hugging Face and
+Supabase send somebody back, reads the handle and the organizations from a live
+userinfo call while `provider_token` is available, renders both with the date,
+and carries the submission form. `artifacts/signin.py`, `artifacts/SIGNIN.md` and
+`tests/test_signin.py` are deleted with it.
+
+**The reversal, stated before anything that follows it.** `astro.config.mjs` says
+a build that emits files "cannot drift into being a public surface the way a
+running process can", and that sentence was the reason for `output: "static"`
+twice over. Half of it survives exactly and half of it is gone.
+
+What survives: the build still emits files, still has no adapter, still runs no
+route, and still has **no origin that receives**. Nothing can be posted to this
+site because there is nothing here to answer it. A reader's submission reaches
+no server of ours and no table of ours, and there is none of either.
+
+What is gone: the site is now a **client**. It sends the reader's data to two
+origins that are not this one, on the reader's instruction and with the reader's
+own credentials. `SIGNIN.md` priced this at one property and the price turned out
+to be slightly higher than it wrote: it said the site "stops being a thing that
+structurally cannot write, and becomes a thing that does not". With the upload
+offer it is a thing that **does** write, to the reader's own account, when the
+reader presses a button. That is the honest sentence and it is worse than the one
+that was costed, which is why it is at the top of this entry rather than in it.
+
+**The guards were rewritten around the structural criterion rather than
+deleted.** `WRITE_SURFACE` in `tests/test_intake.py` held eight patterns and read
+every one as a write path arriving. Six of the eight are now in the build and
+none of them is the thing the guard was for. So the question moved from *does a
+request exist* to *where is it aimed*, which is what `SIGNIN.md` proposed before
+it was deleted:
+
+- `ALWAYS_REFUSED` keeps the patterns with no honest use here at all: a loopback
+  address, a beacon, a multipart encoding. Every built file is read, including
+  the vendored search bundle.
+- `test_nothing_on_the_site_posts_to_this_site` is the property that survived
+  intact. No form action, no `formaction`, no request literal aimed at this
+  origin.
+- `MAY_SEND_TO` names every origin the build's own script can reach, with the
+  reason. Two: `huggingface.co` and `supabase.co`. A third is a test edit, which
+  is a decision somebody made rather than a line that arrived.
+- The identity-endpoint guard was narrowed rather than dropped. `/auth/v1/`,
+  `supabase` and `signInWithOAuth` are allowed on one page and its bundle, and
+  the same strings under `/about/` or on a submission view are still a finding.
+
+Every clause has a bite test beside it. The old guard was green for the right
+reason and a rewritten one that is green for the wrong reason is the failure this
+repository keeps hitting, so each pattern is shown refusing a plausible next
+edit rather than asserted to work.
+
+### Incremental scope, which was the thing to verify and does hold
+
+The 2026-09-20 entry on submissions being links says "whether the provider and
+Supabase support requesting it incrementally has to be verified before this is
+built, not assumed". Verified on 2026-09-20, both halves, against the live
+project rather than from documentation:
+
+- Supabase's `GET /auth/v1/authorize` takes a `scopes` parameter and, for a
+  custom OIDC provider, **replaces** the project's configured list with it
+  rather than adding to it. Read in `loadCustomProvider` in supabase/auth and
+  then confirmed against the live project: the default forwarded to Hugging Face
+  is `openid email profile read-memberships`, and passing `scopes=openid`
+  forwarded exactly `openid`. Because it replaces, the wider request restates
+  the narrow ones, and a caller that passed only the extra would silently drop
+  `read-memberships`. `tests/test_signed_in_page.py` holds that as a property of
+  the two constants.
+- Hugging Face validates the `scope` parameter at the authorize endpoint before
+  anybody logs in. An unknown string comes back as `invalid_scope` with the
+  whole supported list in the message; `write-repos`, `manage-repos` and
+  `contribute-repos` are all in it.
+
+So signing in asks for `openid profile read-memberships` and nothing else. A
+reader, a namespace claimant and anybody submitting a link to an already-public
+file is never asked to grant write access to anything.
+
+**The scope the upload asks for is `contribute-repos`, not `write-repos`.** The
+entry it comes from says "repo write scope", which was the right shape and the
+wrong name. Hugging Face documents `contribute-repos` as "Create repositories
+and access those created by this app. Cannot access any other repositories
+unless additional permissions are granted." `write-repos` and `manage-repos`
+both reach every repository the person owns, and the offer is to create one new
+public repository and put one file in it. The narrower one does exactly that job
+and nothing else, and a test refuses the two wider names by name.
+
+**One thing is unverified and the author should check it once.** The probe above
+was unauthenticated, so it proves Hugging Face accepts the scope *string*; it
+does not prove the registered OAuth app is allowed to request it. If the app's
+own scope list has to carry `contribute-repos`, the second authorization fails
+at consent time, visibly, at the moment of upload, and nothing is over-granted
+in the meantime. It is a line on the app settings page and not a design question.
+
+### What a submission is, and where it goes
+
+A submission is a file the submitter builds in the browser and hands over. The
+page sends it nowhere, because there is nowhere to send it: the Supabase project
+exposes no table today, checked, and adding one is the separate and larger
+decision the 2026-09-15 contribution entry is still open on.
+
+`artifacts/intake.py take` is the other half. It reads the record, fetches the
+bytes at the pin through `controlbun.fetch` exactly the way a consumer will,
+hands them to `controlbun.artifact`, and writes the row. **So nothing the
+submitter says about the bytes is taken on trust, and nothing about the bytes is
+computed in a browser.** The page builds a pointer and a contract and has no
+reader for safetensors at all. A second implementation of shape, dtype, norm and
+digest in JavaScript is the failure this repository has hit more than any other,
+and it is refused here by there being no such code rather than by a rule.
+
+**There is no review step and no queue, and that is not a deferral.** The
+namespace is the handle the provider reported, so there is no question for a
+reviewer to answer. What `take` refuses is what the schema refuses: a shape with
+no reader, bytes that do not resolve, a field given both a value and a reason for
+having none. None of those is a judgment about the work. The 2026-09-17 concern,
+that a review step with no stated rule fills with the reviewer's taste, is
+untouched and stays where it is.
+
+**What this costs the submitter.** A round trip through a human. A submission
+does not appear until the author replays it and publishes, and the page says so
+in those words rather than implying an inbox. That is not a placeholder for a
+queue; it is what a corpus that is a file in git means, and it is the thing that
+makes the falsifier worth running.
+
+**`/contact/` changed, which is the day its own sentence said would come.** That
+page read "Mail is not a submission route either: nothing here publishes what
+you send it, and the day that changes it will be written down." This is the
+writing down. Mail takes one thing now, the submission record, and the page says
+what that is and what it is not: a pointer and a contract rather than bytes,
+which arriving does not publish. The three reasons `/contact/` gave for existing
+are untouched and the invitation still reads the same way to the other two
+people it was written for.
+
+### What is stored, which is nothing
+
+No cookie, no token, no row. The provider token lives in one local variable
+inside one function, goes into one header, and the frame ends. One thing is
+written to `sessionStorage`, the PKCE verifier, because a verifier has to survive
+a navigation by definition; it is removed the moment it is used and exchanges for
+nothing without the authorization code. The code is taken out of the address bar
+with `replaceState` before anything else happens, so it is not in a history
+entry, a copied link or a referrer. Tests hold all of it, on the bundle for how
+many writes there are and on the source for what is written, because the bundler
+renames the constant.
+
+**The capture shape did not change and that is the point of deleting the tool.**
+`orgs` still has three states and they are still three different facts: a list is
+what the provider said, `[]` is membership of nothing and is a real answer, and
+`null` is the provider saying nothing at all and carries its own sentence, per
+`schema/migrations/008`. `artifacts/claim.py` reads what the browser hands over
+and does not know which half of the project wrote it. It now also reads a
+pretty-printed single object, because that is what a browser download is, and
+making somebody reformat a file before a tool will look at it is a transcription
+step with a text editor in it.
+
+### What this makes impossible to express
+
+A sign-in that leaves no trace in a browser's storage at all. The verifier has to
+survive the redirect, so the honest version stores one value rather than none,
+and the alternative is the implicit flow, which puts the session in a URL
+fragment and therefore in every history entry that copies it. That is worse.
+
+A submission from somebody who will not run a browser with script. The loopback
+tool could be driven from a terminal and is gone, and nothing replaces it: this
+path needs a browser, and a person who wants neither has the indexing lane, which
+is deferred, or mail, which is not a route.
+
+And a reader who wants to check what the page sends without reading the bundle.
+`MAY_SEND_TO` is the answer and it is in a test rather than on the page.
+
+### The publishable key is now in the published output
+
+`/signed-in/` carries the Supabase project URL and the publishable key, read at
+build time from the gitignored `.env`. Both are values a browser is meant to
+hold and both are already visible in any authorize redirect a person sees, so
+this discloses nothing that staying out of the build protected. It is recorded
+because it is the first secret-shaped string this project has ever put in an
+artifact it publishes, and because the build silently produces a page that says
+it cannot sign anybody in when `.env` is absent, which is the honest output of a
+build with no endpoint rather than a button that fails on click.
+
+One thing has to be added by hand once, the way the loopback callback did:
+**`https://controlbun.com/signed-in/` has to be in the Supabase project's
+Redirect URLs allowlist**, or Supabase sends the browser to the site URL and the
+page sees no code.
+
+**Supersedes:** 2026-09-19 The site signposts sign-in, receives nothing, and
+names no account of its own. Carries out 2026-09-20 "`artifacts/signin.py` goes
+when the browser path lands", whose condition this is. Answers the verification
+the same day's "A submission is a link, and a private repo is not a blocker" made
+a precondition.

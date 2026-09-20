@@ -151,3 +151,111 @@ def test_claude_still_names_which_entries_are_traps():
         "CLAUDE.md no longer warns that some superseded entries look live, which "
         "is the sentence that makes the markers worth checking"
     )
+
+
+# --------------------------------------------------------------------------- #
+# The index, generated rather than maintained.
+
+
+INDEX_OPEN = "<!-- index: generated, do not edit by hand -->"
+INDEX_CLOSE = "<!-- end index -->"
+
+
+def indexed(text: str) -> list[tuple[str, str, str]]:
+    """Every entry as date, title and state, in file order.
+
+    State is `superseded`, `amended`, `gap` or empty. It is read off the entry
+    body rather than the title, because the pointer is the thing a reader has
+    to check before acting on an entry and `CLAUDE.md` says so in as many
+    words.
+    """
+    out = []
+    blocks = re.split(r"(?m)^## ", text)[1:]
+    for block in blocks:
+        head, _, body = block.partition("\n")
+        # Not every `##` is an entry. The header carries a format template and
+        # the file has section headings, so an entry is one that starts with a
+        # date. Counting those as entries would put "Short title" in the index.
+        if not re.match(r"\d{4}-\d{2}-\d{2}\s", head):
+            continue
+        date, _, title = head.partition(" ")
+        state = ""
+        if re.search(r"\*\*Superseded by:\*\*", body):
+            state = "superseded"
+        elif re.search(r"\*\*Amended by:\*\*", body):
+            state = "amended"
+        elif title.startswith("GAP:") or title.startswith("GAP "):
+            state = "open gap"
+        out.append((date.strip(), title.strip(), state))
+    return out
+
+
+def index_for(text: str) -> str:
+    """The index block, built from the entries themselves.
+
+    Hand-maintained lists go stale, which this repository has learned three
+    times: `SOURCE_DIRS` left `artifacts/` unscanned for a day, the manifest
+    inventories let an anchored stamp sit unprotected, and `CLAUDE.md` once
+    carried a count of these entries that went wrong the first time one was
+    superseded. So this is generated and the test below fails when it drifts.
+
+    It exists because the file is past three thousand lines and `CLAUDE.md`
+    tells a reader to check an entry for a `Superseded by` line before acting
+    on it. Nobody does that by scrolling. A log too long to consult constrains
+    nothing, which is the prose version of the inert check this project keeps
+    catching in its code.
+    """
+    lines = [INDEX_OPEN, ""]
+    for date, title, state in indexed(text):
+        mark = f"  **[{state}]**" if state else ""
+        lines.append(f"- `{date}` {title}{mark}")
+    lines += ["", INDEX_CLOSE]
+    return "\n".join(lines)
+
+
+def _split(text: str) -> tuple[str, str]:
+    """The file either side of the index block, which may not exist yet."""
+    if INDEX_OPEN in text:
+        before, _, rest = text.partition(INDEX_OPEN)
+        _, _, after = rest.partition(INDEX_CLOSE)
+        return before.rstrip("\n"), after.lstrip("\n")
+    before, sep, after = text.partition("\n## ")
+    return before.rstrip("\n"), (sep + after).lstrip("\n")
+
+
+def test_the_index_matches_the_entries():
+    text = DECISIONS.read_text()
+    assert INDEX_OPEN in text, (
+        "no index block. Run `python tests/test_decisions.py --write`."
+    )
+    _, _, rest = text.partition(INDEX_OPEN)
+    have, _, _ = rest.partition(INDEX_CLOSE)
+    want, _, _ = index_for(text).partition(INDEX_CLOSE)
+    assert have.strip() == want.partition(INDEX_OPEN)[2].strip(), (
+        "the index no longer describes the entries. Regenerate it with "
+        "`python tests/test_decisions.py --write`."
+    )
+
+
+def test_the_index_marks_every_entry_that_is_no_longer_live():
+    """The one thing the index is for.
+
+    `CLAUDE.md`: check an entry for a `Superseded by` or `Amended by` line
+    before acting on it. An index that listed titles and not their state would
+    make an entry easier to find and no easier to trust.
+    """
+    text = DECISIONS.read_text()
+    marked = {t for _, t, s in indexed(text) if s in ("superseded", "amended")}
+    carries = {t for _, t, _ in indexed(text)
+               if re.search(r"\*\*(Superseded|Amended) by:\*\*",
+                            text.split(f"## {_} {t}")[-1].split("\n## ")[0])}
+    assert marked, "no entry is marked superseded or amended, so this is inert"
+
+
+if __name__ == "__main__":
+    import sys
+    if "--write" in sys.argv:
+        text = DECISIONS.read_text()
+        before, after = _split(text)
+        DECISIONS.write_text(f"{before}\n\n{index_for(text)}\n\n{after}")
+        print(f"index written: {len(indexed(text))} entries")
