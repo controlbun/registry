@@ -9,22 +9,42 @@
   // fact no build can know. Decided here for the same reason the theme is:
   // anything that runs after first paint shows the wrong one for a frame.
   //
-  // One key, and what is in it is three display facts written by `/signed-in/`
-  // after an exchange. It is not a session and it is not evidence of one; the
-  // token it came in with is already gone. Nothing on any page contributes to
-  // this, which is the point: a bar that read an author's name off the page it
-  // is sitting on would say a reader is somebody because they were looking at
-  // that person's submission.
+  // One key, and what is in it is the session this registry's identity service
+  // issued to `/signed-in/` at the exchange, with the account id, the subject
+  // and the handle it was issued for. The handle is the only part read here.
+  //
+  // The service is not named in this comment on purpose. This script is inline,
+  // so it ships on every page, and `tests/test_signed_in_page.py` refuses the
+  // provider's name and its endpoint on every page but the one with business
+  // for them. A comment is not an endpoint and the guard cannot tell, which is
+  // the right way round: the cheap fix is here and the guard stays strict.
+  //
+  // **Add artifact is offered only when that record carries a refresh token**,
+  // because that is what makes it a way in rather than a name. This key
+  // replaced one that held a handle and nothing else, and the bar on top of it
+  // said Add artifact to somebody whose session had been gone since their last
+  // reload. Nothing on any page contributes to this, which is the other half of
+  // the point: a bar that read an author's name off the page it is sitting on
+  // would say a reader is somebody because they were looking at that person's
+  // submission.
   try {
-    const who = JSON.parse(localStorage.getItem("controlbun.who") || "null");
-    if (who && who.handle) document.documentElement.dataset.who = who.handle;
+    const held = JSON.parse(localStorage.getItem("controlbun.session") || "null");
+    const said = held && held.user && held.user.user_metadata;
+    if (held && held.refresh_token && said && said.preferred_username) {
+      document.documentElement.dataset.who = said.preferred_username;
+    }
   } catch (unreadable) {
     // A key this build cannot parse is one an older build wrote or one
     // something else corrupted. Dropping it is the whole repair: what is lost
-    // is a handle the reader can restore by signing in again.
-    localStorage.removeItem("controlbun.who");
+    // is a session the reader can replace by signing in again.
+    localStorage.removeItem("controlbun.session");
   }
-</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That forgot the handle in this browser and did not end your Hugging Face session.</p><script>
+  // The key that held a handle and no session. An older build wrote it, and a
+  // browser that still carries one would otherwise keep it forever, since
+  // nothing reads it now. Removed rather than read: it is the thing this change
+  // was made to stop offering.
+  localStorage.removeItem("controlbun.who");
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That deleted the session and the handle from this browser, so nothing here can act as you. It told nobody: the session is not revoked at the identity service and expires there on its own, and your Hugging Face session is untouched.</p><script>
   // Inline and unbundled, same reason as the script in the head: no waiting on a
   // module graph for three lines of work.
   (function () {
@@ -53,18 +73,34 @@
     });
   }());
 
-  // The handle, and the way to forget it. Same shape as the toggle above: three
-  // lines of work, inline and unbundled, so nothing waits on a module graph.
+  // The handle, and the way to end the session it belongs to. Same shape as the
+  // toggle above: a few lines of work, inline and unbundled, so nothing waits
+  // on a module graph.
   (function () {
-    // One key, and the only thing this file reads. It holds display facts
-    // written by `/signed-in/` after an exchange: the handle, the subject and
-    // when they were read. No token is in it, and `handshake.mjs` is where that
-    // is a property of a function rather than of this comment.
-    const WHO = "controlbun.who";
+    // One key, and the only thing this file reads. It holds the session this
+    // registry's identity service issued to `/signed-in/` at the exchange, plus
+    // the account id, the subject and the handle it was issued for. What is
+    // deliberately not in it is the provider token, the one that could write
+    // repositories in somebody's own namespace, and `handshake.mjs` is where
+    // that is a property of a function rather than of this comment.
+    //
+    // Neither service is named in this script, for the reason the head script
+    // gives: this is inline, it ships on every page, and the guard that keeps
+    // an identity endpoint to one page cannot tell a comment from a call.
+    const HELD = "controlbun.session";
     const root = document.documentElement;
     const handle = document.querySelector("#nav-handle");
     const out = document.querySelector("#signout");
     const said = document.querySelector("#nav-said");
+
+    // A handle only counts when the record it sits in can still be renewed.
+    // Without a refresh token there is a name and no way in, which is the state
+    // this key replaced.
+    const handleIn = (held) => {
+      const fields = held && held.refresh_token && held.user
+        && held.user.user_metadata;
+      return (fields && fields.preferred_username) || null;
+    };
 
     // The head script has already set the attribute, which is what CSS reads
     // and what keeps the bar from flashing the wrong affordance. This fills in
@@ -77,35 +113,45 @@
 
     if (out) {
       out.addEventListener("click", () => {
-        // Deleting the key is the whole of signing out. There is nothing to
-        // revoke here and nothing to tell anybody: the token died with the tab
-        // that made it, and the account at the identity provider is that
-        // provider's and untouched.
-        localStorage.removeItem(WHO);
+        // Deleting the key is the whole of signing out here, and it is a
+        // smaller whole than it sounds now that the key holds a session. What
+        // it does: the access token and the refresh token are gone from this
+        // browser, so nothing on this origin can act as anybody. What it does
+        // not: it sends no request, so the session is not revoked at the
+        // identity service and lapses there on its own, and the account at
+        // Hugging Face is that provider's and untouched. The receipt says both.
+        //
+        // No request on purpose, and it is a trade rather than an oversight.
+        // Revoking would mean this bar, which is on every page, carrying the
+        // identity endpoint and the publishable key on every page, and
+        // `tests/test_signed_in_page.py` holds that endpoint to the one page
+        // with business for it. The cost is named in `DECISIONS.md` 2026-09-20.
+        localStorage.removeItem(HELD);
         delete root.dataset.who;
         show();
         if (said) said.hidden = false;
       });
     }
 
-    // Two ways the key changes under a page that is already open: `/signed-in/`
-    // finishing an exchange in this tab, and another tab signing in or out.
-    // Neither is common and both look like a bug when the bar disagrees with
-    // what the reader just did.
+    // Three ways the key changes under a page that is already open:
+    // `/signed-in/` finishing an exchange in this tab, the same page renewing
+    // or dropping a session it restored, and another tab doing either. None is
+    // common and all of them look like a bug when the bar disagrees with what
+    // the reader just did.
     const again = () => {
-      const kept = localStorage.getItem(WHO);
-      let who = null;
+      let held = null;
       try {
-        who = JSON.parse(kept || "null");
+        held = JSON.parse(localStorage.getItem(HELD) || "null");
       } catch (unreadable) {
-        who = null;
+        held = null;
       }
-      if (who && who.handle) root.dataset.who = who.handle;
+      const who = handleIn(held);
+      if (who) root.dataset.who = who;
       else delete root.dataset.who;
       show();
     };
     window.addEventListener("storage", again);
-    window.addEventListener("controlbun:who", again);
+    window.addEventListener("controlbun:session", again);
   }());
 </script><main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">controlbun</a></nav><h1>About</h1><p class="lede">A registry for activation-steering artifacts, in the spirit of GitHub or Hugging Face rather than a curated database.</p><p class="byline">Built by <strong>Soham Padia</strong>. <a href="/contact/">Contact</a>.</p><h2>Where it came from</h2><blockquote class="origin"><p>Idea came when I was thinking of criticizing whether my pro-human direction actually represents that direction, and if I could reuse someone else's better pro-human direction without the effort.</p></blockquote><p>That is the problem in one sentence. The direction in question is heavily audited: orthogonalized against length, sentiment and action-vs-inaction, held-out separation, control-pair transfer, and a causal test against norm-matched random directions which confirmed <span class="mono">+d</span>and whose <span class="mono">-d</span> half was withdrawn as estimator-dependent. More evidence than most published directions carry. And it is still not enough, because none of it is reusable and none of it can be checked against anyone else's take on the same construct. The gap is comparison and reuse, not rigor.</p><p class="note">That audit is of a direction in the arena this registry came out of, and not of anything in the corpus here. The four pro-human directions on this site are a layer-32 set and a layer-24 one, and their own steering bake-off was inconclusive: of twenty-four generations each, 13, 13 and 9 came back byte-identical to the unsteered baseline. Which is the point rather than an aside. A direction can be the most audited thing in a repository and still leave a reader unable to check it against anybody else's.</p><h2>A vector is not portable, but a recipe is</h2><p>A steering vector is a tensor in one model's residual basis at one layer, so a <span class="mono">kindness</span> vector for one model does nothing for another. What travels is the extraction recipe: the contrast data, the author's definition of the trait, the layer sweep, the evaluation.</p><h2>Plurality is the product</h2><p>Ten people will extract <span class="mono">kindness</span> with different contrast data, different theories of what kindness is, and different ideas about what could be confounding it. The registry holds all ten side by side and makes the disagreement legible. It does not pick a winner, mandate a definition, or impose a single evaluation.</p><p class="note">Nobody has done it here yet. Every submission in this corpus is by one author, so what the site currently demonstrates is the mechanism rather than the disagreement. That is a fact about how new this is, and it is also why the pages are built to render a label with one claimant the same way they render a label with ten.</p><p class="pull">The primary object is a submission: one author's complete take, self-contained, comparable to others after the fact rather than conformant to them in advance.</p><h2>What you will see on a page</h2><p>A trait score always appears with a coherence measure beside it, or it appears as uninterpretable rather than as a number. Anything an author did not measure reads as not measured, never as zero. Angle similarity between two artifacts is shown as geometry, never as evidence that two authors disagree. Nothing is ranked by a measured result.</p><p class="note">Every page enforces these itself rather than deferring to this one. What is here is the promise; what is there is the behavior, and a build that breaks the promise fails before it ships.</p><h2>Who you are here</h2><p>Nobody signs up. An author is a namespace somebody wrote down, and most of them belong to people who have never heard of this. Binding an account to a namespace is a separate act, recorded with its date and its evidence, and nothing about the work published under a namespace follows from whether anyone has done it. <a href="/sign-in/">How that would work, and why it does not yet</a>.</p><h2>Why controlbun</h2><p>The control problem is the old question of how you get a system that is better than you at something to do what you actually wanted. It predates any of this and it is nobody's to solve alone.</p><p>Steering artifacts are one small, concrete corner of it. A direction extracted from a model's activations is one of the few things that acts on behavior directly rather than by asking nicely, which is what makes where it came from and whether it does what it claims worth writing down.</p><p class="pull">But controlling a model and controlling the record of who claimed what about it are different things. This does the second and refuses the first.</p><p>Nothing here is designated. There is no best entry for a label, no ranking by any measured result, and no authority deciding whose <span class="mono">kindness</span> is the real one. Ten claimants on one label is the content. What the registry controls is that each claim is attributable, versioned, checkable against the artifact it points at, and sitting beside the others rather than above them.</p><p>That refusal costs something real. A reader who wants one answer does not get one, and has to read the disagreement instead. That is the trade, and it is deliberate.</p><p class="note">The bun is a bun. Not everything is an argument.</p></main></body></html><script>(function(){const corpus = {"active_order":"recently-added","active_order_name":"Recently added","age_offset_hours":2,"gravity":1.5,"order_choices":[{"key":"recently-added","name":"Recently added"},{"key":"trending","name":"Trending"}],"size":5,"synthetic":"none","threshold":100};
 

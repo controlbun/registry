@@ -9,22 +9,42 @@
   // fact no build can know. Decided here for the same reason the theme is:
   // anything that runs after first paint shows the wrong one for a frame.
   //
-  // One key, and what is in it is three display facts written by `/signed-in/`
-  // after an exchange. It is not a session and it is not evidence of one; the
-  // token it came in with is already gone. Nothing on any page contributes to
-  // this, which is the point: a bar that read an author's name off the page it
-  // is sitting on would say a reader is somebody because they were looking at
-  // that person's submission.
+  // One key, and what is in it is the session this registry's identity service
+  // issued to `/signed-in/` at the exchange, with the account id, the subject
+  // and the handle it was issued for. The handle is the only part read here.
+  //
+  // The service is not named in this comment on purpose. This script is inline,
+  // so it ships on every page, and `tests/test_signed_in_page.py` refuses the
+  // provider's name and its endpoint on every page but the one with business
+  // for them. A comment is not an endpoint and the guard cannot tell, which is
+  // the right way round: the cheap fix is here and the guard stays strict.
+  //
+  // **Add artifact is offered only when that record carries a refresh token**,
+  // because that is what makes it a way in rather than a name. This key
+  // replaced one that held a handle and nothing else, and the bar on top of it
+  // said Add artifact to somebody whose session had been gone since their last
+  // reload. Nothing on any page contributes to this, which is the other half of
+  // the point: a bar that read an author's name off the page it is sitting on
+  // would say a reader is somebody because they were looking at that person's
+  // submission.
   try {
-    const who = JSON.parse(localStorage.getItem("controlbun.who") || "null");
-    if (who && who.handle) document.documentElement.dataset.who = who.handle;
+    const held = JSON.parse(localStorage.getItem("controlbun.session") || "null");
+    const said = held && held.user && held.user.user_metadata;
+    if (held && held.refresh_token && said && said.preferred_username) {
+      document.documentElement.dataset.who = said.preferred_username;
+    }
   } catch (unreadable) {
     // A key this build cannot parse is one an older build wrote or one
     // something else corrupted. Dropping it is the whole repair: what is lost
-    // is a handle the reader can restore by signing in again.
-    localStorage.removeItem("controlbun.who");
+    // is a session the reader can replace by signing in again.
+    localStorage.removeItem("controlbun.session");
   }
-</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That forgot the handle in this browser and did not end your Hugging Face session.</p><script>
+  // The key that held a handle and no session. An older build wrote it, and a
+  // browser that still carries one would otherwise keep it forever, since
+  // nothing reads it now. Removed rather than read: it is the thing this change
+  // was made to stop offering.
+  localStorage.removeItem("controlbun.who");
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That deleted the session and the handle from this browser, so nothing here can act as you. It told nobody: the session is not revoked at the identity service and expires there on its own, and your Hugging Face session is untouched.</p><script>
   // Inline and unbundled, same reason as the script in the head: no waiting on a
   // module graph for three lines of work.
   (function () {
@@ -53,18 +73,34 @@
     });
   }());
 
-  // The handle, and the way to forget it. Same shape as the toggle above: three
-  // lines of work, inline and unbundled, so nothing waits on a module graph.
+  // The handle, and the way to end the session it belongs to. Same shape as the
+  // toggle above: a few lines of work, inline and unbundled, so nothing waits
+  // on a module graph.
   (function () {
-    // One key, and the only thing this file reads. It holds display facts
-    // written by `/signed-in/` after an exchange: the handle, the subject and
-    // when they were read. No token is in it, and `handshake.mjs` is where that
-    // is a property of a function rather than of this comment.
-    const WHO = "controlbun.who";
+    // One key, and the only thing this file reads. It holds the session this
+    // registry's identity service issued to `/signed-in/` at the exchange, plus
+    // the account id, the subject and the handle it was issued for. What is
+    // deliberately not in it is the provider token, the one that could write
+    // repositories in somebody's own namespace, and `handshake.mjs` is where
+    // that is a property of a function rather than of this comment.
+    //
+    // Neither service is named in this script, for the reason the head script
+    // gives: this is inline, it ships on every page, and the guard that keeps
+    // an identity endpoint to one page cannot tell a comment from a call.
+    const HELD = "controlbun.session";
     const root = document.documentElement;
     const handle = document.querySelector("#nav-handle");
     const out = document.querySelector("#signout");
     const said = document.querySelector("#nav-said");
+
+    // A handle only counts when the record it sits in can still be renewed.
+    // Without a refresh token there is a name and no way in, which is the state
+    // this key replaced.
+    const handleIn = (held) => {
+      const fields = held && held.refresh_token && held.user
+        && held.user.user_metadata;
+      return (fields && fields.preferred_username) || null;
+    };
 
     // The head script has already set the attribute, which is what CSS reads
     // and what keeps the bar from flashing the wrong affordance. This fills in
@@ -77,35 +113,45 @@
 
     if (out) {
       out.addEventListener("click", () => {
-        // Deleting the key is the whole of signing out. There is nothing to
-        // revoke here and nothing to tell anybody: the token died with the tab
-        // that made it, and the account at the identity provider is that
-        // provider's and untouched.
-        localStorage.removeItem(WHO);
+        // Deleting the key is the whole of signing out here, and it is a
+        // smaller whole than it sounds now that the key holds a session. What
+        // it does: the access token and the refresh token are gone from this
+        // browser, so nothing on this origin can act as anybody. What it does
+        // not: it sends no request, so the session is not revoked at the
+        // identity service and lapses there on its own, and the account at
+        // Hugging Face is that provider's and untouched. The receipt says both.
+        //
+        // No request on purpose, and it is a trade rather than an oversight.
+        // Revoking would mean this bar, which is on every page, carrying the
+        // identity endpoint and the publishable key on every page, and
+        // `tests/test_signed_in_page.py` holds that endpoint to the one page
+        // with business for it. The cost is named in `DECISIONS.md` 2026-09-20.
+        localStorage.removeItem(HELD);
         delete root.dataset.who;
         show();
         if (said) said.hidden = false;
       });
     }
 
-    // Two ways the key changes under a page that is already open: `/signed-in/`
-    // finishing an exchange in this tab, and another tab signing in or out.
-    // Neither is common and both look like a bug when the bar disagrees with
-    // what the reader just did.
+    // Three ways the key changes under a page that is already open:
+    // `/signed-in/` finishing an exchange in this tab, the same page renewing
+    // or dropping a session it restored, and another tab doing either. None is
+    // common and all of them look like a bug when the bar disagrees with what
+    // the reader just did.
     const again = () => {
-      const kept = localStorage.getItem(WHO);
-      let who = null;
+      let held = null;
       try {
-        who = JSON.parse(kept || "null");
+        held = JSON.parse(localStorage.getItem(HELD) || "null");
       } catch (unreadable) {
-        who = null;
+        held = null;
       }
-      if (who && who.handle) root.dataset.who = who.handle;
+      const who = handleIn(held);
+      if (who) root.dataset.who = who;
       else delete root.dataset.who;
       show();
     };
     window.addEventListener("storage", again);
-    window.addEventListener("controlbun:who", again);
+    window.addEventListener("controlbun:session", again);
   }());
 </script><main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">controlbun</a></nav><h1>Sign in</h1><p class="lede">Identity here is Hugging Face's. This registry holds no password and has nothing to sign up for.</p><p class="banner"><strong>Signing in publishes nothing and submits nothing.</strong> It produces one thing: a dated reading of what Hugging Face says about your account at that moment, which you keep. Sending a submission is a separate press on the page after this one, and reading this site is metered by nothing and needs none of it.</p><h2>Three steps, and the middle one is the smallest</h2><ol class="steps"><li><h3>Hold a Hugging Face account</h3><p>Most people publishing a steering direction already have one, because that is where the weights and the artifacts live. If you do not, Hugging Face registers it, not us.</p><p><a href="https://huggingface.co/join">Create a Hugging Face account</a></p></li><li><h3>Sign in with it</h3><p>Hugging Face asks you whether to let this registry read who you are. If you agree, what comes back is an opaque subject id, the handle you hold at that moment, and, if you grant it, the organizations Hugging Face says you belong to. No password reaches this site, because none is ever sent here.</p><p><a href="/signed-in/">Sign in with Hugging Face</a> <span class="note">That page sends you to Hugging Face and receives you back. It holds the reading in the tab and nowhere else, so closing the tab ends it. Signing in on its own writes no submission; that is a button further down that page.</span></p></li><li><h3>Claim a namespace</h3><p>This is the act with meaning. A claim binds the account to a namespace and is recorded with its date and its evidence, so a reader can weigh it. Everything published under a namespace stands whether or not anyone has claimed it, and a namespace nobody has claimed is the ordinary state rather than a gap.</p><p>More than one account can claim the same namespace. Both claims stand, both carry their own evidence, and this registry does not decide between them.</p></li></ol><h2>Your namespace is your handle, and there is no field for it</h2><p>When you submit, the namespace is the handle Hugging Face reported when you signed in, and the database writes it from your session rather than from anything you typed. It is shown to you, not offered: no box, and no default to type over. Somebody signed in under one handle cannot publish under a name belonging to somebody else, and a dispute about who really holds a name is Hugging Face's to settle rather than ours.</p><p class="note">What that makes impossible, stated because a rule that cannot name its cost has not been thought through: publishing under a pseudonym, under a lab name you hold no account for, or into one namespace shared by several people who each sign in as themselves. The last is a real shape, and today the answer is that a group claims a namespace rather than submits into one. An author string written down by somebody indexing published work is unaffected, and stays a free string.</p><h2>A membership is something a provider said on a day</h2><p>If Hugging Face reports your organizations, what gets recorded is what it said and when it said it. Nothing rechecks it afterwards, so nothing here will ever claim you belong to an organization now. People join and leave; a membership read once and held forever goes stale quietly while still looking like a fact. Checking again means signing in again, which writes a new observation beside the old one rather than replacing it.</p><h2>Why Hugging Face</h2><p>Because that is where the artifacts already are, and because it can answer the organization question, which a plain login cannot. It is the provider this was built against and not a list of permitted ones. A claim records the provider string it was made with and nothing anywhere compares that string against a set of approved names, so another provider is a configuration rather than a change to the schema.</p><p class="note">A claim binds the provider's subject id and not the handle. Handles are renameable on every provider, so a claim bound to a handle would either break when somebody renames or follow the name to whoever registers it next. The handle is recorded as of the claim date, and is not what anything looks up by.</p><h2>What is missing, in one sentence</h2><p>A way in for somebody who is not on Hugging Face, and a way to correct a submission that is not another submission. What a submission does not wait for is a person's opinion of it: it lands, and it appears on the site when the author rebuilds and publishes, because the corpus is a file in git and that is what the falsifier checks. <a href="/about/">What this registry is and where it came from</a>.</p></main></body></html><script>(function(){const corpus = {"active_order":"recently-added","active_order_name":"Recently added","age_offset_hours":2,"gravity":1.5,"order_choices":[{"key":"recently-added","name":"Recently added"},{"key":"trending","name":"Trending"}],"size":5,"synthetic":"none","threshold":100};
 

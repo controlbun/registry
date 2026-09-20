@@ -9,22 +9,42 @@
   // fact no build can know. Decided here for the same reason the theme is:
   // anything that runs after first paint shows the wrong one for a frame.
   //
-  // One key, and what is in it is three display facts written by `/signed-in/`
-  // after an exchange. It is not a session and it is not evidence of one; the
-  // token it came in with is already gone. Nothing on any page contributes to
-  // this, which is the point: a bar that read an author's name off the page it
-  // is sitting on would say a reader is somebody because they were looking at
-  // that person's submission.
+  // One key, and what is in it is the session this registry's identity service
+  // issued to `/signed-in/` at the exchange, with the account id, the subject
+  // and the handle it was issued for. The handle is the only part read here.
+  //
+  // The service is not named in this comment on purpose. This script is inline,
+  // so it ships on every page, and `tests/test_signed_in_page.py` refuses the
+  // provider's name and its endpoint on every page but the one with business
+  // for them. A comment is not an endpoint and the guard cannot tell, which is
+  // the right way round: the cheap fix is here and the guard stays strict.
+  //
+  // **Add artifact is offered only when that record carries a refresh token**,
+  // because that is what makes it a way in rather than a name. This key
+  // replaced one that held a handle and nothing else, and the bar on top of it
+  // said Add artifact to somebody whose session had been gone since their last
+  // reload. Nothing on any page contributes to this, which is the other half of
+  // the point: a bar that read an author's name off the page it is sitting on
+  // would say a reader is somebody because they were looking at that person's
+  // submission.
   try {
-    const who = JSON.parse(localStorage.getItem("controlbun.who") || "null");
-    if (who && who.handle) document.documentElement.dataset.who = who.handle;
+    const held = JSON.parse(localStorage.getItem("controlbun.session") || "null");
+    const said = held && held.user && held.user.user_metadata;
+    if (held && held.refresh_token && said && said.preferred_username) {
+      document.documentElement.dataset.who = said.preferred_username;
+    }
   } catch (unreadable) {
     // A key this build cannot parse is one an older build wrote or one
     // something else corrupted. Dropping it is the whole repair: what is lost
-    // is a handle the reader can restore by signing in again.
-    localStorage.removeItem("controlbun.who");
+    // is a session the reader can replace by signing in again.
+    localStorage.removeItem("controlbun.session");
   }
-</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That forgot the handle in this browser and did not end your Hugging Face session.</p><script>
+  // The key that held a handle and no session. An older build wrote it, and a
+  // browser that still carries one would otherwise keep it forever, since
+  // nothing reads it now. Removed rather than read: it is the thing this change
+  // was made to stop offering.
+  localStorage.removeItem("controlbun.who");
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That deleted the session and the handle from this browser, so nothing here can act as you. It told nobody: the session is not revoked at the identity service and expires there on its own, and your Hugging Face session is untouched.</p><script>
   // Inline and unbundled, same reason as the script in the head: no waiting on a
   // module graph for three lines of work.
   (function () {
@@ -53,18 +73,34 @@
     });
   }());
 
-  // The handle, and the way to forget it. Same shape as the toggle above: three
-  // lines of work, inline and unbundled, so nothing waits on a module graph.
+  // The handle, and the way to end the session it belongs to. Same shape as the
+  // toggle above: a few lines of work, inline and unbundled, so nothing waits
+  // on a module graph.
   (function () {
-    // One key, and the only thing this file reads. It holds display facts
-    // written by `/signed-in/` after an exchange: the handle, the subject and
-    // when they were read. No token is in it, and `handshake.mjs` is where that
-    // is a property of a function rather than of this comment.
-    const WHO = "controlbun.who";
+    // One key, and the only thing this file reads. It holds the session this
+    // registry's identity service issued to `/signed-in/` at the exchange, plus
+    // the account id, the subject and the handle it was issued for. What is
+    // deliberately not in it is the provider token, the one that could write
+    // repositories in somebody's own namespace, and `handshake.mjs` is where
+    // that is a property of a function rather than of this comment.
+    //
+    // Neither service is named in this script, for the reason the head script
+    // gives: this is inline, it ships on every page, and the guard that keeps
+    // an identity endpoint to one page cannot tell a comment from a call.
+    const HELD = "controlbun.session";
     const root = document.documentElement;
     const handle = document.querySelector("#nav-handle");
     const out = document.querySelector("#signout");
     const said = document.querySelector("#nav-said");
+
+    // A handle only counts when the record it sits in can still be renewed.
+    // Without a refresh token there is a name and no way in, which is the state
+    // this key replaced.
+    const handleIn = (held) => {
+      const fields = held && held.refresh_token && held.user
+        && held.user.user_metadata;
+      return (fields && fields.preferred_username) || null;
+    };
 
     // The head script has already set the attribute, which is what CSS reads
     // and what keeps the bar from flashing the wrong affordance. This fills in
@@ -77,35 +113,45 @@
 
     if (out) {
       out.addEventListener("click", () => {
-        // Deleting the key is the whole of signing out. There is nothing to
-        // revoke here and nothing to tell anybody: the token died with the tab
-        // that made it, and the account at the identity provider is that
-        // provider's and untouched.
-        localStorage.removeItem(WHO);
+        // Deleting the key is the whole of signing out here, and it is a
+        // smaller whole than it sounds now that the key holds a session. What
+        // it does: the access token and the refresh token are gone from this
+        // browser, so nothing on this origin can act as anybody. What it does
+        // not: it sends no request, so the session is not revoked at the
+        // identity service and lapses there on its own, and the account at
+        // Hugging Face is that provider's and untouched. The receipt says both.
+        //
+        // No request on purpose, and it is a trade rather than an oversight.
+        // Revoking would mean this bar, which is on every page, carrying the
+        // identity endpoint and the publishable key on every page, and
+        // `tests/test_signed_in_page.py` holds that endpoint to the one page
+        // with business for it. The cost is named in `DECISIONS.md` 2026-09-20.
+        localStorage.removeItem(HELD);
         delete root.dataset.who;
         show();
         if (said) said.hidden = false;
       });
     }
 
-    // Two ways the key changes under a page that is already open: `/signed-in/`
-    // finishing an exchange in this tab, and another tab signing in or out.
-    // Neither is common and both look like a bug when the bar disagrees with
-    // what the reader just did.
+    // Three ways the key changes under a page that is already open:
+    // `/signed-in/` finishing an exchange in this tab, the same page renewing
+    // or dropping a session it restored, and another tab doing either. None is
+    // common and all of them look like a bug when the bar disagrees with what
+    // the reader just did.
     const again = () => {
-      const kept = localStorage.getItem(WHO);
-      let who = null;
+      let held = null;
       try {
-        who = JSON.parse(kept || "null");
+        held = JSON.parse(localStorage.getItem(HELD) || "null");
       } catch (unreadable) {
-        who = null;
+        held = null;
       }
-      if (who && who.handle) root.dataset.who = who.handle;
+      const who = handleIn(held);
+      if (who) root.dataset.who = who;
       else delete root.dataset.who;
       show();
     };
     window.addEventListener("storage", again);
-    window.addEventListener("controlbun:who", again);
+    window.addEventListener("controlbun:session", again);
   }());
 </script><main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">controlbun</a><span class="sep">/</span><a href="/models/">Models</a></nav><h1 class="mono">allenai/Olmo-3-1125-32B</h1><div class="ordering"><span>Ordered by <strong>Recently added</strong>.</span><button type="button" data-order-key="recently-added" aria-pressed="true">Recently added</button><button type="button" data-order-key="trending" aria-pressed="false">Trending</button><span class="why">5 submissions is too few for engagement to mean anything, so this is newest-first.</span></div><p class="lede">Every intervention published against this model. This registry does not host the model and has no claim on it; the id is a reference to wherever it lives. Artifacts do not carry over between models, so this page is the unit that composes: angle similarity is only meaningful here, inside one model at one layer and hook point.</p><div class="scope"><div><span class="k">Artifacts</span>4</div><div><span class="k">Labels claimed</span>1</div><div><span class="k">Kinds</span><span class="mono">direction</span></div><div><span class="k">Hook points</span><span class="mono">resid_post</span></div><div><span class="k">Layers</span>24, 32</div><div><span class="k">Revisions pinned</span><span class="mono"><span class="absent">none recorded</span></span></div></div><div data-pagefind-body><p class="note" data-pagefind-filter="model">Base and instruct are different models, and so is a different revision. Each artifact names the revision it was extracted against.</p><table class="labels"><thead><tr><th><button data-col="0">Label</button></th><th><button data-col="1">Claimants</button></th></tr></thead><tbody data-orderable><tr data-created="2026-06-08T23:20:02Z" data-engagement="0"><td><a href="/models/allenai/Olmo-3-1125-32B/pro-human/">pro-human</a></td><td>4</td></tr></tbody></table></div></main></body></html><script>(function(){const corpus = {"active_order":"recently-added","active_order_name":"Recently added","age_offset_hours":2,"gravity":1.5,"order_choices":[{"key":"recently-added","name":"Recently added"},{"key":"trending","name":"Trending"}],"size":5,"synthetic":"none","threshold":100};
 
