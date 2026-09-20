@@ -231,6 +231,16 @@ def site_origin() -> str:
     return m.group(1).rstrip("/")
 
 
+# What counts as leaving, and the third one is not a URL the export could ever
+# carry. This read `http://` and `https://` only, so a `mailto:` was not allowed
+# by this file, it was invisible to it: the first one to ship would have passed
+# without anybody deciding it should, which is the hole `AUTHORED_OFFSITE` exists
+# to close for every other scheme. Widened when `/contact/` added one. A mail
+# client is a departure in the same sense a navigation is, and in the one sense
+# this check cares about: the reader ends up somewhere this build did not make.
+LEAVING = ("http://", "https://", "mailto:")
+
+
 def offsite_links(html_by_page: dict[str, str], origin: str) -> dict[str, str]:
     """Every link leaving the site, as target -> the page it is on.
 
@@ -240,7 +250,7 @@ def offsite_links(html_by_page: dict[str, str], origin: str) -> dict[str, str]:
     out: dict[str, str] = {}
     for where, html in html_by_page.items():
         for href in HREF.findall(html):
-            if not href.startswith(("http://", "https://")):
+            if not href.startswith(LEAVING):
                 continue
             if href.startswith(origin):
                 continue
@@ -263,9 +273,19 @@ def offsite_links(html_by_page: dict[str, str], origin: str) -> dict[str, str]:
 # Nothing here comes from the corpus and nothing here is a measurement. Both
 # were fetched on 2026-09-19: `/login` renders and links to `/join` as "Sign
 # Up", which is how the registration URL was confirmed rather than assumed.
+#
+# The last two are `/contact/`'s, added 2026-09-19. The address is the git author
+# identity on every commit in the repository beside it, so neither is a new
+# disclosure and neither is checkable against anything the export holds: no row
+# will ever carry a mailto, and the repository is the thing the export is built
+# from rather than a thing it points at. That is exactly the case this dict is
+# for. A URL maps to one page, so each of these lives on `/contact/` and nowhere
+# else, and the same link appearing on a submission page is still a finding.
 AUTHORED_OFFSITE = {
     "https://huggingface.co/join": "sign-in/index.html",
     "https://huggingface.co/login": "sign-in/index.html",
+    "https://github.com/controlbun/registry": "contact/index.html",
+    "mailto:sohampadia10@gmail.com": "contact/index.html",
 }
 
 
@@ -304,24 +324,39 @@ def test_every_offsite_link_is_a_url_the_export_carries():
 def test_the_offsite_check_bites():
     """Prove the check above fails when violated, or it is decoration.
 
-    Two hostile pages: one linking at a host nothing in this corpus records, and
+    Three hostile pages: one linking at a host nothing in this corpus records,
     one linking at a Hub URL that is the right shape and names a commit no row
-    holds, which is what a template guessing at a URL would produce.
+    holds, which is what a template guessing at a URL would produce, and one
+    carrying an address nobody accounted for.
+
+    The third is the case the scheme filter could not see until `/contact/`
+    shipped, and it is left here rather than checked once at the point of the
+    change: a later edit narrowing `LEAVING` back to http would turn this red
+    instead of quietly restoring an allowance that works by invisibility.
     """
     origin = site_origin()
     guessed = (
         "https://huggingface.co/someone/directions/resolve/"
         + "a" * 40 + "/vectors/kindness.safetensors"
     )
+    # Not the author's, and not anybody's: `.invalid` is reserved by RFC 2606,
+    # so this addresses nothing and can be read as the counterexample it is.
+    unaccounted = "mailto:someone@example.invalid"
     hostile = {
         "alice/index.html": f'<a href="{guessed}">get it</a>',
         "bob/index.html": '<a href="https://example.invalid/vector.safetensors">x</a>',
+        "dave/index.html": f'<a href="{unaccounted}">write to us</a>',
         # Not findings: an own-origin canonical and an internal link.
         "carol/index.html": f'<link href="{origin}/carol/"><a href="/models/">m</a>',
     }
     found = offsite_links(hostile, origin)
-    assert set(found) == {guessed, "https://example.invalid/vector.safetensors"}
+    assert set(found) == {guessed, "https://example.invalid/vector.safetensors",
+                          unaccounted}
     assert found[guessed] == "alice/index.html"
+
+    # And the rule the check applies to what it found: an address on a page that
+    # did not author it is not accounted for by the allowance.
+    assert AUTHORED_OFFSITE.get(unaccounted) != "dave/index.html"
 
 
 def test_the_authored_offsite_allowance_is_bound_to_its_page():

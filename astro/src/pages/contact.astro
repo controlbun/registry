@@ -1,0 +1,76 @@
+---
+import Base from "../layouts/Base.astro";
+import data from "../data/controlbun.json";
+
+// The site had three outbound links before this page: two to Hugging Face's own
+// sign-in pages and one to the bytes of the single pinned artifact. So a reader
+// who finished the argument on `/about/` and had a response to it had nowhere to
+// put it, and a reader who wanted to check a claim could not find the code.
+// `V1.md` B3 was closed when `/about/` said who built it, which answered "whose
+// is it" and left "how do I reply" open.
+//
+// **Two links and a paragraph.** Nothing here receives: a `mailto:` is an
+// anchor, the browser hands it to whatever the reader uses for mail, and this
+// page is gone. Same criterion as `/sign-in/`, which is the other page whose
+// whole job is to point somewhere else.
+//
+// **The address is written out, not obfuscated, and that is a decision rather
+// than an oversight.** It is the git author identity on every commit in a public
+// repository, so it is already fetchable from the GitHub API by anybody who
+// wants it and hiding it here protects nothing that is not already out. The
+// usual mitigations cost more than they save: entity-encoding and "name at
+// domain" both break the click for a reader using a mail client and stop no
+// scraper written this decade, and a script that assembles the address at
+// runtime is script, which this site deliberately does not ship. Spam filtering
+// is where that problem is actually handled.
+//
+// **The state sentence is computed.** How many submissions, by how many people,
+// and whether any label has a second claimant are read off the export for the
+// same reason they are on the home page and `/about/`: the sentence has to
+// change when the corpus does rather than when somebody remembers this file.
+//
+// **The copy is drafted, not dictated.** Structure and accuracy are mine; the
+// sentences are the author's to rewrite.
+
+const EMAIL = "sohampadia10@gmail.com";
+const REPO = "https://github.com/controlbun/registry";
+
+const size = data.corpus.size;
+const authors = new Set(
+  data.labels.flatMap((l) => l.claimants).map((c) => c.author)).size;
+const contested = data.model_index.some((m) =>
+  m.labels.some((b) => new Set(b.claimants.map((c) => c.author)).size > 1));
+---
+
+<Base title="Contact" trail={[{ text: "controlbun", href: "/" }]} synthetic="none">
+  <h1 slot="heading">Contact</h1>
+
+  <p class="lede">
+    Email <a href={`mailto:${EMAIL}`}>{EMAIL}</a>. The code is at{" "}
+    <a href={REPO}>github.com/controlbun/registry</a>, with the brief, the
+    decision log and the tests that hold the pages to what they promise.
+  </p>
+
+  <h2>What is worth writing about</h2>
+
+  <p>
+    This is {size} submissions by {authors === 1 ? "one author" : `${authors} authors`},
+    and nothing here takes an upload yet.{!contested && (
+      " No label has a second claimant, so the disagreement this is built to " +
+      "hold has not happened here once."
+    )}
+  </p>
+
+  <p>
+    The mail that changes that comes from three people: somebody who would
+    publish a direction here and can say what would have to be true first,
+    somebody who thinks the design is wrong and can say where, and somebody who
+    has an artifact and nowhere to put it.
+  </p>
+
+  <p class="note">
+    There is no form on this site and no account. Mail is not a submission route
+    either: nothing here publishes what you send it, and the day that changes it
+    will be written down.
+  </p>
+</Base>
