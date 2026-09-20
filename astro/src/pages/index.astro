@@ -200,6 +200,31 @@ const DEFAULT_NEED = "cannot tell whether to trust it";
               </select>
             </span>.
           </p>
+          {/* The same sentence, for anything that cannot run the script.
+
+              The two fields hold their words in `value` attributes and the
+              options hold theirs inside a `select`, so a consumer that reads
+              text nodes gets "I have a  for  and I" followed by all four
+              options run together. That is most of what fetches a page without
+              a browser, and it was the one sentence here that did not survive
+              being read that way while every other line on this page did.
+
+              `noscript` rather than a hidden copy, because with the script
+              running this is genuinely redundant: a screen reader hears the
+              controls and their labels and does not need the sentence twice.
+              Without it, the controls render and do nothing, which is a real
+              person getting dead widgets, so the plain reading is worth having
+              on its own account and not only for a crawler.
+
+              Built from the same three values the controls start on, so it
+              cannot drift into describing a page that no longer exists. */}
+          <noscript>
+            <p>
+              Those three are a picker and it needs JavaScript. As it starts,
+              it reads: I have a {inCorpusKinds[0]} for {inCorpusLabels[0]} and
+              I {DEFAULT_NEED}.
+            </p>
+          </noscript>
           <p class="answer" id="answer">{NEEDS[DEFAULT_NEED]}</p>
           {/* A list appearing under a field is a visual event and nothing else,
               so how many words came back is said out loud for a reader who

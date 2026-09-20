@@ -816,13 +816,57 @@ def test_the_page_is_reachable():
     )
 
 
+# What the site is allowed to build with, and why each one is here. The point of
+# writing the reason down is that adding a package becomes an edit somebody made
+# on purpose rather than a line that arrived, which is the same shape as
+# `MAY_SEND_TO` in `tests/test_intake.py` and `MAY_KEEP` in
+# `tests/test_nav_account.py`.
+#
+# **None of these ships to a reader as a dependency.** All three are build-time:
+# the output is HTML, CSS and this repository's own scripts. That is the property
+# the sign-in work costed out, and it is what this test is really about.
+MAY_BUILD_WITH = {
+    "astro": "the static site generator; it emits the pages and ships nothing",
+    "pagefind": "the search index, run as a binary after the build rather than "
+                "as a wrapper, so the dependency is first-party",
+    "@astrojs/sitemap": "writes sitemap-index.xml from the routes the build "
+                        "emits, added 2026-09-20 because the site had no "
+                        "sitemap and no robots.txt at all. Build-time only and "
+                        "reaches no page",
+}
+
+
 def test_the_page_adds_no_dependency():
-    """One page, one script, no dependency, which is what `SIGNIN.md` costed
-    out before it was deleted. The two modules it imports are this
-    repository's."""
+    """The sign-in page pulls in nothing, and neither does anything else.
+
+    This asserted the exact set `{"astro", "pagefind"}` until 2026-09-20, when
+    adding a sitemap integration failed it. The property it is named for was
+    untouched by that change, so an exact list turned a legitimate edit into a
+    failure and taught whoever hit it to widen the expectation, which is how a
+    check stops meaning anything. The same brittleness was corrected in this
+    file's scope assertion earlier the same day.
+
+    So the list moved into `MAY_BUILD_WITH`, where a new entry costs a sentence
+    saying why. What is still exact, and is the real rule, is that there are no
+    runtime `dependencies` at all and that neither module imports a package.
+    """
     package = json.loads((ROOT / "astro" / "package.json").read_text())
-    assert set(package.get("devDependencies", {})) == {"astro", "pagefind"}
-    assert not package.get("dependencies")
+    declared = set(package.get("devDependencies", {}))
+    # A control, because an empty set passes the subtraction below and an
+    # unreadable file would look exactly like a clean one.
+    assert "astro" in declared, (
+        f"read {sorted(declared)} out of astro/package.json, which does not "
+        "look like this project's, so this check is not reading what it thinks"
+    )
+    unaccounted = declared - set(MAY_BUILD_WITH)
+    assert not unaccounted, (
+        f"the site builds with {sorted(unaccounted)}, which nobody wrote down. "
+        "Add it to MAY_BUILD_WITH with the reason, or take it out."
+    )
+    assert not package.get("dependencies"), (
+        "a runtime dependency means something ships to a reader, and nothing "
+        "here should"
+    )
     for module in (HANDSHAKE, HUB):
         for line in module.read_text().splitlines():
             assert not re.match(r"\s*import .* from ['\"][^./]", line), (

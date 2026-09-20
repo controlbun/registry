@@ -102,6 +102,7 @@ Format:
 - `2026-09-20` Every document says whether it still instructs, and a test enforces it
 - `2026-09-20` The bar offers one of two ways in, off a handle this browser keeps and a session it does not  **[amended]**
 - `2026-09-20` A sign-in survives a page navigation and a browser restart, and only one of its two credentials does
+- `2026-09-20` A sitemap and a robots.txt, neither of which ranks anything
 
 <!-- end index -->
 
@@ -3960,3 +3961,68 @@ comment put its name on every page and tripped the guard that keeps the endpoint
 to one page. A comment is not an endpoint and the guard cannot tell. The comment
 was reworded rather than the guard loosened, which is the right way round: the
 cheap fix goes in the thing that is cheap to change.
+
+## 2026-09-20 A sitemap and a robots.txt, neither of which ranks anything
+**Decided:** `@astrojs/sitemap` 3.7.4 generates `sitemap-index.xml` from the
+routes the build emits, and `astro/public/robots.txt` allows everything and
+points at it. Neither existed before today: both were 404 on the live site.
+
+**The sitemap carries no `priority` and no `changefreq`.** Both are numbers this
+project would be inventing. Nothing here knows which of its pages matters more
+than another, and a written 0.8 beside a written 0.5 is a ranking of our own
+pages asserted to a stranger, which is the ordering rule applied to a file
+format instead of a page. Absent is the honest value, and the major consumers
+document that they ignore both regardless, so nothing is given up.
+
+**`robots.txt` names no crawler, and that is the whole of the argument.** The
+obvious version of this file enumerates the current agents by vendor and by job,
+allowing the ones that feed answers and deciding about the ones that feed
+training. That list is a closed enumeration of who counts as a legitimate
+reader. It would be maintained by nobody, it would go stale the next time a
+vendor splits or renames an agent, and its effect would be to quietly exclude
+whoever arrived after it was written. Same failure as a closed enum on a field,
+one layer out. Reading this site is anonymous and metered by nothing, and a
+crawler is another reader.
+
+The file exists for the `Sitemap:` line rather than to grant permission. An
+absent `robots.txt` already allowed everything, so nothing here was withheld and
+nothing is being conceded.
+
+**Two pages are filtered out and neither is hidden.** `/signed-in/` is an OAuth
+return leg that means nothing without a code in the query string, and `/404/` is
+what a consumer lands on when it follows something gone. Both stay reachable and
+neither is disallowed anywhere; a sitemap is a list of what is here to read, and
+machinery is not reading.
+
+**What this makes impossible to express:** that some page here matters more than
+another, which is the thing the format most invites and which this registry has
+no basis for saying. Nothing else. A sitemap asserts existence and a date, and
+the ordering invariants are untouched because no ordering anywhere reads it.
+
+**The page whose sentence did not survive being read as text.** The home page's
+picker holds its two defaults in `value` attributes and its four options inside
+a `select`, so a consumer reading text nodes got "I have a  for  and I" followed
+by the options run together. Every other line on that page survives. A
+`noscript` block now states the same sentence plainly, built from the same three
+constants the controls start on so it cannot drift. `noscript` rather than a
+hidden copy, because with the script running the sentence is genuinely redundant
+and a screen reader should not hear it twice, and without the script the
+controls render and do nothing, so a real person gets the plain reading too.
+
+**What is knowingly left undone.** The label and kind datalists hold about a
+hundred open strings in `value` attributes with empty text nodes, which is the
+largest piece of vocabulary on the site and none of it is readable as text.
+Putting those into prose to be indexed would be keyword stuffing. The honest
+version is a page that says what the registry can hold and why those are open
+strings rather than a permitted set, which is writing rather than plumbing and
+is the author's.
+
+**One test changed, and it was right to fail.**
+`tests/test_signed_in_page.py::test_the_page_adds_no_dependency` asserted the
+exact set `{"astro", "pagefind"}` and caught this. The property it is named for
+was untouched, so an exact list turned a legitimate edit into a failure, which
+teaches whoever hits it to widen the expectation. The list moved into
+`MAY_BUILD_WITH`, where each entry carries the reason it is there, with a
+control asserting the scan read a real file. What stays exact is the rule that
+actually matters: no runtime `dependencies` at all, and neither module imports a
+package. Same correction, same day, as the scope assertion in that file.
