@@ -256,7 +256,22 @@ def test_signing_in_asks_for_no_write_access_to_anything():
     read = re.search(
         r'READ_SCOPES = "([^"]+)"', PAGE.read_text()
     ).group(1).split()
-    assert read == ["openid", "profile", "read-memberships"]
+
+    # Checked as a property rather than against a literal list. This asserted
+    # the exact three, and adding `email` broke it: Supabase refuses the
+    # sign-in without an email claim, because its OIDC handler builds an
+    # `auth.users` row and that row needs an address. A hardcoded list turns
+    # every legitimate change into a failure and teaches whoever hits it to
+    # edit the expectation, which is how a check stops meaning anything.
+    #
+    # What has to stay true is that nothing here grants write access. Every
+    # scope has to be one somebody deliberately put on this list.
+    READ_ONLY = {"openid", "email", "profile", "read-memberships"}
+    unexpected = [s for s in read if s not in READ_ONLY]
+    assert not unexpected, (
+        f"{unexpected} is not a scope this list was written to include. "
+        "Adding one is a decision: say in the page what it is for."
+    )
     for scope in read:
         assert not re.search(r"write|manage|contribute|jobs|webhooks|inference",
                              scope), f"{scope} is not a read scope"

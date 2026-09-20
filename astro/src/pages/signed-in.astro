@@ -109,7 +109,21 @@ const PROVIDER = "custom:huggingface";
 const DISCOVERY = "https://huggingface.co/.well-known/openid-configuration";
 
 // What signing in asks for, and nothing beyond it. Read scopes only.
-const READ_SCOPES = "openid profile read-memberships";
+//
+// `email` is in here because Supabase refuses the sign-in without it. Its OIDC
+// handler builds an `auth.users` row and that row needs an address, so a
+// provider that returns no email claim fails the exchange with "Error getting
+// user email from external provider" after the reader has already logged in
+// and consented. Hugging Face only returns the claim when `email` is asked
+// for, so dropping it does not make the sign-in more private, it makes it
+// fail. Checked against the live project on 2026-09-20 by dropping it, which
+// is how this was found.
+//
+// Nothing here reads the address, writes it down or sends it anywhere: it
+// exists in the identity service's own user row and in no file, page or table
+// of this project's. `pendingRowFrom` takes `sub`, `preferred_username` and
+// the account id, and the capture shape has no field for it.
+const READ_SCOPES = "openid email profile read-memberships";
 
 // What the upload offer asks for, in a second authorization, and only when
 // somebody chooses it. Hugging Face documents `contribute-repos` as "Create
@@ -118,7 +132,10 @@ const READ_SCOPES = "openid profile read-memberships";
 // narrowest scope that does this job. Checked against the live scope list on
 // 2026-09-20; an unknown scope string is refused with `invalid_scope` before
 // anybody is asked to log in.
-const WRITE_SCOPES = "openid profile read-memberships contribute-repos";
+// Restates the read scopes because Supabase **replaces** the configured
+// list rather than adding to it, so a second authorization asking only
+// for the new scope would silently drop the others.
+const WRITE_SCOPES = "openid email profile read-memberships contribute-repos";
 
 // The fields the schema takes, each with why it is there. Free text, every one
 // of them: nothing on this page checks a value against a set, and a value

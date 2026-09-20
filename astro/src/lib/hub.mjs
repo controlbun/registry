@@ -39,7 +39,7 @@
  *
  * ## Scope is asked for at the moment of upload
  *
- * Signing in asks for `openid profile read-memberships`. Creating a repository
+ * Signing in asks for `openid email profile read-memberships`. Creating a repository
  * on somebody's behalf needs `contribute-repos`, which Hugging Face documents
  * as "Create repositories and access those created by this app. Cannot access
  * any other repositories unless additional permissions are granted." That is
