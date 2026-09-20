@@ -4,7 +4,27 @@
   // after first paint, which is the flash this exists to prevent.
   const saved = localStorage.getItem("theme");
   if (saved) document.documentElement.dataset.theme = saved;
-</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.C09OUGaP.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button></header><script>
+
+  // The bar at the top ships both ways in, and which one is wrong depends on a
+  // fact no build can know. Decided here for the same reason the theme is:
+  // anything that runs after first paint shows the wrong one for a frame.
+  //
+  // One key, and what is in it is three display facts written by `/signed-in/`
+  // after an exchange. It is not a session and it is not evidence of one; the
+  // token it came in with is already gone. Nothing on any page contributes to
+  // this, which is the point: a bar that read an author's name off the page it
+  // is sitting on would say a reader is somebody because they were looking at
+  // that person's submission.
+  try {
+    const who = JSON.parse(localStorage.getItem("controlbun.who") || "null");
+    if (who && who.handle) document.documentElement.dataset.who = who.handle;
+  } catch (unreadable) {
+    // A key this build cannot parse is one an older build wrote or one
+    // something else corrupted. Dropping it is the whole repair: what is lost
+    // is a handle the reader can restore by signing in again.
+    localStorage.removeItem("controlbun.who");
+  }
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That forgot the handle in this browser and did not end your Hugging Face session.</p><script>
   // Inline and unbundled, same reason as the script in the head: no waiting on a
   // module graph for three lines of work.
   (function () {
@@ -31,6 +51,61 @@
       localStorage.setItem("theme", next);
       label();
     });
+  }());
+
+  // The handle, and the way to forget it. Same shape as the toggle above: three
+  // lines of work, inline and unbundled, so nothing waits on a module graph.
+  (function () {
+    // One key, and the only thing this file reads. It holds display facts
+    // written by `/signed-in/` after an exchange: the handle, the subject and
+    // when they were read. No token is in it, and `handshake.mjs` is where that
+    // is a property of a function rather than of this comment.
+    const WHO = "controlbun.who";
+    const root = document.documentElement;
+    const handle = document.querySelector("#nav-handle");
+    const out = document.querySelector("#signout");
+    const said = document.querySelector("#nav-said");
+
+    // The head script has already set the attribute, which is what CSS reads
+    // and what keeps the bar from flashing the wrong affordance. This fills in
+    // the one thing an attribute cannot: the text.
+    const show = () => {
+      const who = root.dataset.who;
+      if (handle) handle.textContent = who ? "@" + who : "";
+    };
+    show();
+
+    if (out) {
+      out.addEventListener("click", () => {
+        // Deleting the key is the whole of signing out. There is nothing to
+        // revoke here and nothing to tell anybody: the token died with the tab
+        // that made it, and the account at the identity provider is that
+        // provider's and untouched.
+        localStorage.removeItem(WHO);
+        delete root.dataset.who;
+        show();
+        if (said) said.hidden = false;
+      });
+    }
+
+    // Two ways the key changes under a page that is already open: `/signed-in/`
+    // finishing an exchange in this tab, and another tab signing in or out.
+    // Neither is common and both look like a bug when the bar disagrees with
+    // what the reader just did.
+    const again = () => {
+      const kept = localStorage.getItem(WHO);
+      let who = null;
+      try {
+        who = JSON.parse(kept || "null");
+      } catch (unreadable) {
+        who = null;
+      }
+      if (who && who.handle) root.dataset.who = who.handle;
+      else delete root.dataset.who;
+      show();
+    };
+    window.addEventListener("storage", again);
+    window.addEventListener("controlbun:who", again);
   }());
 </script><main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">controlbun</a><span class="sep">/</span><a href="/owners/">Owners</a></nav><h1 class="mono">soham</h1><div class="ordering"><span>Ordered by <strong>Recently added</strong>.</span><button type="button" data-order-key="recently-added" aria-pressed="true">Recently added</button><button type="button" data-order-key="trending" aria-pressed="false">Trending</button><span class="why">5 submissions is too few for engagement to mean anything, so this is newest-first.</span></div><p class="lede">Everything soham has done here. Publishing an artifact is one way to take part and not the only one: evaluating somebody else's submission, attacking it, and reporting what happened when you used it are the rest, and they are what makes anything here evidence rather than a file.</p><div class="scope"><div><span class="k">Submissions</span>5</div><div><span class="k">Labels claimed</span>pro-human, trauma</div><div><span class="k">Kinds</span><span class="mono">direction</span></div><div><span class="k">Attacks received</span>0</div></div><div data-pagefind-body><h2>Namespace</h2><div class="claim"><div class="provenance">Claimed on <time datetime="2026-09-19T16:51:32Z">Sep 19, 2026</time> by the account <span class="mono">custom:huggingface:62cf4580e7f6014c0ea2450f</span>, which called itself <span class="mono">sohampadia</span> that day</div><p class="note">The claim is bound to the provider's subject id above. Handles are renameable on every provider here, so a claim bound to one would either break on a rename or follow the handle to whoever registers it next. The handle is recorded as of the claim date and is not looked up by.</p><h3>Evidence</h3><dl class="spec"><dt class="mono">repo</dt><dd><div class="prose" data-authored><p>The artifact pinned by soham/trauma@d61-diffmeans-expository-L34 is published at huggingface.co/sohampadia/pro-human, commit 2ff771e4bbdc21a74d37dee111e98be6d71600f5, path vectors/events/trauma_minus_neutral_expository.safetensors. That repository belongs to the account this claim binds, and anyone can check both halves without asking anybody.</p></div><div class="provenance">recorded <time datetime="2026-09-19T16:51:32Z">Sep 19, 2026</time></div></dd></dl><h3>Organisation membership</h3><ul class="memberships"><li>Membership of <span class="mono">controlbun</span> confirmed on <time datetime="2026-09-19T16:51:32Z">Sep 19, 2026</time>, with the role <span class="mono">admin</span>, by <span class="mono">https://huggingface.co/oauth/userinfo</span>.</li></ul><p class="note">Each line above is what the provider answered on that date and not a standing fact. People join and leave organisations, so a membership checked once and held forever goes stale silently. Rechecking means the account signs in again and a new observation is written beside this one.</p></div><p class="note">Signing in works and produces the dated reading a claim is made from; binding one to a namespace is still a command run where the corpus is rebuilt, so a claim made today is one somebody handed over rather than one they recorded here. <a href="/sign-in/">What signing in is for, and what a claim is</a>.</p><h2>Submissions</h2><table class="submissions"><thead><tr><th><button data-col="0">Label</button></th><th><button data-col="1">Model</button></th><th>Released</th><th>Evidence</th></tr></thead><tbody data-orderable><tr data-created="2026-08-19T00:12:51+00:00" data-engagement="0"><td><a href="/soham/meta-llama/Llama-3.3-70B-Instruct/trauma/d61-diffmeans-expository-L34/" title="soham/meta-llama/Llama-3.3-70B-Instruct/trauma@d61-diffmeans-expository-L34">trauma<span class="meta">@d61-diffmeans-expository-L34</span></a><div class="provenance mono">direction @d61-diffmeans-expository-L34</div></td><td class="mono"><a href="/models/meta-llama/Llama-3.3-70B-Instruct/">meta-llama/Llama-3.3-70B-Instruct</a></td><td><time datetime="2026-08-19T00:12:51+00:00">Aug 19, 2026</time></td><td class="provenance"><span class="absent">no score</span>, <span class="absent">no recipe</span>, <span class="absent">never attacked</span></td></tr><tr data-created="2026-06-08T23:20:02Z" data-engagement="0"><td><a href="/soham/allenai/Olmo-3-1125-32B/pro-human/L24/" title="soham/allenai/Olmo-3-1125-32B/pro-human@L24">pro-human<span class="meta">@L24</span></a><div class="provenance mono">direction @L24</div></td><td class="mono"><a href="/models/allenai/Olmo-3-1125-32B/">allenai/Olmo-3-1125-32B</a></td><td><time datetime="2026-06-08T23:20:02Z">Jun 8, 2026</time></td><td class="provenance"><span class="absent">no score</span>, recipe, <span class="absent">never attacked</span></td></tr><tr data-created="2026-06-08T22:52:10Z" data-engagement="0"><td><a href="/soham/allenai/Olmo-3-1125-32B/pro-human/logistic/" title="soham/allenai/Olmo-3-1125-32B/pro-human@logistic">pro-human<span class="meta">@logistic</span></a><div class="provenance mono">direction @logistic</div></td><td class="mono"><a href="/models/allenai/Olmo-3-1125-32B/">allenai/Olmo-3-1125-32B</a></td><td><time datetime="2026-06-08T22:52:10Z">Jun 8, 2026</time></td><td class="provenance"><span class="absent">no score</span>, recipe, <span class="absent">never attacked</span></td></tr><tr data-created="2026-06-08T22:52:06Z" data-engagement="0"><td><a href="/soham/allenai/Olmo-3-1125-32B/pro-human/lda/" title="soham/allenai/Olmo-3-1125-32B/pro-human@lda">pro-human<span class="meta">@lda</span></a><div class="provenance mono">direction @lda</div></td><td class="mono"><a href="/models/allenai/Olmo-3-1125-32B/">allenai/Olmo-3-1125-32B</a></td><td><time datetime="2026-06-08T22:52:06Z">Jun 8, 2026</time></td><td class="provenance"><span class="absent">no score</span>, recipe, <span class="absent">never attacked</span></td></tr><tr data-created="2026-06-08T22:05:52Z" data-engagement="0"><td><a href="/soham/allenai/Olmo-3-1125-32B/pro-human/meandiff/" title="soham/allenai/Olmo-3-1125-32B/pro-human@meandiff">pro-human<span class="meta">@meandiff</span></a><div class="provenance mono">direction @meandiff</div></td><td class="mono"><a href="/models/allenai/Olmo-3-1125-32B/">allenai/Olmo-3-1125-32B</a></td><td><time datetime="2026-06-08T22:05:52Z">Jun 8, 2026</time></td><td class="provenance"><span class="absent">no score</span>, recipe, <span class="absent">never attacked</span></td></tr></tbody></table><h2>Work on other people's submissions</h2><p class="note absent-block">soham has not evaluated, attacked or reported use of anybody else's submission. Nothing follows from that about the quality of their own work. It does mean every number on their submissions was measured by the person who made them.</p><h2>Eval suites</h2><table><thead><tr><th>Suite</th><th>Judge</th><th>Confound axes checked</th></tr></thead><tbody><tr><td class="mono">confound-audit@v1</td><td class="mono"><span class="absent">no judge pinned</span></td><td>approach, valence, length_independent, approach_probe</td></tr></tbody></table><p class="note">The judge model and revision are pinned by the suite's author for their own measurements. A score from a different judge is a different measurement, which is why suites are named rather than pooled.</p></div></main></body></html><script>(function(){const corpus = {"active_order":"recently-added","active_order_name":"Recently added","age_offset_hours":2,"gravity":1.5,"order_choices":[{"key":"recently-added","name":"Recently added"},{"key":"trending","name":"Trending"}],"size":5,"synthetic":"none","threshold":100};
 

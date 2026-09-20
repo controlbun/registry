@@ -4,8 +4,28 @@
   // after first paint, which is the flash this exists to prevent.
   const saved = localStorage.getItem("theme");
   if (saved) document.documentElement.dataset.theme = saved;
-</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.C09OUGaP.css"><style>.plain[data-astro-cid-ibpinaeu]{padding:0;list-style:none}.plain[data-astro-cid-ibpinaeu] li[data-astro-cid-ibpinaeu]{padding:.15rem 0}
-</style></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button></header><script>
+
+  // The bar at the top ships both ways in, and which one is wrong depends on a
+  // fact no build can know. Decided here for the same reason the theme is:
+  // anything that runs after first paint shows the wrong one for a frame.
+  //
+  // One key, and what is in it is three display facts written by `/signed-in/`
+  // after an exchange. It is not a session and it is not evidence of one; the
+  // token it came in with is already gone. Nothing on any page contributes to
+  // this, which is the point: a bar that read an author's name off the page it
+  // is sitting on would say a reader is somebody because they were looking at
+  // that person's submission.
+  try {
+    const who = JSON.parse(localStorage.getItem("controlbun.who") || "null");
+    if (who && who.handle) document.documentElement.dataset.who = who.handle;
+  } catch (unreadable) {
+    // A key this build cannot parse is one an older build wrote or one
+    // something else corrupted. Dropping it is the whole repair: what is lost
+    // is a handle the reader can restore by signing in again.
+    localStorage.removeItem("controlbun.who");
+  }
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"><style>.plain[data-astro-cid-ibpinaeu]{padding:0;list-style:none}.plain[data-astro-cid-ibpinaeu] li[data-astro-cid-ibpinaeu]{padding:.15rem 0}
+</style></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That forgot the handle in this browser and did not end your Hugging Face session.</p><script>
   // Inline and unbundled, same reason as the script in the head: no waiting on a
   // module graph for three lines of work.
   (function () {
@@ -32,6 +52,61 @@
       localStorage.setItem("theme", next);
       label();
     });
+  }());
+
+  // The handle, and the way to forget it. Same shape as the toggle above: three
+  // lines of work, inline and unbundled, so nothing waits on a module graph.
+  (function () {
+    // One key, and the only thing this file reads. It holds display facts
+    // written by `/signed-in/` after an exchange: the handle, the subject and
+    // when they were read. No token is in it, and `handshake.mjs` is where that
+    // is a property of a function rather than of this comment.
+    const WHO = "controlbun.who";
+    const root = document.documentElement;
+    const handle = document.querySelector("#nav-handle");
+    const out = document.querySelector("#signout");
+    const said = document.querySelector("#nav-said");
+
+    // The head script has already set the attribute, which is what CSS reads
+    // and what keeps the bar from flashing the wrong affordance. This fills in
+    // the one thing an attribute cannot: the text.
+    const show = () => {
+      const who = root.dataset.who;
+      if (handle) handle.textContent = who ? "@" + who : "";
+    };
+    show();
+
+    if (out) {
+      out.addEventListener("click", () => {
+        // Deleting the key is the whole of signing out. There is nothing to
+        // revoke here and nothing to tell anybody: the token died with the tab
+        // that made it, and the account at the identity provider is that
+        // provider's and untouched.
+        localStorage.removeItem(WHO);
+        delete root.dataset.who;
+        show();
+        if (said) said.hidden = false;
+      });
+    }
+
+    // Two ways the key changes under a page that is already open: `/signed-in/`
+    // finishing an exchange in this tab, and another tab signing in or out.
+    // Neither is common and both look like a bug when the bar disagrees with
+    // what the reader just did.
+    const again = () => {
+      const kept = localStorage.getItem(WHO);
+      let who = null;
+      try {
+        who = JSON.parse(kept || "null");
+      } catch (unreadable) {
+        who = null;
+      }
+      if (who && who.handle) root.dataset.who = who.handle;
+      else delete root.dataset.who;
+      show();
+    };
+    window.addEventListener("storage", again);
+    window.addEventListener("controlbun:who", again);
   }());
 </script><main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">controlbun</a></nav><h1 data-astro-cid-ibpinaeu>Not found</h1><p class="lede" data-astro-cid-ibpinaeu>There is nothing at this address. That is a fact about the URL rather than about the registry: nothing here has been moved or withdrawn.</p><h2 data-astro-cid-ibpinaeu>The shapes that exist</h2><dl class="spec" data-astro-cid-ibpinaeu><dt class="mono" data-astro-cid-ibpinaeu>/models/</dt><dd data-astro-cid-ibpinaeu>Every model anything has been published against.</dd><dt class="mono" data-astro-cid-ibpinaeu>/models/&lt;model&gt;/</dt><dd data-astro-cid-ibpinaeu>Our index entry for one model. The model itself lives elsewhere.</dd><dt class="mono" data-astro-cid-ibpinaeu>/models/&lt;model&gt;/&lt;label&gt;/</dt><dd data-astro-cid-ibpinaeu>Everyone claiming that label against that model, side by side.</dd><dt class="mono" data-astro-cid-ibpinaeu>/&lt;owner&gt;/&lt;model&gt;/&lt;label&gt;/&lt;version&gt;/</dt><dd data-astro-cid-ibpinaeu>One submission. The version is part of the address because<span class="mono" data-astro-cid-ibpinaeu>author/label@version</span> is the identity here and nothing above it resolves to a single artifact.</dd><dt class="mono" data-astro-cid-ibpinaeu>/owners/</dt><dd data-astro-cid-ibpinaeu>Everyone who has taken part, whether or not they published an artifact.</dd><dt class="mono" data-astro-cid-ibpinaeu>/&lt;owner&gt;/</dt><dd data-astro-cid-ibpinaeu>One person, and what they actually did.</dd></dl><p class="note" data-astro-cid-ibpinaeu>A label has no page of its own. Claimants of the same word on different models are not comparable, so there is nowhere sensible to put them together.</p><h2 data-astro-cid-ibpinaeu>Models in the registry</h2><ul class="plain" data-astro-cid-ibpinaeu><li data-astro-cid-ibpinaeu><a class="mono" href="/models/allenai/Olmo-3-1125-32B/" data-astro-cid-ibpinaeu>allenai/Olmo-3-1125-32B</a></li><li data-astro-cid-ibpinaeu><a class="mono" href="/models/meta-llama/Llama-3.3-70B-Instruct/" data-astro-cid-ibpinaeu>meta-llama/Llama-3.3-70B-Instruct</a></li></ul><p data-astro-cid-ibpinaeu><a href="/" data-astro-cid-ibpinaeu>Back to the registry</a></p></main></body></html><script>(function(){const corpus = {"active_order":"recently-added","active_order_name":"Recently added","age_offset_hours":2,"gravity":1.5,"order_choices":[{"key":"recently-added","name":"Recently added"},{"key":"trending","name":"Trending"}],"size":5,"synthetic":"none","threshold":100};
 

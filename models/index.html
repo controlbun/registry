@@ -4,7 +4,27 @@
   // after first paint, which is the flash this exists to prevent.
   const saved = localStorage.getItem("theme");
   if (saved) document.documentElement.dataset.theme = saved;
-</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.C09OUGaP.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button></header><script>
+
+  // The bar at the top ships both ways in, and which one is wrong depends on a
+  // fact no build can know. Decided here for the same reason the theme is:
+  // anything that runs after first paint shows the wrong one for a frame.
+  //
+  // One key, and what is in it is three display facts written by `/signed-in/`
+  // after an exchange. It is not a session and it is not evidence of one; the
+  // token it came in with is already gone. Nothing on any page contributes to
+  // this, which is the point: a bar that read an author's name off the page it
+  // is sitting on would say a reader is somebody because they were looking at
+  // that person's submission.
+  try {
+    const who = JSON.parse(localStorage.getItem("controlbun.who") || "null");
+    if (who && who.handle) document.documentElement.dataset.who = who.handle;
+  } catch (unreadable) {
+    // A key this build cannot parse is one an older build wrote or one
+    // something else corrupted. Dropping it is the whole repair: what is lost
+    // is a handle the reader can restore by signing in again.
+    localStorage.removeItem("controlbun.who");
+  }
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That forgot the handle in this browser and did not end your Hugging Face session.</p><script>
   // Inline and unbundled, same reason as the script in the head: no waiting on a
   // module graph for three lines of work.
   (function () {
@@ -31,6 +51,61 @@
       localStorage.setItem("theme", next);
       label();
     });
+  }());
+
+  // The handle, and the way to forget it. Same shape as the toggle above: three
+  // lines of work, inline and unbundled, so nothing waits on a module graph.
+  (function () {
+    // One key, and the only thing this file reads. It holds display facts
+    // written by `/signed-in/` after an exchange: the handle, the subject and
+    // when they were read. No token is in it, and `handshake.mjs` is where that
+    // is a property of a function rather than of this comment.
+    const WHO = "controlbun.who";
+    const root = document.documentElement;
+    const handle = document.querySelector("#nav-handle");
+    const out = document.querySelector("#signout");
+    const said = document.querySelector("#nav-said");
+
+    // The head script has already set the attribute, which is what CSS reads
+    // and what keeps the bar from flashing the wrong affordance. This fills in
+    // the one thing an attribute cannot: the text.
+    const show = () => {
+      const who = root.dataset.who;
+      if (handle) handle.textContent = who ? "@" + who : "";
+    };
+    show();
+
+    if (out) {
+      out.addEventListener("click", () => {
+        // Deleting the key is the whole of signing out. There is nothing to
+        // revoke here and nothing to tell anybody: the token died with the tab
+        // that made it, and the account at the identity provider is that
+        // provider's and untouched.
+        localStorage.removeItem(WHO);
+        delete root.dataset.who;
+        show();
+        if (said) said.hidden = false;
+      });
+    }
+
+    // Two ways the key changes under a page that is already open: `/signed-in/`
+    // finishing an exchange in this tab, and another tab signing in or out.
+    // Neither is common and both look like a bug when the bar disagrees with
+    // what the reader just did.
+    const again = () => {
+      const kept = localStorage.getItem(WHO);
+      let who = null;
+      try {
+        who = JSON.parse(kept || "null");
+      } catch (unreadable) {
+        who = null;
+      }
+      if (who && who.handle) root.dataset.who = who.handle;
+      else delete root.dataset.who;
+      show();
+    };
+    window.addEventListener("storage", again);
+    window.addEventListener("controlbun:who", again);
   }());
 </script><main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">controlbun</a></nav><h1>Models</h1><div class="ordering"><span>Ordered by <strong>Recently added</strong>.</span><button type="button" data-order-key="recently-added" aria-pressed="true">Recently added</button><button type="button" data-order-key="trending" aria-pressed="false">Trending</button><span class="why">5 submissions is too few for engagement to mean anything, so this is newest-first.</span></div><p class="lede">Every model something has been published against. This registry hosts none of them; each id is a reference to wherever the model actually lives. A vector is a tensor in one model's basis at one layer, so it does nothing for another model. Pick the one you are working with.</p><div class="scope"><div><span class="k">Models</span>2</div><div><span class="k">Artifacts</span>5</div><div><span class="k">Artifact kinds</span><span class="mono">direction</span></div></div><div class="facets"><aside><input type="search" id="q" placeholder="Search models"><h3>Models with an artifact of kind</h3><label><input type="checkbox" data-facet="kinds" value="direction">direction <span class="count">(2)</span></label><h3>Models with a hook point</h3><label><input type="checkbox" data-facet="hooks" value="resid_post"><span class="mono">resid_post</span> <span class="count">(2)</span></label><h3>Models with evidence of a kind</h3><label><input type="checkbox" data-facet="evidence" value="transfer not measured">transfer not measured <span class="count">(2)</span></label><label><input type="checkbox" data-facet="evidence" value="never attacked">never attacked <span class="count">(2)</span></label><label><input type="checkbox" data-facet="evidence" value="transfer measured">transfer measured <span class="count">(1)</span></label><p class="note">Each count is models, not artifacts, because models are what this list holds. A model with several claimants can appear under both sides of a pair: one of its submissions measured transfer and another did not, and both are true of the model.</p></aside><div data-pagefind-body><table id="models"><thead><tr><th><button data-col="0">Model</button></th><th><button data-col="1">Artifacts</button></th></tr></thead><tbody data-orderable><tr data-created="2026-06-08T23:20:02Z" data-engagement="0" data-kinds="direction" data-hooks="resid_post" data-evidence="transfer not measured|never attacked|transfer measured"><td><a class="mono" href="/models/allenai/Olmo-3-1125-32B/">allenai/Olmo-3-1125-32B</a><div class="provenance">1 revision, layers 24, 32</div></td><td>4</td></tr><tr data-created="2026-08-19T00:12:51+00:00" data-engagement="0" data-kinds="direction" data-hooks="resid_post" data-evidence="transfer not measured|never attacked"><td><a class="mono" href="/models/meta-llama/Llama-3.3-70B-Instruct/">meta-llama/Llama-3.3-70B-Instruct</a><div class="provenance">1 revision, layer 34</div></td><td>1</td></tr></tbody></table><p class="note" id="empty" hidden>Nothing matches those filters.</p><p class="note">Artifact count is a fact about how much has been published for a model, not a measure of quality, and a model with one artifact is not worse than a model with four.</p><p class="note"><span class="mono">kind</span> and <span class="mono">hook_point</span> are open strings. The values in the sidebar are whatever the corpus contains, not a permitted set, and an artifact whose kind nothing recognizes is still stored and still shown.</p></div></div></main></body></html><script>(function(){const corpus = {"active_order":"recently-added","active_order_name":"Recently added","age_offset_hours":2,"gravity":1.5,"order_choices":[{"key":"recently-added","name":"Recently added"},{"key":"trending","name":"Trending"}],"size":5,"synthetic":"none","threshold":100};
 

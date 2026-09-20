@@ -4,7 +4,27 @@
   // after first paint, which is the flash this exists to prevent.
   const saved = localStorage.getItem("theme");
   if (saved) document.documentElement.dataset.theme = saved;
-</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.C09OUGaP.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button></header><script>
+
+  // The bar at the top ships both ways in, and which one is wrong depends on a
+  // fact no build can know. Decided here for the same reason the theme is:
+  // anything that runs after first paint shows the wrong one for a frame.
+  //
+  // One key, and what is in it is three display facts written by `/signed-in/`
+  // after an exchange. It is not a session and it is not evidence of one; the
+  // token it came in with is already gone. Nothing on any page contributes to
+  // this, which is the point: a bar that read an author's name off the page it
+  // is sitting on would say a reader is somebody because they were looking at
+  // that person's submission.
+  try {
+    const who = JSON.parse(localStorage.getItem("controlbun.who") || "null");
+    if (who && who.handle) document.documentElement.dataset.who = who.handle;
+  } catch (unreadable) {
+    // A key this build cannot parse is one an older build wrote or one
+    // something else corrupted. Dropping it is the whole repair: what is lost
+    // is a handle the reader can restore by signing in again.
+    localStorage.removeItem("controlbun.who");
+  }
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That forgot the handle in this browser and did not end your Hugging Face session.</p><script>
   // Inline and unbundled, same reason as the script in the head: no waiting on a
   // module graph for three lines of work.
   (function () {
@@ -31,6 +51,61 @@
       localStorage.setItem("theme", next);
       label();
     });
+  }());
+
+  // The handle, and the way to forget it. Same shape as the toggle above: three
+  // lines of work, inline and unbundled, so nothing waits on a module graph.
+  (function () {
+    // One key, and the only thing this file reads. It holds display facts
+    // written by `/signed-in/` after an exchange: the handle, the subject and
+    // when they were read. No token is in it, and `handshake.mjs` is where that
+    // is a property of a function rather than of this comment.
+    const WHO = "controlbun.who";
+    const root = document.documentElement;
+    const handle = document.querySelector("#nav-handle");
+    const out = document.querySelector("#signout");
+    const said = document.querySelector("#nav-said");
+
+    // The head script has already set the attribute, which is what CSS reads
+    // and what keeps the bar from flashing the wrong affordance. This fills in
+    // the one thing an attribute cannot: the text.
+    const show = () => {
+      const who = root.dataset.who;
+      if (handle) handle.textContent = who ? "@" + who : "";
+    };
+    show();
+
+    if (out) {
+      out.addEventListener("click", () => {
+        // Deleting the key is the whole of signing out. There is nothing to
+        // revoke here and nothing to tell anybody: the token died with the tab
+        // that made it, and the account at the identity provider is that
+        // provider's and untouched.
+        localStorage.removeItem(WHO);
+        delete root.dataset.who;
+        show();
+        if (said) said.hidden = false;
+      });
+    }
+
+    // Two ways the key changes under a page that is already open: `/signed-in/`
+    // finishing an exchange in this tab, and another tab signing in or out.
+    // Neither is common and both look like a bug when the bar disagrees with
+    // what the reader just did.
+    const again = () => {
+      const kept = localStorage.getItem(WHO);
+      let who = null;
+      try {
+        who = JSON.parse(kept || "null");
+      } catch (unreadable) {
+        who = null;
+      }
+      if (who && who.handle) root.dataset.who = who.handle;
+      else delete root.dataset.who;
+      show();
+    };
+    window.addEventListener("storage", again);
+    window.addEventListener("controlbun:who", again);
   }());
 </script><div class="home"><nav class="sidenav"><h3>Browse</h3><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a></nav><main class="intro"><h1 class="sr-only">controlbun</h1><p class="lede">Extracting a steering direction takes about a day. Deciding whether to trust it takes weeks, and none of that work carries over to anybody else.</p><div class="situation"><p class="ask">I have a <span class="field" id="pick-kind-field"><input id="pick-kind" list="kinds" value="direction" size="9" spellcheck="false" autocomplete="off" aria-label="kind of artifact, type anything"><datalist id="kinds"><option value="direction"></option><option value="linear-probe"></option><option value="difference-of-means"></option><option value="caa-vector"></option><option value="persona-vector"></option><option value="steering-vector"></option><option value="sae-latent"></option><option value="transcoder-feature"></option><option value="circuit"></option><option value="attention-head-role"></option><option value="task-vector"></option><option value="function-vector"></option><option value="causal-mask"></option><option value="lora"></option><option value="reft"></option></datalist></span> for <span class="field" id="pick-label-field"><input id="pick-label" list="labels" value="pro-human" size="9" spellcheck="false" autocomplete="off" aria-label="what it is meant to capture, type anything"><datalist id="labels"><option value="pro-human"></option><option value="trauma"></option><option value="refusal"></option><option value="compliance"></option><option value="harmfulness"></option><option value="jailbreak-susceptibility"></option><option value="sycophancy"></option><option value="deception"></option><option value="lying"></option><option value="sandbagging"></option><option value="reward-hacking"></option><option value="power-seeking"></option><option value="self-preservation"></option><option value="shutdown-resistance"></option><option value="alignment-faking"></option><option value="sabotage"></option><option value="withholding"></option><option value="manipulation"></option><option value="whistleblowing"></option><option value="truthfulness"></option><option value="known-vs-unknown"></option><option value="uncertainty"></option><option value="confidence"></option><option value="hallucination"></option><option value="entity-recognition"></option><option value="factual-recall"></option><option value="belief-vs-assertion"></option><option value="chain-of-thought-faithfulness"></option><option value="kindness"></option><option value="warmth"></option><option value="helpfulness"></option><option value="honesty"></option><option value="humility"></option><option value="arrogance"></option><option value="evil"></option><option value="sarcasm"></option><option value="humor"></option><option value="formality"></option><option value="verbosity"></option><option value="enthusiasm"></option><option value="bluntness"></option><option value="pedantry"></option><option value="assistant-persona"></option><option value="sentience-claiming"></option><option value="valence"></option><option value="arousal"></option><option value="distress"></option><option value="anxiety"></option><option value="anger"></option><option value="sadness"></option><option value="joy"></option><option value="curiosity"></option><option value="boredom"></option><option value="frustration"></option><option value="inner-conflict"></option><option value="i-am-an-ai"></option><option value="evaluation-awareness"></option><option value="deployment-vs-training"></option><option value="self-vs-other"></option><option value="introspective-access"></option><option value="tool-use-awareness"></option><option value="observed-awareness"></option><option value="gender"></option><option value="race"></option><option value="age"></option><option value="nationality"></option><option value="religion"></option><option value="political-leaning"></option><option value="socioeconomic-class"></option><option value="sentiment-toward-group"></option><option value="golden-gate-bridge"></option><option value="brooklyn-bridge"></option><option value="transit-infrastructure"></option><option value="dna-sequences"></option><option value="python-code"></option><option value="code-errors"></option><option value="legal-language"></option><option value="immigration"></option><option value="tourist-attractions"></option><option value="named-people"></option><option value="months"></option><option value="currencies"></option><option value="board-state"></option><option value="spatial-coordinates"></option><option value="latitude-longitude"></option><option value="time-and-date"></option><option value="physical-scale"></option><option value="causal-direction"></option><option value="syntax-trees"></option><option value="coreference"></option><option value="language-selection"></option><option value="output-format"></option><option value="instruction-following"></option><option value="register-transfer"></option><option value="task-vector"></option><option value="function-vector"></option></datalist></span> and I <span class="choice"><select id="pick-need" aria-label="what you want to do"><option value="cannot tell whether to trust it">cannot tell whether to trust it</option><option value="want to publish it">want to publish it</option><option value="think somebody else's is better">think somebody else&#39;s is better</option><option value="want to know if somebody already tried">want to know if somebody already tried</option></select></span>.</p><p class="answer" id="answer">Then what you want is not our opinion, it is somebody else&#39;s check. A submission here shows what its author measured, what they did not, and anything a third party found afterwards. Nothing is scored and nothing is ranked. The three pro-human directions on this site come from one dataset at one layer and differ only in the estimator, every check their author ran says all three are fine, and nothing distinguishes them. That is the problem stated exactly.</p><p class="sr-only" id="pick-status" role="status"></p></div><p>So the next person starts from nothing. And somebody who tries an existing artifact, gets nothing out of it, and gives up has nowhere to say so, which means the person after them spends the same weeks finding out the same thing.</p><p>This is a record of what people extracted, from which model, how, and what happened when they or anyone else checked it. Failures included, because those are the ones that save somebody a month.</p><p>Several people will mean different things by the same word and build different vectors for it. When they do, those sit side by side here. Nothing picks one, and nothing is ranked by a score. Nobody has done it here yet: every submission in this corpus is by one author, so what this shows today is the mechanism rather than the disagreement. <a href="/about/">What this is and where it came from</a>.</p><div class="banner"><strong>A working demonstration, not a running service.</strong> 5 submissions. Submitting is open to anybody signed in with Hugging Face, and what it takes is a pointer to bytes in your own account rather than the bytes. </div></main><script>(function(){const NEEDS = {"cannot tell whether to trust it":"Then what you want is not our opinion, it is somebody else's check. A submission here shows what its author measured, what they did not, and anything a third party found afterwards. Nothing is scored and nothing is ranked. The three pro-human directions on this site come from one dataset at one layer and differ only in the estimator, every check their author ran says all three are fine, and nothing distinguishes them. That is the problem stated exactly.","want to publish it":"Sign in with Hugging Face and submit. What crosses is a pointer to bytes in your own account and the contract describing them, never the bytes themselves, and the namespace is the handle your provider reported rather than a field anybody can fill in. Nothing is reviewed, ranked or approved; it appears here when the corpus is rebuilt and published, because the corpus is a file in git.","think somebody else's is better":"Quite possibly, and finding out is the point of this. There will always be a better one for what you are doing; there is never a best one, because better is a judgment you make for one purpose and this registry does not make it for you. Today there is nobody to compare against: 5 submissions, by one author. Browse it for the shape rather than the contents.","want to know if somebody already tried":"Nothing here yet, and that is the gap this aims at. Negative results have nowhere to live, so everybody spends the same weeks finding out the same thing separately."};
 const IN_CORPUS_KINDS = ["direction"];

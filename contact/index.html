@@ -4,7 +4,27 @@
   // after first paint, which is the flash this exists to prevent.
   const saved = localStorage.getItem("theme");
   if (saved) document.documentElement.dataset.theme = saved;
-</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.C09OUGaP.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button></header><script>
+
+  // The bar at the top ships both ways in, and which one is wrong depends on a
+  // fact no build can know. Decided here for the same reason the theme is:
+  // anything that runs after first paint shows the wrong one for a frame.
+  //
+  // One key, and what is in it is three display facts written by `/signed-in/`
+  // after an exchange. It is not a session and it is not evidence of one; the
+  // token it came in with is already gone. Nothing on any page contributes to
+  // this, which is the point: a bar that read an author's name off the page it
+  // is sitting on would say a reader is somebody because they were looking at
+  // that person's submission.
+  try {
+    const who = JSON.parse(localStorage.getItem("controlbun.who") || "null");
+    if (who && who.handle) document.documentElement.dataset.who = who.handle;
+  } catch (unreadable) {
+    // A key this build cannot parse is one an older build wrote or one
+    // something else corrupted. Dropping it is the whole repair: what is lost
+    // is a handle the reader can restore by signing in again.
+    localStorage.removeItem("controlbun.who");
+  }
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/signed-in/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That forgot the handle in this browser and did not end your Hugging Face session.</p><script>
   // Inline and unbundled, same reason as the script in the head: no waiting on a
   // module graph for three lines of work.
   (function () {
@@ -31,6 +51,61 @@
       localStorage.setItem("theme", next);
       label();
     });
+  }());
+
+  // The handle, and the way to forget it. Same shape as the toggle above: three
+  // lines of work, inline and unbundled, so nothing waits on a module graph.
+  (function () {
+    // One key, and the only thing this file reads. It holds display facts
+    // written by `/signed-in/` after an exchange: the handle, the subject and
+    // when they were read. No token is in it, and `handshake.mjs` is where that
+    // is a property of a function rather than of this comment.
+    const WHO = "controlbun.who";
+    const root = document.documentElement;
+    const handle = document.querySelector("#nav-handle");
+    const out = document.querySelector("#signout");
+    const said = document.querySelector("#nav-said");
+
+    // The head script has already set the attribute, which is what CSS reads
+    // and what keeps the bar from flashing the wrong affordance. This fills in
+    // the one thing an attribute cannot: the text.
+    const show = () => {
+      const who = root.dataset.who;
+      if (handle) handle.textContent = who ? "@" + who : "";
+    };
+    show();
+
+    if (out) {
+      out.addEventListener("click", () => {
+        // Deleting the key is the whole of signing out. There is nothing to
+        // revoke here and nothing to tell anybody: the token died with the tab
+        // that made it, and the account at the identity provider is that
+        // provider's and untouched.
+        localStorage.removeItem(WHO);
+        delete root.dataset.who;
+        show();
+        if (said) said.hidden = false;
+      });
+    }
+
+    // Two ways the key changes under a page that is already open: `/signed-in/`
+    // finishing an exchange in this tab, and another tab signing in or out.
+    // Neither is common and both look like a bug when the bar disagrees with
+    // what the reader just did.
+    const again = () => {
+      const kept = localStorage.getItem(WHO);
+      let who = null;
+      try {
+        who = JSON.parse(kept || "null");
+      } catch (unreadable) {
+        who = null;
+      }
+      if (who && who.handle) root.dataset.who = who.handle;
+      else delete root.dataset.who;
+      show();
+    };
+    window.addEventListener("storage", again);
+    window.addEventListener("controlbun:who", again);
   }());
 </script><main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">controlbun</a></nav><h1>Contact</h1><p class="lede">Email <a href="mailto:sohampadia10@gmail.com">sohampadia10@gmail.com</a>. The code is at <a href="https://github.com/controlbun/registry">github.com/controlbun/registry</a>, with the brief, the decision log and the tests that hold the pages to what they promise.</p><h2>What is worth writing about</h2><p>This is 5 submissions by one author, and what a submission records is a pointer rather than bytes. No label has a second claimant, so the disagreement this is built to hold has not happened here once.</p><p>The mail that changes that comes from three people: somebody who would publish a direction here and can say what would have to be true first, somebody who thinks the design is wrong and can say where, and somebody who has an artifact and nowhere to put it.</p><p class="note">Mail is not a submission route: nothing here publishes what you send it, and that has not changed. What has changed is that there is now a route, and it is <a href="/signed-in/">/signed-in/</a>. Sign in with Hugging Face, fill in the pointer and the contract, and press submit. Arriving does not publish it either: the bytes are fetched at the pin and checked, the row is written where the corpus is rebuilt, and it appears on the site when I publish.</p></main></body></html><script>(function(){const corpus = {"active_order":"recently-added","active_order_name":"Recently added","age_offset_hours":2,"gravity":1.5,"order_choices":[{"key":"recently-added","name":"Recently added"},{"key":"trending","name":"Trending"}],"size":5,"synthetic":"none","threshold":100};
 
