@@ -3157,3 +3157,46 @@ platform they already use.
 
 **Supersedes:** nothing. Settles the question `V2.md` section 2 left open by
 saying "upload preferred, pointer available", in the other direction.
+
+## 2026-09-20 GAP: nothing notices when a pin stops resolving
+**Found, not decided.** A pin cannot be changed and can be taken away, and only
+the first half is handled.
+
+**What is already safe, and why this is not a hole in the pin.** A pin is forty
+hex characters, refused otherwise by `fetch.commit_sha` on the stated ground
+that a tag is movable by whoever owns the repo. Git content-addresses a commit,
+so an author can push ten later versions and the pin keeps resolving to the one
+submitted. `artifact_sha256` is the second line: `artifact.confirmed` refuses
+and names both sides if what arrives does not hash to the record, so a host
+serving different bytes at that URL cannot hand anybody the wrong tensor.
+
+**What is not handled.** Removal. An author can delete the repository, make it
+private, or force-push in a way that lets the commit be collected. `fetch.py`
+already has the right position on the fetch itself, that a 401 or 403 "is a
+fact about the artifact worth surfacing rather than a credential to go find",
+but nothing ever performs that fetch on the corpus's behalf.
+
+**So a dead pin is discovered by a reader clicking it.** The falsifier does not
+fetch, deliberately and correctly: `make verify` runs from a clean checkout with
+no network, and a gate that depended on somebody else's host being up would go
+red for reasons that are nothing to do with this repository. It already prints
+what that costs on every run. Meanwhile the page keeps showing a digest, a
+commit and a link for bytes nobody can reach, and says nothing about it.
+
+**Why this matters more now than it did.** Every artifact was vendored here
+until 2026-09-18. Removal was not a thing that could happen. The write path
+being built makes every submission somebody else's file on somebody else's
+account, and the second an outside author submits, this is a property of
+strangers' repositories rather than of one person's.
+
+**Not fixed here.** The shape is a separate thing on its own schedule rather
+than a gate step: fetch each pin, record what resolved and when, and render it
+as a dated state beside the artifact, the way membership observations and evals
+already are. "Resolved on 2026-09-20" is honest and silence is not. Two things
+to get right when it is taken. It must not become a quality signal or an
+ordering, because "still resolves" is exactly the shape that becomes a badge.
+And a pin that stops resolving is not a defect in the submission: the record
+stays, the reader is told, and nothing is withdrawn on an author's behalf.
+
+**Supersedes:** nothing. Same kind of entry as the `layer`, host and
+token-sequence gaps.
