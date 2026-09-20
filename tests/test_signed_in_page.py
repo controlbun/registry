@@ -479,10 +479,23 @@ def test_the_identity_endpoint_is_on_this_page_and_on_no_other():
 
 
 def test_the_page_stores_no_token_and_no_session():
-    """The token is used for the request it is for and never stored. The one
-    thing written to storage is the PKCE verifier, because a verifier has to
-    survive a navigation by definition, and it is removed the moment it is
-    used. Without the authorization code it exchanges for nothing."""
+    """The token is used for the request it is for and never stored.
+
+    Two things are written and neither is a credential. The PKCE verifier,
+    because a verifier has to survive a navigation by definition, removed the
+    moment it is used and worth nothing without the authorization code. And
+    three display facts about who signed in, since 2026-09-20, because the bar
+    at the top ships both ways in and has to know which to show on a page this
+    one did not render.
+
+    This asserted one write, which was the honest count while nothing on the
+    site had a bar to fill in. Counting is not what makes it a guard, though,
+    and a count that gets edited upward each time something is added stops
+    meaning anything: what holds is that both writes are named, that the second
+    is the module's record rather than an object this page assembled, and that
+    neither call mentions a token. `tests/test_nav_account.py` holds the same
+    rule across every file in the view layer.
+    """
     code = bundle()
     writes = [
         m.group(0) for m in re.finditer(
@@ -490,9 +503,10 @@ def test_the_page_stores_no_token_and_no_session():
             r"[^;]{0,120}", code,
         )
     ]
-    assert len(writes) == 1, f"more than the verifier is written to storage: {writes}"
+    assert len(writes) == 2, f"more than the verifier and the handle: {writes}"
     assert "removeItem" in code, "the verifier is stored and never removed"
-    for leak in (r"setItem\([^)]*provider_token", r"cookie\s*=[^;]*token"):
+    for leak in (r"setItem\([^)]*provider_token", r"setItem\([^)]*access",
+                 r"cookie\s*=[^;]*token"):
         assert not re.search(leak, code, re.I), f"a token is written: {leak}"
 
     # What is written is read off the source rather than the bundle, because
@@ -506,6 +520,19 @@ def test_the_page_stores_no_token_and_no_session():
         "the one thing stored is no longer the PKCE verifier"
     )
     assert "sessionStorage.removeItem(VERIFIER)" in source
+
+    remembered = re.findall(r"localStorage\.setItem\(\s*([A-Za-z_$][\w$]*)", source)
+    assert remembered == ["WHO"], remembered
+    assert re.search(r'WHO\s*=\s*"controlbun\.who"', source), (
+        "the key the bar reads moved, and the bar is still reading the old one"
+    )
+    # The value is the module's projection and not an object built here. A
+    # literal assembled at the call site is how a field nobody intended gets
+    # kept: `whoFrom` names its fields, so a capture that grows a token cannot
+    # push one into a browser.
+    assert re.search(
+        r"localStorage\.setItem\(WHO,\s*JSON\.stringify\(who\)\);", source
+    ), "the page assembles what it keeps rather than writing whoFrom's record"
 
 
 def test_the_code_is_taken_out_of_the_address_bar():

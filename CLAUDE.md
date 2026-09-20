@@ -153,6 +153,16 @@ design. Tests that fail the build:
   session for that reason. Where the stamped identity and the record's own copy
   disagree, the stamped one is used and the disagreement is surfaced rather
   than either being preferred silently
+- Nothing on this site writes a token to browser storage. Held across every file
+  in `astro/src` by resolving each written key to the literal it is and refusing
+  one nobody accounted for. What may be kept is the theme, the PKCE verifier and
+  a remembered handle, and nothing else. Remembering who somebody is and holding
+  a session are separate, and the bar saying a handle never means a session
+  exists
+- The bar's signed-in state never comes from anything the page asserts about a
+  person. `SiteNav.astro` takes no props and reads nothing about the page it is
+  on. A submission page knows an author's handle, so a bar that read its own
+  page would greet a stranger by the name of whoever they were reading
 - Every document says at the top whether it still instructs, and on what date it
   said so. `tests/test_doc_status.py` fails the build on a missing block, a date
   in the future, or one pushed below the first twelve lines. The word after the
