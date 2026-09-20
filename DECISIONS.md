@@ -100,7 +100,8 @@ Format:
 - `2026-09-20` The site holds a session, submits to nobody, and uploads only where it is told  **[amended]**
 - `2026-09-20` The form posts, Postgres stamps who sent it, and a pull is the only way in
 - `2026-09-20` Every document says whether it still instructs, and a test enforces it
-- `2026-09-20` The bar offers one of two ways in, off a handle this browser keeps and a session it does not
+- `2026-09-20` The bar offers one of two ways in, off a handle this browser keeps and a session it does not  **[amended]**
+- `2026-09-20` A sign-in survives a page navigation and a browser restart, and only one of its two credentials does
 
 <!-- end index -->
 
@@ -3717,6 +3718,13 @@ since 2026-09-19 and there is still no CI, which is now a choice rather than a
 circumstance. And `README.md`, which was three lines on the front door of a
 public repository.
 ## 2026-09-20 The bar offers one of two ways in, off a handle this browser keeps and a session it does not
+**Amended by:** 2026-09-20 "A sign-in survives a page navigation and a browser
+restart, and only one of its two credentials does". The bar, the one key, the
+decision before first paint and the CSS that acts on it all stand. What changed
+is what the key holds and therefore what the bar is entitled to say: three
+display facts became the session itself, so Add artifact stops being an offer
+with nothing behind it. Everything below about the handle outliving the session
+was true for one day and describes the gap that entry closed.
 **Decided:** `SiteNav.astro` ships both affordances and CSS picks. Signed out is
 "Sign in", to `/sign-in/`. Signed in is the handle, "Add artifact" to
 `/signed-in/`, and "Sign out". What decides is one key in the reader's own
@@ -3794,3 +3802,161 @@ page. The edit this stops is the one that would look like an improvement: a
 submission page knows an author's handle, so a bar that read the page it was
 sitting on would greet a stranger by the name of whoever they were reading, and
 would do it on the pages where it looks most plausible.
+
+## 2026-09-20 A sign-in survives a page navigation and a browser restart, and only one of its two credentials does
+**Supersedes:** nothing. **Amends:** 2026-09-20 "The bar offers one of two ways
+in, off a handle this browser keeps and a session it does not", which is marked.
+
+**Decided:** one sign-in returns two credentials with opposite lifetimes, and
+the difference is the design rather than an implementation detail.
+
+- **The Supabase session**, `access_token` with its `refresh_token`, persists,
+  in `localStorage`, under one key, `controlbun.session`. It is restored on
+  every load of `/signed-in/`, renewed when the access token is spent, and used
+  by the submit path without a fresh authorization. Row-level security scopes
+  that JWT to inserting one row into `pending_submission` as its owner: it reads
+  nobody else's rows, and there is no update or delete policy at all, so it
+  changes and removes nothing. `localStorage` rather than tab-scoped storage,
+  deliberately, so a return visit tomorrow just works.
+- **The Hugging Face `provider_token`** persists nowhere, in any form. With
+  `contribute-repos` it creates and writes repositories in somebody's own
+  namespace. It is held in one local variable for the moment somebody agrees to
+  an upload and the frame ends. It cannot be renewed, so storing it would buy
+  nothing past its expiry and would leave a credential that reaches an account
+  sitting somewhere that outlives the reason it was asked for.
+
+**Premise first, because the object this touches is the one that erodes it.**
+Plurality is the product and the registry never designates. A session gates
+nothing: `/sign-in/` is offered to somebody who has never signed in, it links to
+`/signed-in/`, and that page is where a submission is sent from. Nothing is
+behind the key, and `test_publishing_never_requires_a_claim` fails the build on
+the schema version of the failure this would become.
+
+### Why this had to change, which is an honesty problem and not a feature
+
+The arrangement it replaces kept three display facts so the bar could name a
+handle, while the session died with the tab. That was honest about what it held
+and dishonest about what it offered. A reader who came back the next day got a
+bar saying **Add artifact**, pressed it, and reached a page whose only remaining
+move was to ask them to sign in again. The entry above says so in as many words
+and calls the gap "a thing to say rather than a thing to hide", which was the
+right thing to do for one day and is not a resting place: the fix for a button
+that means less than it says is to make it mean what it says.
+
+Closing it meant persisting a credential. So the old invariant, "nothing on this
+site writes a token to browser storage", had to become false. It was true
+because of the thing that was wrong, which is the shape worth recognizing: a
+constraint can be held perfectly and be paid for somewhere nobody is looking.
+
+### Read rather than recalled
+
+The claim that a renewal never returns a provider token is load bearing, because
+it is the whole reason keeping that token buys nothing. Checked against
+supabase/auth v2.197.0, which is what the live project answers at
+`/auth/v1/health`, on 2026-09-20:
+
+- `RefreshTokenGrantParams` in `internal/api/token_refresh.go` is one field,
+  `refresh_token`.
+- `AccessTokenResponse` in `internal/tokens/service.go` carries `provider_token`
+  and `provider_refresh_token` as `omitempty`, and `RefreshTokenGrant` in that
+  file sets `Token`, `TokenType`, `ExpiresIn`, `ExpiresAt`, `RefreshToken` and
+  `User` and nothing else.
+- `ProviderAccessToken` is assigned in exactly one place in the package, inside
+  the PKCE branch of `internal/api/token.go`, off the flow state.
+- Against the live project: an invalid refresh token answers 400 with
+  `{"code":400,"error_code":"validation_failed","msg":"Refresh token is not
+  valid"}`, and `/auth/v1/logout` answers 401 `no_authorization` with no bearer
+  and 403 `bad_jwt` with a bad one.
+
+### The renewal is the one call whose credential is in the body
+
+`refreshSession` does not go through `ask`, which every other call in `hub.mjs`
+does. `ask` reads a failing body back into the message, which is safe when the
+credential is in a header and is not when it is in the body: an error page that
+reflected the request would put a refresh token on the screen. So the renewal
+parses the two fields the endpoint documents, never renders a body whole, and
+drops the message outright if it contains the token that was sent. The live
+endpoint echoes nothing today; the guarantee should not be a fact about one
+version of one service.
+
+### A refused renewal is a state with its own words
+
+Not an error and not silence. A session signed out somewhere else, or left
+longer than the identity service keeps one, is refused, and the reader did
+nothing wrong. So the session is deleted, the bar drops back to **Sign in** on
+the same frame, and the page says what happened in the endpoint's own words with
+the one thing to do about it beside them. The same shape the rest of this
+project gives an absent eval and an unclaimed namespace.
+
+### Signing out deletes the key, and the key is bigger than it was
+
+It ends the session in this browser: both tokens are gone, and nothing on this
+origin can act as anybody. It tells nobody, so the session is not revoked at the
+identity service and lapses there on its own, and the Hugging Face account is
+that provider's and untouched. The receipt says all three.
+
+**Revocation was considered and not built, and the reason is the cost rather
+than the difficulty.** `/auth/v1/logout?scope=local` ends one session and wants
+the user's own JWT. The button is in the bar, the bar is on every page, so
+calling it would put the identity endpoint and the publishable key on every page
+on the site, and `tests/test_signed_in_page.py` holds that endpoint to the one
+page with business for one. The trade: a refresh token this browser has thrown
+away stays valid at the identity service until it lapses. Nobody holds it, and a
+"sign out everywhere" control on `/signed-in/`, which already has the endpoint,
+is the honest place for it if it is ever wanted. Not built, and named here so it
+is a decision rather than an omission.
+
+### What a restored session cannot do, and says so
+
+Read a membership. That needs the provider token, which this browser keeps
+nowhere. So `/signed-in/` shows the membership reading only on the load that did
+the sign-in, and on a restored one it says what came back and what did not,
+rather than showing yesterday's answer as today's. That is the same rule as
+"confirmed on a date, never verified", applied at the one place nothing
+re-fetches.
+
+One consequence worth naming: a submission sent from a restored session carries
+the session's own copy of the subject and the handle, which are the values
+Postgres stamps the row with, so the two cannot disagree. A submission sent
+right after a sign-in carries what the userinfo endpoint said a moment later,
+and those two can. The invariant about surfacing that disagreement is unchanged
+and now has a case where there is nothing to surface.
+
+### What this makes impossible to express
+
+A reader whose session lives only as long as the tab, which was the old default
+and is no longer available without editing the projection. A session confined to
+one tab, since `localStorage` is shared across tabs and windows on the origin;
+that was chosen so a return visit works and it means a second tab is signed in
+too. And the arrangement where a browser remembers who somebody is without
+holding anything they can act with, which is gone on purpose: it is a name
+without a capability, and the bar had no way to render it that did not
+over-promise.
+
+### The invariants, amended and added
+
+**Amended.** "Nothing on this site writes a token to browser storage" became the
+split above: no provider token in any form under any key, the Supabase session
+as the only credential kept, under one named key, removed by Sign out. The shape
+of the check is untouched, which is the part that made the old one worth
+anything: every write in `astro/src` is resolved to the literal key it is, and
+the resolver is still shown catching a renamed constant and an expression it
+cannot read.
+
+**Added.** The bar never offers a way in that has nothing behind it. Add
+artifact renders only where the session in that browser still carries a refresh
+token, a refused renewal deletes the session and renders as its own state, and
+Sign out says what it did and did not do.
+
+**Narrowed rather than deleted, with the old property written into the test's
+own docstring.** `tests/test_nav_account.py` and `tests/test_signed_in_page.py`
+each say what they used to hold, why it stopped being the right property, and
+what replaced it. Weakening a guard is allowed when the rule changed; weakening
+one quietly is how a suite stops meaning anything.
+
+**One thing the guards caught in passing.** The head script and the bar's script
+are inline, so they ship on every page, and naming the identity service in a
+comment put its name on every page and tripped the guard that keeps the endpoint
+to one page. A comment is not an endpoint and the guard cannot tell. The comment
+was reworded rather than the guard loosened, which is the right way round: the
+cheap fix goes in the thing that is cheap to change.

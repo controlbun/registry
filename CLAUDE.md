@@ -153,12 +153,27 @@ design. Tests that fail the build:
   session for that reason. Where the stamped identity and the record's own copy
   disagree, the stamped one is used and the disagreement is surfaced rather
   than either being preferred silently
-- Nothing on this site writes a token to browser storage. Held across every file
-  in `astro/src` by resolving each written key to the literal it is and refusing
-  one nobody accounted for. What may be kept is the theme, the PKCE verifier and
-  a remembered handle, and nothing else. Remembering who somebody is and holding
-  a session are separate, and the bar saying a handle never means a session
-  exists
+- One sign-in returns two credentials and they have opposite lifetimes. The
+  Hugging Face `provider_token` is written to browser storage in no form and
+  under no key: with `contribute-repos` it creates and writes repositories in
+  somebody's own namespace, and it comes back on the sign-in itself and never on
+  a renewal, so keeping it buys nothing past its expiry. The Supabase session,
+  which row-level security scopes to inserting one row as its owner with no read
+  of anyone else's and no update or delete policy at all, is the only credential
+  kept, lives under one named key with its refresh token, and is removed by Sign
+  out. Held across every file in `astro/src` by resolving each written key to
+  the literal it is and refusing one nobody accounted for. What may be kept is
+  the theme, the PKCE verifier and that session, and nothing else. This line
+  read "nothing on this site writes a token to browser storage", which was true
+  only because the session died with the tab, and the bar paid for it by
+  offering Add artifact to readers whose session was already gone
+- The bar never offers a way in that has nothing behind it. Add artifact renders
+  only where the session in that browser still carries a refresh token, and a
+  renewal the identity service refuses deletes the session and renders as its
+  own state with its own words, never as an error and never as silence. Sign out
+  says what it did and what it did not: it ends the session in this browser, it
+  tells nobody, so the session is not revoked at the identity service, and the
+  account at the provider is untouched
 - The bar's signed-in state never comes from anything the page asserts about a
   person. `SiteNav.astro` takes no props and reads nothing about the page it is
   on. A submission page knows an author's handle, so a bar that read its own

@@ -30,12 +30,21 @@
  * arriving. `MAY_SEND_TO` in `tests/test_intake.py` names the destination and
  * the reason, so a third one is a test edit rather than a line that arrived.
  *
- * ## The token is used for the request it is for and never stored
+ * ## Nothing here writes anything down, and the two credentials differ
  *
- * No function here writes to `localStorage`, `sessionStorage`, a cookie, a
- * field or a log line. A token is an argument, it is passed to `fetch` in one
- * header, and the frame ends. The page holds it in one local variable for the
- * length of a click and closing the tab ends it.
+ * No function in this file writes to `localStorage`, `sessionStorage`, a
+ * cookie, a field or a log line. A token is an argument, it goes to `fetch` in
+ * one header or, for the renewal below, in one body, and the frame ends.
+ *
+ * What the page does with them afterwards is not the same for both, and this
+ * paragraph used to say it was. **The Supabase session persists**, under one
+ * key, with its refresh token, so a visit tomorrow is not a second sign-in;
+ * `heldSessionFrom` in `handshake.mjs` is the projection that decides what
+ * goes in. **The Hugging Face `provider_token` persists nowhere**, in any
+ * form: one variable, one upload, and the frame ends. It cannot be renewed, so
+ * keeping it would buy nothing past its expiry and would put a credential that
+ * reaches somebody's account in a place that outlives the reason it was asked
+ * for.
  *
  * ## Scope is asked for at the moment of upload
  *
@@ -101,10 +110,13 @@ export async function discovery(url) {
 }
 
 /**
- * The authorization code for a session. The session is never written down.
+ * The authorization code for a session, which is the only hop that returns two.
  *
- * `provider_token` comes back on the sign-in itself and never on a refresh,
- * which is why membership has to be read now or not at all.
+ * `provider_token` comes back on the sign-in itself and never on a renewal,
+ * which is why membership has to be read now or not at all, and why a restored
+ * session can send a submission and cannot read a membership. The Supabase half
+ * of the answer is kept; the Hugging Face half is used here and dropped.
+ * `refreshSession` below is the hop that has the first and never the second.
  */
 export async function exchange(supabaseUrl, key, { code, verifier }) {
   const url = `${supabaseUrl.replace(/\/+$/, "")}/auth/v1/token?grant_type=pkce`;
@@ -121,6 +133,70 @@ export async function exchange(supabaseUrl, key, { code, verifier }) {
     },
     "the token exchange",
   );
+  return response.json();
+}
+
+/**
+ * A refresh token for a new session. The credential is in the body here.
+ *
+ * Read rather than recalled, against supabase/auth v2.197.0, which is what the
+ * live project answers at `/auth/v1/health`, on 2026-09-20.
+ * `RefreshTokenGrantParams` in `internal/api/token_refresh.go` is one field,
+ * `refresh_token`. `RefreshTokenGrant` in `internal/tokens/service.go` answers
+ * with `access_token`, `token_type`, `expires_in`, `expires_at`,
+ * `refresh_token` and `user`, and sets nothing else: **`provider_token` is
+ * `omitempty` on that struct and is assigned in one place in the whole
+ * package, inside the PKCE branch of `internal/api/token.go`.** So a renewal
+ * never returns a Hugging Face token, which is why storing one would buy
+ * nothing and why the upload offer asks Hugging Face again every time.
+ *
+ * **Not routed through `ask`, and that is the point of it being here.** Every
+ * other call in this file carries its credential in a header, so reading a
+ * failing body back for the message is safe. This one carries its credential in
+ * the request body, and an error page that reflected the request would put a
+ * refresh token on the screen and into whatever reads it. So the body is parsed
+ * for the two fields the endpoint documents, never rendered whole, and dropped
+ * outright if it contains the token that was sent. Checked against the live
+ * project on 2026-09-20: an invalid token answers 400 with
+ * `{"code":400,"error_code":"validation_failed","msg":"Refresh token is not
+ * valid"}`, which names nothing that was sent. The check is here anyway,
+ * because that is a fact about one version of one service and the guarantee
+ * should not be.
+ */
+export async function refreshSession(supabaseUrl, key, { refreshToken }) {
+  const url = `${supabaseUrl.replace(/\/+$/, "")}/auth/v1/token?grant_type=refresh_token`;
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+  } catch (unreachable) {
+    throw new HubError(
+      `renewing this session could not reach the identity service ` +
+        `(${unreachable.message}). Nothing was written anywhere and the ` +
+        "session in this browser is untouched, so this is worth trying again.",
+    );
+  }
+  if (!response.ok) {
+    let said = "";
+    try {
+      const body = await response.json();
+      said = [body.error_code, body.msg].filter(Boolean).join(": ");
+    } catch (notJson) {
+      said = "";
+    }
+    if (refreshToken && said.includes(refreshToken)) said = "";
+    throw new HubError(
+      `renewing this session answered ${response.status}` +
+        (said ? `, ${said}` : "") + ".",
+    );
+  }
   return response.json();
 }
 

@@ -65,21 +65,41 @@ const pageUrl = new URL(Astro.url.pathname, Astro.site);
   // fact no build can know. Decided here for the same reason the theme is:
   // anything that runs after first paint shows the wrong one for a frame.
   //
-  // One key, and what is in it is three display facts written by `/signed-in/`
-  // after an exchange. It is not a session and it is not evidence of one; the
-  // token it came in with is already gone. Nothing on any page contributes to
-  // this, which is the point: a bar that read an author's name off the page it
-  // is sitting on would say a reader is somebody because they were looking at
-  // that person's submission.
+  // One key, and what is in it is the session this registry's identity service
+  // issued to `/signed-in/` at the exchange, with the account id, the subject
+  // and the handle it was issued for. The handle is the only part read here.
+  //
+  // The service is not named in this comment on purpose. This script is inline,
+  // so it ships on every page, and `tests/test_signed_in_page.py` refuses the
+  // provider's name and its endpoint on every page but the one with business
+  // for them. A comment is not an endpoint and the guard cannot tell, which is
+  // the right way round: the cheap fix is here and the guard stays strict.
+  //
+  // **Add artifact is offered only when that record carries a refresh token**,
+  // because that is what makes it a way in rather than a name. This key
+  // replaced one that held a handle and nothing else, and the bar on top of it
+  // said Add artifact to somebody whose session had been gone since their last
+  // reload. Nothing on any page contributes to this, which is the other half of
+  // the point: a bar that read an author's name off the page it is sitting on
+  // would say a reader is somebody because they were looking at that person's
+  // submission.
   try {
-    const who = JSON.parse(localStorage.getItem("controlbun.who") || "null");
-    if (who && who.handle) document.documentElement.dataset.who = who.handle;
+    const held = JSON.parse(localStorage.getItem("controlbun.session") || "null");
+    const said = held && held.user && held.user.user_metadata;
+    if (held && held.refresh_token && said && said.preferred_username) {
+      document.documentElement.dataset.who = said.preferred_username;
+    }
   } catch (unreadable) {
     // A key this build cannot parse is one an older build wrote or one
     // something else corrupted. Dropping it is the whole repair: what is lost
-    // is a handle the reader can restore by signing in again.
-    localStorage.removeItem("controlbun.who");
+    // is a session the reader can replace by signing in again.
+    localStorage.removeItem("controlbun.session");
   }
+  // The key that held a handle and no session. An older build wrote it, and a
+  // browser that still carries one would otherwise keep it forever, since
+  // nothing reads it now. Removed rather than read: it is the thing this change
+  // was made to stop offering.
+  localStorage.removeItem("controlbun.who");
 </script>
 
 {/*
