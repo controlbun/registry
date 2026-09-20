@@ -64,14 +64,20 @@
       that a handle never means a session exists, which was true and was the
       problem: the bar offered a way in to somebody whose session had died on
       their last reload, and the only thing behind the offer was a second
-      request to sign in. */}
+      request to sign in.
+
+      **It points at `/submit/` and not at `/signed-in/`.** It pointed at the
+      return leg while the form lived there, so pressing it during a sign-in
+      reloaded that page and discarded the exchange in progress. Splitting the
+      two pages is the fix, and this href is the half of it that a reader
+      touches. */}
   <div class="account whenout">
     <a href="/sign-in/">Sign in</a>
   </div>
 
   <div class="account whenin">
     <span class="handle" id="nav-handle"></span>
-    <a href="/signed-in/">Add artifact</a>
+    <a href="/submit/">Add artifact</a>
     <button type="button" id="signout">Sign out</button>
   </div>
 </header>

@@ -103,6 +103,7 @@ Format:
 - `2026-09-20` The bar offers one of two ways in, off a handle this browser keeps and a session it does not  **[amended]**
 - `2026-09-20` A sign-in survives a page navigation and a browser restart, and only one of its two credentials does
 - `2026-09-20` A sitemap and a robots.txt, neither of which ranks anything
+- `2026-09-20` The submit page offers the agent handoff, and the parser does not cross
 
 <!-- end index -->
 
@@ -4026,3 +4027,137 @@ teaches whoever hits it to widen the expectation. The list moved into
 control asserting the scan read a real file. What stays exact is the rule that
 actually matters: no runtime `dependencies` at all, and neither module imports a
 package. Same correction, same day, as the scope assertion in that file.
+## 2026-09-20 The submit page offers the agent handoff, and the parser does not cross
+**Decided:** the submission form moves off `/signed-in/` to its own page,
+`/submit/`, and gains a second way in beside the twenty fields: a copy button
+for the prompt `artifacts/agent_handoff.py` already builds, and a box to paste
+back what a coding agent produced. **`prompt()` is generated into the build.
+`parse()` stays in Python and runs when the author pulls.** Pasting and filling
+fields at once is refused and neither wins.
+**Why:** the mechanism was finished and reachable only from a loopback form on
+127.0.0.1, which is to say only by the author. Every field on it is something an
+agent sitting in the checkout where the extraction happened can read off the
+author's own scripts, and the people this registry is for mostly have one.
+
+### The split that makes it cost nothing
+
+`prompt(observed)` is a pure function of the spec list and the values this
+corpus holds, so it is built during `make site` by `artifacts/intake.py prompt`
+and written to `astro/src/data/agent-prompt.json`, which the page imports.
+`astro/src/data/controlbun.json` is the precedent and the argument is the same:
+a second copy of a document that changes whenever a field does is a copy that
+goes stale, and the failure would be silent. An agent answering last month's
+prompt, a parser refusing a field the reader was never asked for.
+
+`tests/test_submit_page.py` asserts the text in the built page is exactly
+`agent_handoff.prompt(suggestions(conn))` for this corpus, and that the page
+source carries no second copy of it.
+
+### The parser does not cross, and what that costs
+
+`parse()` is several hundred lines of liberal-in strict-out recovery across
+markdown fences, preamble, bold keys, bullets, blockquote markers, typographic
+quotes and trailing commentary, refusing by name rather than guessing. **None of
+it is ported and no part of it is approximated in the page**, not even a shallow
+check that the markers are there. Two parsers that drift is the failure this
+repository keeps catching, and the drift would be worst exactly where it
+matters: a paste that passed in a browser and refused on the author's machine.
+
+So the page posts the raw text and `agent_handoff.parse` runs at pull time, on
+the machine that reads the bytes, beside the one implementation of everything
+else that reads them.
+
+**The cost is real and the page says it without softening.** A mistake in a
+paste is not found as somebody types, the way a mistake in a field is. It is
+found when the author pulls the row in, and the refusal reaches the submitter by
+mail. `tests/test_submit_page.py` fails the build if that sentence leaves the
+page.
+
+### What lands in `record`, for each of the two routes
+
+`schema/supabase/001_pending_submission.sql` is untouched: `record` is `jsonb`
+and validates nothing, for the reason it already gives.
+
+- `controlbun.registry/link-submission@1`, unchanged. The fields, the pin, the
+  declared absences, and the browser's own copy of the subject and the handle.
+- `controlbun.registry/agent-paste@1`, new. `pasted`, which is the text exactly
+  as it arrived including the agent's prose around the block, plus the same
+  three identity fields and `submitted_at`. Nothing is extracted from it in the
+  browser, which is the property rather than an omission.
+
+`artifacts/intake.py` reads both. `SHAPES` is the enumeration, with a sentence
+per entry saying what that shape is, and a shape with no reader is still refused
+with both names in the message rather than with a statement that the shape is
+illegitimate.
+
+### Pasting and filling at once
+
+Refused, and neither is preferred. That is the rule `insert` already applies
+where one field carries both a value and a reason for having none: resolving it
+drops one of somebody's two statements while the record still reads correct to
+whoever wrote it. Two accounts of a whole submission is the same thing one
+object up. `chosenRoute` refuses it in the browser, naming what is filled in as
+well as the paste, and `take` refuses it again on the author's machine for a
+record that arrives carrying both.
+
+The upload offer belongs to the field route, because it fills three fields in.
+An absence typed into the absences box counts as filling fields in too, since an
+absence is a positive statement about a field; an agent writes its own on the
+`not-found:` lines the prompt asks for.
+
+### The stamped author outranks the one in the paste
+
+A paste carries an `author:` line, because the prompt asks for one and an agent
+reading its author's files can answer it. The row's handle came through the
+insert policy out of a verified session. The stamped one is what the row
+records, and the disagreement is printed rather than swallowed, which is what
+`stamped` already does for the structured route and for the same reason.
+
+### `/submit/` is its own page
+
+Taken with this rather than after it. The bar's **Add artifact** pointed at
+`/signed-in/` while the form lived there, so pressing it during a return leg
+reloaded the page and discarded the exchange in progress. That was recorded as a
+papercut when the bar shipped and the split is the real fix. `/signed-in/` keeps
+the redirect, the reading of what the provider said, the capture download and
+the namespace explanation; `/submit/` takes the fields, the absences, the upload
+offer and the handoff.
+
+**It needs no console change.** The upload offer's second authorization lands on
+the redirect URL the identity service already knows, `/signed-in/`, and that
+page relays the code to whichever window opened it and closes. The exchange
+happens in the window that holds the verifier, which is `/submit/`. Adding a
+second allowed redirect URL was the alternative and would have been a change
+only the account holder can make.
+
+**The session moved to `astro/src/lib/held.mjs`.** Two pages restore, renew and
+drop one now, and a copy per page is two sets of rules for one key. The property
+was never "one page writes it", it was **one function writes it**, and that
+function takes what the token endpoint answered rather than a record, so no
+caller can hand it an object it assembled. `tests/test_nav_account.py` and
+`tests/test_signed_in_page.py` were repointed at the module and say in their own
+docstrings what they used to read and why.
+
+### What this makes impossible to express
+
+A paste checked before it is sent. Somebody who pastes a reply missing the
+`hook_point` line finds out when the author writes back, not in the browser, and
+there is no arrangement that gives them both that and one parser.
+
+A submission built half one way and half the other: somebody who has a pin from
+the upload offer and a paste for everything else has to clear one of them. That
+is a real shape and it is refused rather than merged, because merging means
+deciding which account of a field is the one they meant.
+
+And a page that both finishes a sign-in and takes a submission, which is what
+the split gives up. The cost is one more navigation for somebody who has just
+signed in, and the link is on the page they land on.
+
+### The invariant this added
+
+Added to `CLAUDE.md`: text a page hands a reader to run elsewhere is generated
+from the code that reads the answer, and a test pins the built page to that
+function. What made this worth writing down is that it is not a rule about
+prompts. It is the same rule as "one thing in this project reads bytes",
+applied to a document: the thing that produces a format and the thing that
+consumes it are one source, or they drift.

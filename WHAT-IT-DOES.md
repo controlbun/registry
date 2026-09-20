@@ -64,7 +64,8 @@ pin and fetching an artifact send no credential and go through no account. The
 only thing signing in permits is sending a submission.
 
 *Check: `tests/test_signed_in_page.py` fails the build if an identity endpoint
-appears on any page other than `/signed-in/`.*
+appears on any page but the two that talk to the identity service, `/signed-in/`
+and `/submit/`, each named in that file with what it uses one for.*
 
 **There is no rate limit on the site because there is nothing to limit.** Static
 files. True of the current architecture and false the day anything is served
@@ -84,10 +85,16 @@ from an eval result.*
 
 **This registry receives no artifact bytes, and a submission is a pointer.**
 Identity is Hugging Face's, and this registry issues no password. Somebody who
-signs in at `/signed-in/` can send one submission: a pointer to bytes in their
-own account, plus the contract describing them. The bytes stay where their
-author put them. Nothing sent appears on the site until the corpus is rebuilt
-and published, which is what lets the falsifier check the build readers read.
+signs in at `/signed-in/` can send one submission from `/submit/`: a pointer to
+bytes in their own account, plus the contract describing them, either typed in
+or pasted out of their own coding agent. The bytes stay where their author put
+them. Nothing sent appears on the site until the corpus is rebuilt and
+published, which is what lets the falsifier check the build readers read.
+
+A pasted submission crosses as text and nothing in the browser reads it.
+`artifacts/agent_handoff.py` parses it on the author's machine when the row is
+pulled in, which is one parser rather than two that drift, and costs the
+submitter the immediate feedback the typed fields give.
 
 *Check: `SELECT count(*) FROM intervention WHERE served_repo IS NOT NULL` is 0,
 which holds for rows that arrived this way as well as for the seeded ones.*

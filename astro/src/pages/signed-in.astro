@@ -1,16 +1,24 @@
 ---
-import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
 import Base from "../layouts/Base.astro";
+import { identityConfig } from "../lib/env.mjs";
 
-// The return leg, and the two things a person can do once they are on it.
+// The return leg, and only the return leg.
 //
 // Premise, restated because a premise stated in one file gets violated in every
 // other one: **plurality is the product; the registry never designates,
 // consumers pin, visibly.** Signing in confers no standing. Nothing on this page
-// ranks, scores, approves or filters a submission, there is no queue and there
-// is nothing to approve: the namespace is the handle the provider reported, so
+// ranks, scores, approves or filters anything, there is no queue and there is
+// nothing to approve: the namespace is the handle the provider reported, so
 // there is no question for a reviewer to answer.
+//
+// **The submission form left this page on 2026-09-20 and went to `/submit/`.**
+// It was here because the session died with the tab, so the only page that could
+// know who was signed in was the one that had just signed them in. The session
+// persists now, and the cost of leaving them joined was being paid in the bar:
+// **Add artifact** pointed here, so pressing it during a return leg reloaded the
+// page and discarded the exchange in progress. What stays is what the page's own
+// name says: the redirect comes back here, the reading of what the provider said
+// happens here, and the capture is downloaded here.
 //
 // **This page reverses a property recorded twice, deliberately rather than as a
 // side effect.** `astro.config.mjs` says a build that emits files cannot drift
@@ -23,44 +31,29 @@ import Base from "../layouts/Base.astro";
 // was rewritten around the structural criterion rather than deleted: the
 // question is now where a request is aimed, not whether one exists.
 //
-// **This page writes a row, and the row is not the corpus.** An earlier version
-// of this comment said there was no table behind this page and no insert, which
-// stopped being true when `schema/supabase/001_pending_submission.sql` was run.
-// A completed form is sent to that table over the submitter's own session. It
-// is not a queue and there is nothing to approve: the namespace is the handle
-// the provider reported, so there is no question for a reviewer to answer. The
-// published corpus is still a file in git, a submission appears on the site
-// when the author pulls it in and publishes a rebuild, and that is what makes
-// the falsifier mean anything.
-//
-// **The identity on that row is stamped by Postgres and never read off the
-// form.** The insert policy refuses a row whose `account`, `subject` or
-// `handle` disagrees with the verified session, so a submission cannot claim to
-// be from somebody it is not. The record inside still carries the browser's own
-// copy of both, unedited, and where the two disagree the author's pull says so.
+// **It is also the window the upload offer comes back through.** The redirect
+// URL registered with the identity service is this page, so the permission
+// window `/submit/` opens lands here, and the branch at the bottom relays the
+// code to whoever opened it and closes. That window holds no verifier and makes
+// no exchange: the page that opened it does both. Adding `/submit/` to the
+// allowed redirect URLs would be a console change only the account holder can
+// make, and nothing here needs one.
 //
 // **One sign-in returns two credentials and they have opposite lifetimes.**
-// This block said the token is used for the request it is for and never stored,
-// and the bar on top of it offered Add artifact to somebody whose session had
-// died on their last reload. That gap is what this page was changed to close,
-// and closing it meant one of the two credentials now persists.
 //
 // - **The Supabase session**, `access_token` with its `refresh_token`, is what
 //   the insert policy on `pending_submission` scopes to putting one row in as
 //   yourself. It reads nobody else's rows and there is no update or delete
-//   policy at all. It is written to `localStorage` under one key, restored on
-//   every load of this page, and renewed when the access token is spent, so a
-//   visit tomorrow is not a second sign-in. `heldSessionFrom` in
-//   `handshake.mjs` names the fields that go in, so nothing arrives in that
-//   record because the endpoint grew a claim.
+//   policy at all. It is written to `localStorage` under one key by
+//   `astro/src/lib/held.mjs`, which is the only thing in this project that
+//   writes it, and is restored and renewed by both pages that need it.
 // - **The Hugging Face `provider_token`** can create and write repositories in
 //   somebody's own namespace once `contribute-repos` is granted. It is written
 //   nowhere, in any form. It lives in one local variable for the length of one
-//   upload and the frame ends. Hugging Face returns it on the sign-in itself
-//   and never on a renewal, verified against supabase/auth v2.197.0 on
-//   2026-09-20, so keeping it would buy nothing past its expiry and would put
-//   a credential that reaches an account somewhere that outlives the reason it
-//   was asked for.
+//   call and the frame ends. Hugging Face returns it on the sign-in itself and
+//   never on a renewal, verified against supabase/auth v2.197.0 on 2026-09-20,
+//   so keeping it would buy nothing past its expiry and would put a credential
+//   that reaches an account somewhere that outlives the reason it was asked for.
 //
 // The PKCE verifier is still in `sessionStorage`, because a verifier has to
 // survive a navigation by definition, and it is removed the moment it is used.
@@ -68,8 +61,7 @@ import Base from "../layouts/Base.astro";
 // **What a restored session cannot do.** Read a membership. That needs the
 // provider token, which is gone, so this page shows the reading only on the
 // load that did the sign-in and says so rather than showing yesterday's answer
-// as today's. The upload offer still works, because it asks Hugging Face for a
-// fresh authorization every time it is used, which it did before this too.
+// as today's.
 //
 // **Sign out in the bar deletes the key.** That ends the session in this
 // browser and tells nobody, so the session is not revoked at the identity
@@ -78,51 +70,7 @@ import Base from "../layouts/Base.astro";
 // **The copy is drafted, not dictated.** Structure and accuracy are mine; every
 // sentence a reader sees is the author's to rewrite.
 
-// Read from the repository-root `.env`, which is gitignored and was gitignored
-// before the first file here existed. Read with `node:fs` rather than through
-// `import.meta.env`, because Astro's env loading is rooted at `astro/` and the
-// one `.env` this project has is a directory up; a second copy of two values is
-// a second place for them to disagree.
-//
-// Neither value is a secret in the sense the client secret is. The project URL
-// is in every authorize redirect a person sees, and the publishable key is the
-// one a browser is given. They are still read from an ignored file rather than
-// written into a tracked one, because a habit that distinguishes which of two
-// keys may be committed is a habit that commits the wrong one eventually. What
-// ships is the built page, which carries them by necessity.
-// Found by walking up from the working directory rather than resolved against
-// this file's own URL: `import.meta.url` inside an Astro page is a bundled
-// module path at build time and not a location on disk, which is how the first
-// version of this read nothing and reported "not configured" on a machine that
-// had the file.
-function fromEnv(): Record<string, string> {
-  let at = resolve(process.cwd());
-  for (let up = 0; up < 5; up += 1) {
-    try {
-      const out: Record<string, string> = {};
-      for (const line of readFileSync(join(at, ".env"), "utf8").split("\n")) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
-        const [key, ...rest] = trimmed.split("=");
-        out[key.trim()] = rest.join("=").trim().replace(/^['"]|['"]$/g, "");
-      }
-      return out;
-    } catch {
-      const above = dirname(at);
-      if (above === at) break;
-      at = above;
-    }
-  }
-  // A checkout with no `.env` builds. What it builds is a page that says it
-  // cannot sign anybody in, which is the honest output of a build that was not
-  // given an endpoint, rather than a button that fails on click.
-  return {};
-}
-
-const env = fromEnv();
-const supabaseUrl = env.SUPABASE_URL ?? "";
-const supabaseKey = env.SUPABASE_PUBLISHABLE_KEY ?? "";
-const configured = Boolean(supabaseUrl && supabaseKey);
+const { url: supabaseUrl, key: supabaseKey, configured } = identityConfig();
 
 // Addressed rather than enumerated. A custom OIDC provider in Supabase is named
 // `custom:<name>`, and this is the one that is configured. Nothing anywhere
@@ -134,97 +82,6 @@ const PROVIDER = "custom:huggingface";
 // moment of the capture, and the document's `issuer` and `userinfo_endpoint`
 // are written into the capture, so the evidence says where it came from.
 const DISCOVERY = "https://huggingface.co/.well-known/openid-configuration";
-
-// What signing in asks for, and nothing beyond it. Read scopes only.
-//
-// `email` is in here because Supabase refuses the sign-in without it. Its OIDC
-// handler builds an `auth.users` row and that row needs an address, so a
-// provider that returns no email claim fails the exchange with "Error getting
-// user email from external provider" after the reader has already logged in
-// and consented. Hugging Face only returns the claim when `email` is asked
-// for, so dropping it does not make the sign-in more private, it makes it
-// fail. Checked against the live project on 2026-09-20 by dropping it, which
-// is how this was found.
-//
-// Nothing here reads the address, writes it down or sends it anywhere: it
-// exists in the identity service's own user row and in no file, page or table
-// of this project's. `pendingRowFrom` takes `sub`, `preferred_username` and
-// the account id, and the capture shape has no field for it.
-const READ_SCOPES = "openid email profile read-memberships";
-
-// What the upload offer asks for, in a second authorization, and only when
-// somebody chooses it. Hugging Face documents `contribute-repos` as "Create
-// repositories and access those created by this app. Cannot access any other
-// repositories unless additional permissions are granted", which is the
-// narrowest scope that does this job. Checked against the live scope list on
-// 2026-09-20; an unknown scope string is refused with `invalid_scope` before
-// anybody is asked to log in.
-// Restates the read scopes because Supabase **replaces** the configured
-// list rather than adding to it, so a second authorization asking only
-// for the new scope would silently drop the others.
-const WRITE_SCOPES = "openid email profile read-memberships contribute-repos";
-
-// The fields the schema takes, each with why it is there. Free text, every one
-// of them: nothing on this page checks a value against a set, and a value
-// nobody has used before is the ordinary way a corpus grows.
-const CONTRACT = [
-  {
-    group: "The submission",
-    fields: [
-      ["label", "label", "text",
-        "The thing other people will disagree with you about. A bare label is a view across everyone claiming it, owned by nobody."],
-      ["version", "version", "text",
-        "author/model/label@version resolves to one frozen submission forever, so there has to be a version to freeze."],
-      ["created_at", "created at", "text",
-        "When the work happened, which is not when it was typed in here."],
-      ["definition", "your definition", "textarea",
-        "Load bearing twice: it feeds contrast-pair generation and it is the thing another author disagrees with."],
-    ],
-  },
-  {
-    group: "The intervention",
-    fields: [
-      ["intervention_id", "intervention id", "text",
-        "The primary key, and the thing an eval report or an attack points at."],
-      ["kind", "kind", "text",
-        "An open string. Whatever you call this. Nothing checks it against a list."],
-      ["model_id", "model id", "text",
-        "A direction has no meaning apart from the model it was read out of, which is why the model is part of the identity."],
-      ["model_revision", "model revision", "text",
-        "Optional. Absent renders as absent rather than as an error."],
-      ["layer", "layer", "text",
-        "A whole number. A band across several layers cannot be stated in this column at all, which is a recorded gap."],
-      ["layer_convention", "layer convention", "text",
-        "Getting this wrong is silent. block-0indexed is a common value and not the only one."],
-      ["hook_point", "hook point", "text",
-        "An open string. Where in the block this acts."],
-      ["chat_template_hash", "chat template hash", "text",
-        "Optional."],
-      ["activation_norm", "activation norm", "text",
-        "Optional. A number, or nothing."],
-      ["coeff_low", "coefficient, low", "text", "Optional."],
-      ["coeff_high", "coefficient, high", "text", "Optional."],
-      ["steering_position", "steering position", "text", "Optional."],
-      ["license_status", "license status", "textarea",
-        "What the source model's license says about an artifact derived from it, with the URL and the date you read it. Yours to assert, not ours to decide."],
-    ],
-  },
-  {
-    group: "The artifact, which is a link",
-    fields: [
-      ["repo", "repository", "text",
-        "owner/name. The bytes stay yours and this records where they are."],
-      ["commit", "commit", "text",
-        "Forty hex characters. A branch or a tag is movable by whoever owns the repository, so neither can be pinned."],
-      ["path", "path in the repository", "text",
-        "The same string the client will fetch by."],
-      ["host", "host", "text",
-        "Optional. Empty means the Hub, which is where a row recording no host has always resolved."],
-      ["url_template", "url template", "text",
-        "Optional, and how the four fields above become a URL on a host this project has never met."],
-    ],
-  },
-];
 ---
 
 <Base title="Signed in" trail={[{ text: "controlbun", href: "/" }]} synthetic="none">
@@ -236,8 +93,6 @@ const CONTRACT = [
     data-supabase-key={supabaseKey}
     data-provider={PROVIDER}
     data-discovery={DISCOVERY}
-    data-read-scopes={READ_SCOPES}
-    data-write-scopes={WRITE_SCOPES}
   >
   </div>
 
@@ -274,7 +129,8 @@ const CONTRACT = [
         Signing in writes no submission and publishes nothing. It leaves one
         session in this browser, so coming back later does not ask again, and
         Sign out in the bar at the top deletes it. Whether to send anything is a
-        separate press, further down, after you have read what it would send.
+        separate press, on a separate page, after you have read what it would
+        send.
       </p>
     </section>
   )}
@@ -284,9 +140,7 @@ const CONTRACT = [
 
   <p id="failed" hidden class="banner"></p>
 
-  {/* A session came back off this browser. Outside the section above, because
-      it is shown beside the submission form rather than beside the button that
-      would start a sign-in nobody needs. */}
+  {/* A session came back off this browser. */}
   <p id="remembered" hidden class="banner"></p>
 
   {/* And the other answer: there was a session and it could not be renewed.
@@ -324,193 +178,51 @@ const CONTRACT = [
       it, so a visit tomorrow is not a second sign-in and the bar at the top can
       offer <strong>Add artifact</strong> on a page this one did not render. The
       Hugging Face token, which could create and write repositories in your
-      account if you take the upload offer below, is <strong>kept nowhere at
-      all</strong>: it is held in one variable for the length of that one upload
-      and Hugging Face never returns it on a renewal, so keeping it would buy
-      nothing and risk your account. <strong>Sign out</strong> in the bar
-      deletes the session and the handle from this browser. It tells nobody, so
-      the session is not revoked at the identity service and lapses there on its
-      own, and it does not end your Hugging Face session.
+      account if you take the upload offer when you submit, is <strong>kept
+      nowhere at all</strong>: it is held in one variable for the length of that
+      one call and Hugging Face never returns it on a renewal, so keeping it
+      would buy nothing and risk your account. <strong>Sign out</strong> in the
+      bar deletes the session and the handle from this browser. It tells nobody,
+      so the session is not revoked at the identity service and lapses there on
+      its own, and it does not end your Hugging Face session.
     </p>
   </section>
 
-  <section id="submit-section" hidden>
-    <h2>Submit a direction</h2>
-
-    <p class="banner">
-      <strong>A submission does not appear on this site until the author rebuilds
-      and publishes it.</strong> The corpus is a file in git and the site is built
-      from it on one machine, which is what lets the falsifier check the thing
-      readers actually read. Pressing submit puts what you wrote in a holding
-      table, where it waits to be read. That is not a queue and there is nothing
-      to approve: your namespace is the handle Hugging Face reported, so there is
-      no question for anybody to answer about it.
-    </p>
-
+  <section id="onward" hidden>
+    <h2>Your namespace is your handle, and there is no field for it</h2>
     <p>
-      Your namespace is <strong id="namespace-shown"></strong>, which is the handle
-      Hugging Face reported when you signed in. There is no field for it and no
-      default to type over. What that makes impossible: publishing under a
-      pseudonym, under a lab name you hold no account for, or into one namespace
-      shared by several people who each sign in as themselves.
+      Anything you submit is published under <strong id="namespace-shown"></strong>,
+      the handle Hugging Face reported just now, and the database writes it from
+      your session rather than from anything you type. It is shown to you, not
+      offered: no box, and no default to type over.
     </p>
-
     <p class="note">
-      A submission is a pointer to bytes a stranger can fetch. If your repository
-      is private, the section below will publish the one file to your own account,
-      with your permission, and then fill in the pin.
+      What that makes impossible, stated because a rule that cannot name its cost
+      has not been thought through: publishing under a pseudonym, under a lab name
+      you hold no account for, or into one namespace shared by several people who
+      each sign in as themselves. The last is a real shape, and today the answer
+      is that a group claims a namespace rather than submits into one.
     </p>
-
-    <div id="fields">
-      {CONTRACT.map((group) => (
-        <fieldset>
-          <legend>{group.group}</legend>
-          {group.fields.map(([name, title, kind, why]) => (
-            <div class="field">
-              <label for={`f-${name}`}>{title}</label>
-              {kind === "textarea" ? (
-                <textarea id={`f-${name}`} name={name} rows="3"></textarea>
-              ) : (
-                <input id={`f-${name}`} name={name} type="text" />
-              )}
-              <p class="why">{why}</p>
-            </div>
-          ))}
-        </fieldset>
-      ))}
-    </div>
-
-    <details id="offer">
-      <summary>The file is not at a public URL yet</summary>
-      <p>
-        This registry can put one file in <strong id="offer-namespace"></strong>,
-        your own account, in a new public repository, and then fill in the
-        repository, the commit and the path above. The bytes go to your account
-        and never to this project's, which is a different column in the schema and
-        a different question.
-      </p>
-      <p>
-        Hugging Face will ask you for one more permission at that point and not
-        before: creating repositories for this app, which cannot reach any other
-        repository you own. It asks every time, including on a visit where this
-        browser already had your session, because the token that permission
-        returns is the one credential here that is never stored, logged or
-        written anywhere. It lives in one variable for the length of the upload.
-      </p>
-      <div class="field">
-        <label for="f-upload-name">repository to create</label>
-        <input id="f-upload-name" type="text" />
-        <p class="why">A new one, under your namespace. An existing one stops the
-          offer rather than being written into.</p>
-      </div>
-      <div class="field">
-        <label for="f-upload-path">path inside it</label>
-        <input id="f-upload-path" type="text" />
-        <p class="why">The same string the client will fetch by, so it is also
-          the path recorded on the row.</p>
-      </div>
-      <div class="field">
-        <label for="f-upload-file">the file</label>
-        <input id="f-upload-file" type="file" />
-        <p class="why">It is read in this tab and sent to Hugging Face. It does
-          not reach this site, which has nowhere to receive it.</p>
-      </div>
-      <p>
-        <button type="button" id="do-upload">Ask permission and publish it to my
-          account</button>
-      </p>
-      <p id="upload-said" class="note"></p>
-    </details>
-
-    <details id="absences">
-      <summary>Something is absent and you want to say why</summary>
-      <p class="note">
-        An absence is a positive statement with a reason, never an omission and
-        never an error. One line per field, as <code>field: your sentence</code>.
-        The field name is any string; it is not checked against a list.
-      </p>
-      <div class="field">
-        <label for="f-absent">absences</label>
-        <textarea id="f-absent" rows="3"></textarea>
-        <p class="why">A field cannot carry both a value above and a reason for
-          having none. That is two claims about one field, and the author's
-          rebuild refuses it rather than picking one.</p>
-      </div>
-    </details>
-
     <p>
-      <button type="button" id="build-record" class="go">Build my submission</button>
+      <a href="/submit/" class="go">Submit a direction</a>{" "}
+      <span class="note">
+        Which is a separate page and a separate press. Nothing has been sent by
+        signing in, and nothing is sent until you read the record on that page
+        and press send.
+      </span>
     </p>
-    <p id="record-said" class="banner" hidden></p>
-
-    <div id="record-out" hidden>
-      <h3>Your submission</h3>
-      <p>
-        Nothing has been sent yet. This is the record. Read it, then send it.
-      </p>
-      <pre id="record-json"></pre>
-      <p>
-        <button type="button" id="send-record" class="go">Send it</button>{" "}
-        <button type="button" id="keep-record">Download a copy</button>
-      </p>
-      <p class="note">
-        Sending puts this record and three columns beside it in a holding table:
-        the account, the subject and the handle, all three taken from your signed
-        session by the database rather than from anything above. So a submission
-        cannot claim to be from somebody it is not. The copy is for you; it is
-        not needed for anything and nothing here depends on your keeping it.
-      </p>
-      <p class="note">
-        Reading it later fetches the bytes at the pin, checks them against what
-        this record says, writes the row and rebuilds the site. The shape, the
-        dtype, the norm and the digest are read off the bytes on that machine
-        rather than computed here, because one thing in this project reads bytes
-        and a second implementation of it is the failure this repository has hit
-        most often. A pin nobody can fetch is refused there, with the reason.
-      </p>
-    </div>
-
-    <section id="sent" hidden>
-      <h3>Received</h3>
-      <p class="banner">
-        <strong>It is in the holding table and it is not on the site.</strong>
-        It appears when the author reads it in, rebuilds the corpus and
-        publishes, because the corpus is a file in git. Nothing was approved and
-        nothing was ranked.
-      </p>
-      <dl class="said">
-        <dt>received at</dt><dd id="sent-when"></dd>
-        <dt>row</dt><dd id="sent-id"></dd>
-        <dt>stamped handle</dt><dd id="sent-handle"></dd>
-        <dt>stamped subject</dt><dd id="sent-sub"></dd>
-      </dl>
-      <p class="note">
-        Those four are what the database wrote, read back off its answer rather
-        than off what this page sent. The handle and the subject beside them are
-        the ones your session carries; the record above carries the browser's own
-        copy of both, and where the two disagree the stamped ones are the ones
-        the author reads.
-      </p>
-      <p class="note">
-        There is no way to edit or withdraw this from here, on purpose: a
-        submission is a statement somebody made at a time, and a correction is
-        another submission. Mail the author if you need one removed.
-      </p>
-    </section>
-    <p id="send-said" hidden class="banner"></p>
   </section>
 
   <h2>What this page is not</h2>
   <p class="note">
     It is not an account. It is not a queue, and nothing here is reviewed,
-    ranked, counted or ordered. It keeps no cookie. It writes two things and
-    they are different in kind: the submission you send, which nobody else can
-    read, and the session for this registry, which stays in this browser under
-    one key so a return visit is not a second sign-in and which Sign out
-    deletes. The Hugging Face token is the thing it never writes down anywhere,
-    because that one reaches your account rather than this table. A namespace
-    takes any number of claimants, and two people claiming one name render as
-    two claims with their dates rather than as a conflict anybody here resolves.
+    ranked, counted or ordered. It keeps no cookie. The one thing it writes is
+    the session for this registry, which stays in this browser under one key so a
+    return visit is not a second sign-in and which Sign out deletes. The Hugging
+    Face token is the thing it never writes down anywhere, because that one
+    reaches your account rather than this site. A namespace takes any number of
+    claimants, and two people claiming one name render as two claims with their
+    dates rather than as a conflict anybody here resolves.
   </p>
 
   <p>
@@ -522,50 +234,22 @@ const CONTRACT = [
   .said { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; }
   .said dt { font-weight: 600; }
   .said dd { margin: 0; overflow-wrap: anywhere; }
-  fieldset { border: 1px solid var(--rule, #ddd); border-radius: 0.3rem;
-    margin: 1.2rem 0; padding: 0.6rem 1rem 1rem; }
-  legend { font-weight: 600; padding: 0 0.4rem; }
-  .field { margin: 0.9rem 0; }
-  .field label { display: block; font-weight: 600; }
-  .field input, .field textarea { width: 100%; box-sizing: border-box;
-    font: inherit; padding: 0.35rem 0.5rem; }
-  .why { margin: 0.25rem 0 0; font-size: 0.85em; opacity: 0.75; }
-  pre { overflow-x: auto; padding: 0.8rem; background: var(--tint, #f5f5f5);
-    border-radius: 0.3rem; }
-  details { margin: 1.2rem 0; }
-  summary { cursor: pointer; font-weight: 600; }
 </style>
 
 <script>
   import {
-    accessSpent,
     authorizeUrl,
     captureFrom,
     confirmations,
     downloadName,
-    heldSessionFrom,
     nowStamp,
-    pendingRowFrom,
     pkcePair,
-    refuseOurNamespace,
+    READ_SCOPES,
     signerFrom,
-    submissionFrom,
     Refused,
   } from "../lib/handshake.mjs";
-  import {
-    commit,
-    createRepo,
-    digestOf,
-    discovery,
-    exchange,
-    HubError,
-    inlineFile,
-    putLfs,
-    refreshSession,
-    sendPending,
-    uploadMode,
-    userinfo,
-  } from "../lib/hub.mjs";
+  import { discovery, exchange, HubError, userinfo } from "../lib/hub.mjs";
+  import { keep, resume, staleSaid } from "../lib/held.mjs";
 
   const config = document.getElementById("handshake").dataset;
   const SUPABASE = config.supabaseUrl;
@@ -577,16 +261,6 @@ const CONTRACT = [
   // anything on its own: without the authorization code it exchanges for
   // nothing.
   const VERIFIER = "controlbun.pkce";
-  // The one thing that outlives this tab, and since 2026-09-20 it is a
-  // credential: the Supabase session, with the refresh token that makes a
-  // return visit work. What goes in is `heldSessionFrom`'s output and nothing
-  // else, which is where the rule about what may be in it is enforced rather
-  // than here, and the rule is that the Hugging Face provider token is not.
-  const HELD = "controlbun.session";
-  // Names the window so a second press reuses it rather than stacking two
-  // consent screens. Not used to recognize the window on the way back: see the
-  // comment at the bottom of this file for why that cannot work.
-  const POPUP_NAME = "controlbun-scope";
 
   const show = (id, on = true) => {
     const node = document.getElementById(id);
@@ -618,144 +292,17 @@ const CONTRACT = [
   }
 
   // ------------------------------------------------------------------ //
-  // The session, which is the one thing here that outlives the tab.
-  //
-  // Three functions and one key, so the page never touches storage anywhere
-  // else and the record can only be the module's projection. Each one tells the
-  // bar, which is on a page this script did not render and would otherwise sit
-  // on the previous answer until a reload.
-
-  let signed = null;
-
-  /** Write the session. The only call into storage on this page. */
-  function keep(held) {
-    localStorage.setItem(HELD, JSON.stringify(held));
-    signed = held;
-    window.dispatchEvent(new Event("controlbun:session"));
-    return held;
-  }
-
-  /** The session is gone. Said in one place, so the bar cannot disagree. */
-  function forget() {
-    localStorage.removeItem(HELD);
-    signed = null;
-    window.dispatchEvent(new Event("controlbun:session"));
-  }
-
-  /**
-   * What this browser kept, or null.
-   *
-   * A record with no refresh token is not restored: it names somebody and
-   * cannot renew, which is the state the bar used to offer a way in on.
-   */
-  function restore() {
-    let held = null;
-    try {
-      held = JSON.parse(localStorage.getItem(HELD) || "null");
-    } catch (unreadable) {
-      return null;
-    }
-    return held && held.access_token && held.refresh_token ? held : null;
-  }
-
-  /** What to say when a session came back and could not be renewed. */
-  function staleSaid(problem) {
-    return (
-      "The session this browser kept could not be renewed, so it has been " +
-      "deleted here and nothing was sent. The identity service said: " +
-      `${problem.message ?? problem} ` +
-      "That is what a session signed out somewhere else looks like, or one " +
-      "left longer than the identity service keeps one. It is " +
-      "not a failure of anything you typed. " +
-      "Signing in again is the whole of the fix. It leaves this page, so take " +
-      "the copy first if you have built a record."
-    );
-  }
-
-  /**
-   * The session, renewed if the access token is spent.
-   *
-   * Called before the one request that needs it rather than on a timer,
-   * because a page left open for an hour and a page opened tomorrow are the
-   * same problem and this is the only place either of them is felt.
-   */
-  async function usable() {
-    if (!signed) {
-      throw new Refused(
-        "there is no session in this browser, so there is nothing to send " +
-          "with. Sign in again and the button at the top of this page starts " +
-          "it. Nothing was sent.",
-      );
-    }
-    if (!accessSpent(signed)) return signed;
-    try {
-      const said = await refreshSession(SUPABASE, KEY, {
-        refreshToken: signed.refresh_token,
-      });
-      return keep(heldSessionFrom(said, { provider: config.provider }));
-    } catch (problem) {
-      forget();
-      show("stale", true);
-      say("stale", staleSaid(problem));
-      throw new Refused(
-        "this session could not be renewed, so nothing was sent. What went " +
-          "wrong is above; the record you built is still on this page and the " +
-          "button beside it still downloads a copy.",
-      );
-    }
-  }
-
-  // ------------------------------------------------------------------ //
   // Leg one: leaving.
 
-  async function begin(scopes, { popup = false } = {}) {
+  async function begin() {
     const { verifier, challenge } = await pkcePair();
     sessionStorage.setItem(VERIFIER, verifier);
-    const url = authorizeUrl(SUPABASE, {
+    location.assign(authorizeUrl(SUPABASE, {
       provider: config.provider,
       redirectTo: RETURN_TO,
       challenge,
-      scopes: scopes.split(/\s+/).filter(Boolean),
-    });
-    if (!popup) {
-      location.assign(url);
-      return null;
-    }
-    const child = window.open(url, POPUP_NAME, "width=620,height=760");
-    if (!child) {
-      throw new Refused(
-        "the browser stopped the permission window from opening. Allow popups " +
-          "for this site and press the button again. Nothing was sent.",
-      );
-    }
-    return new Promise((resolve, reject) => {
-      const done = (event) => {
-        if (event.origin !== location.origin || !event.data) return;
-        if (event.data.controlbun !== "scope") return;
-        window.removeEventListener("message", done);
-        clearInterval(watch);
-        if (event.data.error) reject(new Refused(event.data.error));
-        else if (!event.data.code) {
-          reject(new Refused(
-            "the permission window came back with no authorization code, so " +
-              "there is nothing to exchange and nothing was uploaded.",
-          ));
-        } else resolve(event.data.code);
-      };
-      window.addEventListener("message", done);
-      const watch = setInterval(() => {
-        if (child.closed) {
-          clearInterval(watch);
-          window.removeEventListener("message", done);
-          reject(
-            new Refused(
-              "the permission window was closed before Hugging Face answered. " +
-                "Nothing was sent and nothing was uploaded.",
-            ),
-          );
-        }
-      }, 400);
-    });
+      scopes: READ_SCOPES.split(/\s+/).filter(Boolean),
+    }));
   }
 
   // ------------------------------------------------------------------ //
@@ -791,7 +338,7 @@ const CONTRACT = [
       );
     }
     const session = await exchange(SUPABASE, KEY, { code, verifier });
-    keep(heldSessionFrom(session, { provider: config.provider }));
+    keep(session, { provider: config.provider });
     const token = session.provider_token;
     if (!token) {
       throw new Refused(
@@ -811,20 +358,6 @@ const CONTRACT = [
     });
   }
 
-  /** The same exchange, for the elevated scope, returning only the token. */
-  async function elevated(code) {
-    const verifier = sessionStorage.getItem(VERIFIER);
-    sessionStorage.removeItem(VERIFIER);
-    const session = await exchange(SUPABASE, KEY, { code, verifier });
-    if (!session.provider_token) {
-      throw new Refused(
-        "Hugging Face returned a session with no provider token, so there is " +
-          "nothing to upload with. Nothing was written to your account.",
-      );
-    }
-    return session.provider_token;
-  }
-
   // ------------------------------------------------------------------ //
   // What the page shows.
 
@@ -832,20 +365,13 @@ const CONTRACT = [
   // Null on a restored session, because reading it needs the provider token and
   // no browser here keeps one.
   let held = null;
-  // Who the submission is built from: the capture on the load that signed in,
-  // the restored session otherwise. Both carry the three fields
-  // `submissionFrom` reads, and `signerFrom` is what puts a session in that
-  // shape without putting a token in it.
-  let signer = null;
 
   function render(entry) {
     held = entry;
-    signer = entry;
     say("who-handle", entry.preferred_username ?? "the provider returned none");
     say("who-sub", entry.sub);
     say("who-when", entry.captured_at);
     say("namespace-shown", entry.preferred_username ?? "");
-    say("offer-namespace", entry.preferred_username ?? "");
 
     const orgs = document.getElementById("who-orgs");
     orgs.textContent = "";
@@ -873,30 +399,29 @@ const CONTRACT = [
     show("remembered", false);
     show("stale", false);
     show("who", true);
-    show("submit-section", Boolean(entry.preferred_username));
+    show("onward", Boolean(entry.preferred_username));
   }
 
   /**
    * A session came back off this browser, so there is no reading to show.
    *
-   * The namespace and the submission form are all of it. `#who` stays hidden
-   * rather than showing the membership this browser saw last time: a
-   * membership read once and held forever goes stale quietly while still
-   * looking like a fact, which is the sentence already under that section, and
-   * it applies hardest to a reading nothing here even re-fetched.
+   * The namespace and the way on are all of it. `#who` stays hidden rather than
+   * showing the membership this browser saw last time: a membership read once
+   * and held forever goes stale quietly while still looking like a fact, which
+   * is the sentence already under that section, and it applies hardest to a
+   * reading nothing here even re-fetched.
    */
-  function resumed(held_, { renewed }) {
-    signer = signerFrom(held_);
+  function resumed(kept, { renewed }) {
+    const signer = signerFrom(kept);
     say("namespace-shown", signer.preferred_username ?? "");
-    say("offer-namespace", signer.preferred_username ?? "");
     show("working", false);
     show("start", false);
     show("stale", false);
-    show("submit-section", Boolean(signer.preferred_username));
+    show("onward", Boolean(signer.preferred_username));
     show("remembered", true);
     say(
       "remembered",
-      `This browser kept the session from a sign-in on ${held_.recorded_at}, ` +
+      `This browser kept the session from a sign-in on ${kept.recorded_at}, ` +
         "so Hugging Face was not asked again. " +
         (renewed
           ? "Its access token had expired and the identity service issued a " +
@@ -916,137 +441,35 @@ const CONTRACT = [
   /**
    * A plain visit: restore, renew if the access token is spent, say which.
    *
-   * Only this page renews. The bar is on every page and renewing there would
-   * put the identity endpoint and the publishable key on every page, which
-   * `tests/test_signed_in_page.py` holds to the one page with business for
-   * one. So the bar answers off what the record says it can do, and the one
-   * page that can ask, asks.
+   * Only the two pages with business for the endpoint renew. The bar is on
+   * every page and renewing there would put the identity endpoint and the
+   * publishable key on every page, which `tests/test_signed_in_page.py` holds
+   * to the pages with business for one. So the bar answers off what the record
+   * says it can do, and the pages that can ask, ask.
    */
-  async function resume() {
+  async function arrive() {
     if (!SUPABASE || !KEY) return;
-    const kept = restore();
-    if (!kept) {
+    show("working", true);
+    say("working", "Reading the session this browser kept.");
+    const answer = await resume(SUPABASE, KEY, { provider: config.provider });
+    show("working", false);
+    if (answer.state === "none") {
       show("start", true);
       return;
     }
-    signed = kept;
-    if (!accessSpent(kept)) {
-      resumed(kept, { renewed: false });
-      return;
-    }
-    show("working", true);
-    say("working", "Renewing this session with the identity service.");
-    try {
-      const said = await refreshSession(SUPABASE, KEY, {
-        refreshToken: kept.refresh_token,
-      });
-      resumed(keep(heldSessionFrom(said, { provider: config.provider })), {
-        renewed: true,
-      });
-    } catch (problem) {
+    if (answer.state === "stale") {
       // A refusal is a state and not an error: the reader did nothing wrong
-      // and there is one thing to do about it. So the session goes, the bar
-      // drops back to Sign in on the same frame, and the button that starts a
-      // fresh one is on the screen under a sentence saying why it is there.
-      forget();
-      show("working", false);
+      // and there is one thing to do about it. So the session is already gone,
+      // the bar drops back to Sign in on the same frame, and the button that
+      // starts a fresh one is on the screen under a sentence saying why it is
+      // there.
       show("remembered", false);
       show("stale", true);
-      say("stale", staleSaid(problem));
+      say("stale", staleSaid(answer.problem));
       show("start", true);
+      return;
     }
-  }
-
-  // Whether the registry made the upload on this person's behalf. A fact about
-  // how the bytes got where they are, recorded on the submission, and never a
-  // property of the submission itself.
-  let uploaded = false;
-
-  function readForm() {
-    const value = (name) => (document.getElementById(`f-${name}`) || {}).value ?? "";
-    const absent = {};
-    for (const line of value("absent").split("\n")) {
-      const at = line.indexOf(":");
-      if (at > 0) absent[line.slice(0, at).trim()] = line.slice(at + 1).trim();
-    }
-    return {
-      label: value("label"),
-      version: value("version"),
-      created_at: value("created_at"),
-      definition: value("definition"),
-      intervention_id: value("intervention_id"),
-      kind: value("kind"),
-      model_id: value("model_id"),
-      model_revision: value("model_revision"),
-      layer: value("layer"),
-      layer_convention: value("layer_convention"),
-      hook_point: value("hook_point"),
-      chat_template_hash: value("chat_template_hash"),
-      activation_norm: value("activation_norm"),
-      coeff_low: value("coeff_low"),
-      coeff_high: value("coeff_high"),
-      steering_position: value("steering_position"),
-      license_status: value("license_status"),
-      repo: value("repo"),
-      commit: value("commit"),
-      path: value("path"),
-      host: value("host"),
-      url_template: value("url_template"),
-      absent,
-      uploaded_by_registry: uploaded,
-    };
-  }
-
-  // ------------------------------------------------------------------ //
-  // The upload offer, which runs only when somebody presses the button.
-
-  async function publish() {
-    const namespace = signer && signer.preferred_username;
-    const name = document.getElementById("f-upload-name").value.trim();
-    const path = document.getElementById("f-upload-path").value.trim();
-    const chosen = document.getElementById("f-upload-file").files[0];
-    if (!namespace) throw new Refused("nobody is signed in, so there is no account to publish to.");
-    if (!name) throw new Refused("name the repository to create.");
-    if (!path) throw new Refused("say where the file goes inside it.");
-    if (!chosen) throw new Refused("choose the file.");
-    const repo = refuseOurNamespace(`${namespace}/${name}`);
-
-    say("upload-said", "Asking Hugging Face for permission.");
-    const code = await begin(config.writeScopes, { popup: true });
-    // One variable, one function, one frame. It reaches no file and no log.
-    const token = await elevated(code);
-
-    say("upload-said", `Creating ${repo}.`);
-    await createRepo(token, { namespace, name });
-
-    const bytes = await chosen.arrayBuffer();
-    const oid = await digestOf(bytes);
-    say("upload-said", `Sending ${bytes.byteLength} bytes.`);
-    const mode = await uploadMode(token, repo, {
-      path,
-      size: bytes.byteLength,
-      sample: btoa(
-        String.fromCharCode(...new Uint8Array(bytes.slice(0, 512))),
-      ),
-    });
-    const entry =
-      mode === "lfs"
-        ? await putLfs(token, repo, { path, bytes, oid })
-        : inlineFile(path, bytes);
-
-    const sha = await commit(token, repo, {
-      entry,
-      summary: "Add a steering direction",
-    });
-    uploaded = true;
-    document.getElementById("f-repo").value = repo;
-    document.getElementById("f-commit").value = sha;
-    document.getElementById("f-path").value = path;
-    say(
-      "upload-said",
-      `Published to ${repo} at ${sha}. The pin above is filled in. ` +
-        "The bytes are in your account and this registry holds none of them.",
-    );
+    resumed(answer.held, { renewed: answer.state === "renewed" });
   }
 
   // ------------------------------------------------------------------ //
@@ -1055,7 +478,7 @@ const CONTRACT = [
   const begun = document.getElementById("begin");
   if (begun) {
     begun.addEventListener("click", () => {
-      begin(config.readScopes).catch(stop);
+      begin().catch(stop);
     });
   }
 
@@ -1067,99 +490,6 @@ const CONTRACT = [
     );
   });
 
-  document.getElementById("do-upload").addEventListener("click", () => {
-    publish().catch((problem) =>
-      say("upload-said", problem.message ?? `${problem}`),
-    );
-  });
-
-  let record = null;
-  document.getElementById("build-record").addEventListener("click", () => {
-    try {
-      record = submissionFrom(readForm(), {
-        capture: signer,
-        submittedAt: nowStamp(),
-      });
-      document.getElementById("record-json").textContent = JSON.stringify(
-        record,
-        null,
-        2,
-      );
-      show("record-said", false);
-      show("record-out", true);
-      // Building again after a send is a new record, so the receipt for the
-      // old one comes off the screen rather than sitting under a record it is
-      // not a receipt for.
-      show("sent", false);
-      show("send-said", false);
-      document.getElementById("send-record").disabled = false;
-    } catch (problem) {
-      show("record-out", false);
-      show("record-said", true);
-      say("record-said", problem.message ?? `${problem}`);
-    }
-  });
-
-  document.getElementById("keep-record").addEventListener("click", () => {
-    if (!record) return;
-    download(
-      downloadName("submission", `${record.author}-${record.label}`, record.submitted_at),
-      JSON.stringify(record, null, 2),
-    );
-  });
-
-  // The send, which is the path. The download beside it is a copy for the
-  // person who made it and is not how anything gets here.
-  async function send() {
-    if (!SUPABASE || !KEY) {
-      throw new Refused(
-        "this build was made without an endpoint, so there is nowhere to send " +
-          "this. That is a fact about how the site was built rather than about " +
-          "your submission, and nothing else here is a way round it: mail is " +
-          "not a submission route. Keep the record and try again later.",
-      );
-    }
-    // Renewed first if the access token is spent, which is the ordinary case
-    // on a page that has been open a while and on every visit after the first.
-    // A person who pressed send should not be told to sign in again for a
-    // reason a request could have settled.
-    const now = await usable();
-    // Built from the session and never from the record above, because the
-    // database refuses a row whose columns disagree with the session and
-    // because a submission that could name its own author would not be worth
-    // stamping. The user comes out of the held record rather than the held
-    // record going in, so there is still no parameter here a token can reach.
-    const row = pendingRowFrom(now.user, record);
-    const written = await sendPending(SUPABASE, KEY, {
-      accessToken: now.access_token,
-      row,
-    });
-    say("sent-when", written.received_at ?? "the answer carried no time");
-    say("sent-id", written.id);
-    say("sent-handle", written.handle);
-    say("sent-sub", written.subject);
-    show("send-said", false);
-    show("record-out", false);
-    show("sent", true);
-  }
-
-  document.getElementById("send-record").addEventListener("click", (event) => {
-    const button = event.currentTarget;
-    if (!record) return;
-    // Disabled for the length of the request, so a second press is a second
-    // row rather than a duplicate of the first one by accident. Re-enabled on
-    // failure, because a failure means nothing was written.
-    button.disabled = true;
-    say("send-said", "Sending.");
-    show("send-said", true);
-    send()
-      .catch((problem) => {
-        button.disabled = false;
-        show("send-said", true);
-        say("send-said", problem.message ?? `${problem}`);
-      });
-  });
-
   // ------------------------------------------------------------------ //
   // Which of the three things this load is.
 
@@ -1167,8 +497,9 @@ const CONTRACT = [
   const failure = new URLSearchParams(location.search).get("error_description");
 
   if (window.opener && (code || failure)) {
-    // A permission window. It relays and closes, and does nothing else: the
-    // page that opened it holds the verifier and makes the exchange.
+    // A permission window, opened by `/submit/`. It relays and closes, and does
+    // nothing else: the page that opened it holds the verifier and makes the
+    // exchange.
     //
     // `code || failure` as well as the opener, so a tab somebody opened some
     // other way does not close itself the moment it loads. A permission window
@@ -1196,16 +527,8 @@ const CONTRACT = [
     history.replaceState(null, "", location.pathname);
     capture(code).then(render).catch(stop);
   } else {
-    // A plain visit, which is what the Add artifact button in the bar produces.
-    // Somebody arriving that way has the session this browser kept, or nothing.
-    //
-    // This branch used to read the remembered handle and explain that it was
-    // not a session, because it never could be one: the token died with the
-    // tab. That explanation was honest and the arrangement it explained was
-    // not, since the bar had already offered Add artifact to somebody it then
-    // had to ask to sign in again. The session persists now, so the three
-    // answers this page can give are a restored session, a session that could
-    // not be renewed, and nothing at all, and `resume` says which.
-    resume().catch(stop);
+    // A plain visit, which is what Sign in in the bar produces. Somebody
+    // arriving that way has the session this browser kept, or nothing.
+    arrive().catch(stop);
   }
 </script>

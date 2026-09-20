@@ -1,5 +1,5 @@
-"""`/signed-in/`: the return leg, the submission it makes possible, and the
-guards that were rewritten rather than deleted to let it exist.
+"""`/signed-in/`: the return leg, and the guards that were rewritten rather than
+deleted to let it exist.
 
 Premise, restated because a premise stated in one file gets violated in every
 other one: **plurality is the product, the registry never designates, and
@@ -7,6 +7,13 @@ consumers pin visibly.** Identity is somebody else's here. Signing in confers no
 standing, nothing on that page ranks, counts or orders anything, and there is no
 queue: the namespace is the handle the provider reported, so there is nothing for
 a reviewer to decide.
+
+**The submission moved out on 2026-09-20 and is in `tests/test_submit_page.py`.**
+The form went to `/submit/` with it: the bar's **Add artifact** pointed at this
+page while the two were joined, so pressing it mid-sign-in reloaded the page and
+discarded the exchange in progress. What is left here is what the page's name
+says, plus the two properties that were narrowed rather than dropped when the
+session started persisting.
 
 **This file replaces `tests/test_signin.py`, which went with the loopback tool it
 tested.** What it inherits is the part that was about the shape of the evidence
@@ -39,7 +46,11 @@ DIST = ROOT / "astro" / "dist"
 LIB = ROOT / "astro" / "src" / "lib"
 HANDSHAKE = LIB / "handshake.mjs"
 HUB = LIB / "hub.mjs"
+# The session in a browser, which is one module rather than a copy per page
+# since `/submit/` also has to restore, renew and drop one.
+HELD = LIB / "held.mjs"
 PAGE = ROOT / "astro" / "src" / "pages" / "signed-in.astro"
+SUBMIT = ROOT / "astro" / "src" / "pages" / "submit.astro"
 BUILT = DIST / "signed-in" / "index.html"
 
 NODE = shutil.which("node")
@@ -236,12 +247,17 @@ def test_the_scope_parameter_replaces_rather_than_adds():
     So the wider request has to restate the narrow ones, and a caller that
     passed only the extra would silently drop `read-memberships`.
 
-    Checked here as a property of the page's two constants rather than of the
-    network: the write list contains the read list.
+    Checked here as a property of two constants rather than of the network: the
+    write list contains the read list.
+
+    Both live in `handshake.mjs` since 2026-09-20, because two pages read them:
+    `/signed-in/` starts a sign-in and `/submit/` asks for the upload
+    permission. A property that spans two files is a property that holds until
+    somebody edits one of them.
     """
-    source = PAGE.read_text()
-    read = re.search(r'READ_SCOPES = "([^"]+)"', source).group(1).split()
-    write = re.search(r'WRITE_SCOPES = "([^"]+)"', source).group(1).split()
+    source = HANDSHAKE.read_text()
+    read = re.search(r'READ_SCOPES =\s*"([^"]+)"', source).group(1).split()
+    write = re.search(r'WRITE_SCOPES =\s*\n?\s*"([^"]+)"', source).group(1).split()
     assert set(read) <= set(write), (
         f"{sorted(set(read) - set(write))} is asked for at sign-in and not at "
         "upload, so taking the offer would drop it"
@@ -254,7 +270,7 @@ def test_signing_in_asks_for_no_write_access_to_anything():
     already-public file is never asked to grant write access. That is the whole
     reason the scope is incremental, and it is a property of one constant."""
     read = re.search(
-        r'READ_SCOPES = "([^"]+)"', PAGE.read_text()
+        r'READ_SCOPES =\s*"([^"]+)"', HANDSHAKE.read_text()
     ).group(1).split()
 
     # Checked as a property rather than against a literal list. This asserted
@@ -284,7 +300,7 @@ def test_the_upload_asks_for_the_narrowest_scope_that_creates_a_repository():
     `manage-repos` both reach every repository the person owns, which is more
     than putting one file in a new one needs."""
     write = re.search(
-        r'WRITE_SCOPES = "([^"]+)"', PAGE.read_text()
+        r'WRITE_SCOPES =\s*\n?\s*"([^"]+)"', HANDSHAKE.read_text()
     ).group(1).split()
     assert "contribute-repos" in write
     for wider in ("write-repos", "manage-repos", "read-repos"):
@@ -294,133 +310,10 @@ def test_the_upload_asks_for_the_narrowest_scope_that_creates_a_repository():
 
 
 # --------------------------------------------------------------------------- #
-# The submission.
-
-
-def a_form(**over):
-    form = {
-        "label": "pro-human", "version": "meandiff",
-        "created_at": "2026-09-01", "definition": "what the author means by it",
-        "intervention_id": "iv-1", "kind": "difference-in-means",
-        "model_id": "allenai/Olmo-3-1125-32B", "layer": "31",
-        "layer_convention": "block-0indexed", "hook_point": "resid_post",
-        "repo": "someone/direction", "commit": "a" * 40,
-        "path": "direction.safetensors",
-    }
-    form.update(over)
-    return form
-
-
-def submission(form, handle="sohampadia"):
-    return run_js(
-        f"return h.submissionFrom({json.dumps(form)}, {{capture: "
-        f'{{preferred_username: {json.dumps(handle)}, provider: "custom:huggingface",'
-        ' sub: "opaque"}, submittedAt: "2026-09-20T00:00:00Z"});'
-    )
-
-
-def test_the_namespace_is_the_handle_and_no_field_can_override_it():
-    """`DECISIONS.md` 2026-09-19: shown, not offered. A pre-filled default was
-    considered and rejected, because somebody who has decided to take a name
-    clears the field and types it. The only version that does anything is the
-    one with no field, so a value called `author` in the form has to be ignored
-    rather than preferred."""
-    out = submission(a_form(author="meta", namespace="meta"), handle="qwen-fan")
-    assert out["author"] == "qwen-fan"
-    assert "namespace" not in out
-
-
-def test_a_submission_with_no_handle_is_refused_rather_than_defaulted():
-    with pytest.raises(AssertionError) as refused:
-        submission(a_form(), handle="")
-    assert "no field to type one into" in str(refused.value)
-
-
-def test_a_branch_or_a_tag_cannot_be_pinned():
-    """Forty hex characters, which is `controlbun.fetch.commit_sha`'s one rule
-    stated in the same words. A tag is movable by whoever owns the repository,
-    so a pin naming one would resolve to different bytes later while the digest
-    beside it kept claiming otherwise."""
-    for bad in ("main", "v1.0", "a" * 39, "z" * 40):
-        with pytest.raises(AssertionError) as refused:
-            submission(a_form(commit=bad))
-        assert "40-character commit sha" in str(refused.value)
-
-
-def test_the_bytes_never_go_to_this_registry_s_own_namespace():
-    """`publish.ServedCopy` refuses this on the author's machine and the reason
-    is in `schema/migrations/004`: `artifact_repo` is where an author published
-    and `served_repo` is where this registry serves a copy from, and one pair of
-    columns cannot express a mirror that has drifted from its origin. The two
-    callers are now on different computers, so the rule is in both."""
-    for bad in ("controlbun/x", "CONTROLBUN/x"):
-        with pytest.raises(AssertionError) as refused:
-            submission(a_form(repo=bad))
-        assert "004_served_copy" in str(refused.value)
-    # And a namespace that merely contains the word is fine.
-    assert submission(a_form(repo="controlbunny/x"))["artifact"]["repo"] == \
-        "controlbunny/x"
-
-
-def test_no_tensor_fact_is_computed_in_the_browser():
-    """One thing in this project reads bytes. A second implementation of shape,
-    dtype, norm and digest in JavaScript is the failure this repository has hit
-    more often than any other, so the record crossing is the pointer and the
-    contract and the facts are derived where the corpus is rebuilt."""
-    out = submission(a_form())
-    # The intervention is where a tensor fact would land, and `shape` at the
-    # top level is this record's own versioned shape rather than a tensor's.
-    for derived in ("sha256", "l2_norm", "dtype", "shape", "size"):
-        assert derived not in out["intervention"], (
-            f"{derived} is in a submission built in the browser, which means "
-            "something there is reading bytes and deciding what they say"
-        )
-    assert "artifact_sha256" not in json.dumps(out["artifact"])
-    assert HANDSHAKE.read_text().count("safetensors") == 0
-
-
-def test_an_absence_is_a_sentence_and_an_empty_one_is_not_recorded():
-    out = submission(a_form(absent={
-        "chat_template_hash": "no hash of the template string is computed anywhere",
-        "activation_norm": "   ",
-        "a_field_nobody_has_met": "and the field side takes any string",
-    }))
-    assert set(out["absent"]) == {"chat_template_hash", "a_field_nobody_has_met"}
-
-
-def test_the_optional_fields_are_absent_rather_than_empty_strings():
-    """Absence renders as absence. A row carrying "" where nobody said anything
-    is a value somebody has to read as a blank, which is the state
-    `schema/migrations/005` and `007` both refuse."""
-    out = submission(a_form())
-    iv = out["intervention"]
-    for field in ("model_revision", "chat_template_hash", "steering_position",
-                  "license_status"):
-        assert iv[field] is None
-    for field in ("activation_norm", "coeff_low", "coeff_high"):
-        assert iv[field] is None
-    assert out["artifact"]["host"] is None
-    assert out["artifact"]["url_template"] is None
-
-
-def test_nothing_in_the_submission_is_a_score_or_an_order():
-    out = submission(a_form())
-    # Key names, not the whole blob, and `status` is deliberately not on the
-    # list below. `license_status` is a field an author asserts about a source
-    # model's license, and a substring scan reads it as a review state, which
-    # is the trap `CLAUDE.md` names: a grep catching the word rather than the
-    # meaning.
-    keys = set(out) | set(out["intervention"]) | set(out["artifact"])
-    for forbidden in ("rank", "score", "rating", "quality", "approved",
-                      "reviewed", "tier", "sort", "order", "count"):
-        assert not any(forbidden in key for key in keys), (
-            f"a submission carries a key containing {forbidden!r}: "
-            f"{sorted(k for k in keys if forbidden in k)}"
-        )
-
-
-# --------------------------------------------------------------------------- #
 # What the built page says and does not do.
+#
+# The submission itself is `tests/test_submit_page.py`, which holds the helpers
+# that build one. It imports `run_js` from here rather than restating it.
 
 
 def built() -> str:
@@ -429,17 +322,56 @@ def built() -> str:
     return BUILT.read_text()
 
 
+def reachable_scripts(page: str) -> list[Path]:
+    """Every file a page's script loads, the ones it imports included.
+
+    A bundler splits shared code into chunks that no `<script src>` names: the
+    page loads one module and that module imports the rest. Reading only the
+    tags was right while each page's script was a single file, and went quiet
+    the moment two pages shared a module, which is the failure this repository
+    keeps catching: a check that passes because it cannot see the thing it is
+    about. `held.mjs` became that shared module on 2026-09-20 and took the
+    session write with it.
+    """
+    queue = [(DIST / src.lstrip("/")).resolve()
+             for src in re.findall(r'<script[^>]*src="([^"]+)"', page)]
+    seen: list[Path] = []
+    while queue:
+        path = queue.pop()
+        if path in seen or not path.exists():
+            continue
+        seen.append(path)
+        code = path.read_text()
+        for rel in re.findall(r'(?:from|import)\s*\(?\s*["\']([^"\']+)["\']', code):
+            if rel.startswith("."):
+                queue.append((path.parent / rel).resolve())
+    return seen
+
+
 def bundle() -> str:
     if not DIST.exists():
         pytest.skip("site not built; run `make site`")
-    scripts = re.findall(r'<script[^>]*src="([^"]+)"', built())
-    text = ""
-    for src in scripts:
-        path = DIST / src.lstrip("/")
-        if path.exists():
-            text += path.read_text()
+    text = "".join(path.read_text() for path in reachable_scripts(built()))
     assert text, "the page ships no script, so there is no return leg on it"
     return text
+
+
+def test_the_scan_follows_the_imports_and_not_only_the_tags():
+    """The bite. A chunk the page imports is code the page ships, and a scan
+    that stopped at the tag would report on a fraction of it.
+    """
+    if not DIST.exists():
+        pytest.skip("site not built; run `make site`")
+    tagged = {
+        (DIST / src.lstrip("/")).resolve()
+        for src in re.findall(r'<script[^>]*src="([^"]+)"', built())
+    }
+    found = set(reachable_scripts(built()))
+    assert tagged <= found
+    assert found - tagged, (
+        "the page's script imports nothing, so this scan is the tag scan with "
+        "more steps. If the bundler stopped splitting chunks, say so here."
+    )
 
 
 def text_of(html: str) -> str:
@@ -448,22 +380,45 @@ def text_of(html: str) -> str:
     return " ".join(re.sub(r"<[^>]+>", " ", html).split())
 
 
-def test_the_identity_endpoint_is_on_this_page_and_on_no_other():
+# The pages that talk to the identity service, with why each one does. Two
+# since 2026-09-20, because the return leg and the submission form are two
+# pages: this one exchanges an authorization code and renews a session, and
+# `/submit/` renews one before it sends a row and exchanges a second code for
+# the upload permission. Everything else on the site is a reader's page and has
+# no business with an endpoint.
+TALKS_TO_THE_SERVICE = {
+    "signed-in/index.html": "the return leg. It exchanges the code, keeps the "
+                            "session and reads what the provider said.",
+    "submit/index.html": "renews the session before sending a row, and "
+                         "exchanges the second code when somebody takes the "
+                         "upload offer.",
+}
+
+
+def test_the_identity_endpoint_is_on_these_pages_and_on_no_other():
     """The guard `tests/test_signin.py` held for the whole build, narrowed
     rather than dropped.
 
     It used to fail on `/auth/v1/`, `supabase` or `signInWithOAuth` anywhere in
     `astro/dist`, which was the right check while nothing on the site could hold
-    a session. One page holds one now. Every other page must still be clean, and
-    the same string turning up under `/about/` or on a submission view is still
-    a finding.
+    a session. Two pages hold one now, each with its reason written down. Every
+    other page must still be clean, and the same string turning up under
+    `/about/` or on a submission view is still a finding.
     """
     if not DIST.exists():
         pytest.skip("site not built; run `make site`")
-    allowed = {"signed-in/index.html"}
-    scripts = {
-        src.lstrip("/") for src in re.findall(r'<script[^>]*src="([^"]+)"', built())
-    }
+    allowed = set(TALKS_TO_THE_SERVICE)
+    scripts = set()
+    for where in TALKS_TO_THE_SERVICE:
+        page = DIST / where
+        if not page.exists():
+            pytest.fail(f"{where} is on the list and was not built")
+        # Imports followed, because the module that renews a session is a
+        # shared chunk no tag names and it carries the endpoint by necessity.
+        scripts.update(
+            str(path.relative_to(DIST))
+            for path in reachable_scripts(page.read_text())
+        )
     offenders = []
     for path in sorted(DIST.rglob("*")):
         if not path.is_file() or path.suffix not in {".html", ".js", ".mjs", ".css"}:
@@ -498,9 +453,16 @@ def test_the_page_keeps_the_session_and_never_the_provider_token():
     repositories in somebody's own namespace, and Hugging Face returns it on the
     sign-in itself and never on a renewal, so keeping it would buy nothing past
     its expiry. What is kept is one key holding `heldSessionFrom`'s projection,
-    and the page writes it through one function.
+    written by one function in one module.
     `tests/test_nav_account.py` holds the same rule across every file in the
     view layer.
+
+    **The write moved into `held.mjs` on 2026-09-20**, when `/submit/` became a
+    second page that restores, renews and drops a session. The property was
+    never "the page writes it in one place", it was "one function writes it",
+    and a copy per page would have ended that. So the source half below reads
+    the module, and the bundle half still reads what this page ships, which is
+    the module plus its own verifier.
     """
     code = bundle()
     writes = [
@@ -527,23 +489,27 @@ def test_the_page_keeps_the_session_and_never_the_provider_token():
     )
     assert "sessionStorage.removeItem(VERIFIER)" in source
 
-    kept = re.findall(r"localStorage\.setItem\(\s*([A-Za-z_$][\w$]*)", source)
+    held = HELD.read_text()
+    kept = re.findall(r"localStorage\.setItem\(\s*([A-Za-z_$][\w$]*)", held)
     assert kept == ["HELD"], kept
-    assert re.search(r'HELD\s*=\s*"controlbun\.session"', source), (
+    assert re.search(r'HELD\s*=\s*"controlbun\.session"', held), (
         "the key the session lives under moved, and the bar reads the old one"
     )
-    # The value is the module's projection and not an object built here. A
-    # literal assembled at the call site is how a field nobody intended gets
-    # kept: `heldSessionFrom` names its fields, so neither provider token and
-    # not the email on the Supabase user row can push into a browser.
+    # The value is the module's own projection and not an object a caller
+    # built. `keep` takes what the endpoint answered rather than a record, so
+    # there is no call site that could hand it a literal: `heldSessionFrom`
+    # names its fields, so neither provider token and not the email on the
+    # Supabase user row can push into a browser.
     assert re.search(
-        r"localStorage\.setItem\(HELD, JSON\.stringify\(held\)\);", source
-    ), "the page assembles what it keeps rather than writing the module's record"
-    for call in re.findall(r"\bkeep\(([^\n]*)", source):
-        if call.startswith("held)"):
-            continue  # the definition
-        assert call.startswith("heldSessionFrom("), (
-            f"keep({call.strip()}) writes something the module did not build"
+        r"const held = heldSessionFrom\(said, \{ provider \}\);\n"
+        r"\s*localStorage\.setItem\(HELD, JSON\.stringify\(held\)\);",
+        held,
+    ), "the module writes something other than its own projection"
+    # And no page writes that key at all.
+    for page in (PAGE, SUBMIT):
+        assert not re.search(r"localStorage\.setItem", page.read_text()), (
+            f"{page.name} writes to localStorage itself, so there are two "
+            "rules for one key again"
         )
 
 
@@ -587,42 +553,36 @@ def test_the_code_is_taken_out_of_the_address_bar():
 
 
 def test_the_page_receives_nothing_and_submits_no_form():
-    """The structural criterion, applied to the one page that would break it
-    first. A field that holds what somebody typed is not a target; a form with
-    somewhere to send it is. This page has the first and not the second."""
+    """The structural criterion, applied where it would break first.
+
+    A field that holds what somebody typed is not a target; a form with
+    somewhere to send it is. This page has neither since the form left it, and
+    `tests/test_submit_page.py` holds the same rule on the page that has the
+    fields.
+    """
     html = built()
-    assert "<input" in html, "the submission form has no fields, so there is none"
     for receiving in (r"<form\b", r"\bformaction\b", r"\baction\s*=", r"\benctype\b"):
         assert not re.search(receiving, html, re.I), (
             f"{receiving} is on the page, which means something submits"
         )
 
 
-def test_the_page_says_a_submission_does_not_appear_until_it_is_published():
-    """The sentence that keeps this honest. The corpus is a file in git and the
-    site is built from it on one machine, which is what lets the falsifier check
-    the build readers actually read."""
-    body = text_of(built()).lower()
-    assert "does not appear on this site until the author rebuilds and publishes" in body
-    assert "file in git" in body
+def test_the_submission_form_is_not_on_this_page_any_more():
+    """The split, asserted here as well as there.
 
-
-# --------------------------------------------------------------------------- #
-# The submission is sent, since 2026-09-20.
-
-
-def test_the_page_sends_the_submission_to_the_holding_table():
-    """The form posts. Downloading is a copy for the person who made it and is
-    no longer how anything gets here, which the page has to say in the same
-    place it offers the download."""
-    code = bundle()
-    assert "/rest/v1/pending_submission" in code, (
-        "the page no longer sends anything, or sends it somewhere this test "
-        "has not read"
-    )
+    The form was here because the session died with the tab, so the only page
+    that could know who was signed in was the one that had just signed them in.
+    Putting it back would put the papercut back: the bar points at `/submit/`,
+    and a second form here would be a second place a submission is built.
+    """
     html = built()
-    assert 'id="send-record"' in html, "there is no button that sends"
-    assert 'id="keep-record"' in html, "the download went away rather than moving"
+    for gone in ('id="build-record"', 'id="send-record"', 'id="f-label"',
+                 'id="f-pasted"'):
+        assert gone not in html, f"{gone} is back on the return leg"
+    assert 'href="/submit/"' in html, (
+        "the return leg does not offer the page that takes a submission, so "
+        "somebody who has just signed in has nowhere to go"
+    )
 
 
 def test_the_page_no_longer_says_it_writes_to_no_database():
@@ -636,44 +596,33 @@ def test_the_page_no_longer_says_it_writes_to_no_database():
         assert gone not in body, f"the page still claims {gone!r}"
 
 
-def test_the_page_says_the_identity_on_the_row_is_stamped_and_not_typed():
-    """The property the whole design rests on, said to the person it protects.
+def test_the_page_says_the_namespace_is_not_a_field_anywhere():
+    """The property the whole design rests on, said where somebody first sees
+    their handle rather than only where they would type one.
 
     A submitter has to be able to tell that their handle is not a field
     somebody else could fill in, because that is the difference between this
-    and a form where anybody can publish as anybody.
+    and a form where anybody can publish as anybody. The page that takes the
+    submission says it too, and `tests/test_submit_page.py` holds that half.
     """
     body = text_of(built()).lower()
-    assert "taken from your signed session by the database" in body
-    assert "cannot claim to be from somebody it is not" in body
+    assert "the database writes it from your session" in body
+    assert "no box, and no default to type over" in body
 
 
-def test_the_receipt_is_read_off_the_answer_and_not_off_what_was_sent():
-    """Showing a fact rather than showing a hope. `Prefer: return=representation`
-    is why there is an answer to read, and the four fields shown come out of it.
-    """
-    assert "return=representation" in HUB.read_text()
-    source = PAGE.read_text()
-    for field in ("written.received_at", "written.id", "written.handle",
-                  "written.subject"):
-        assert field in source, f"the receipt does not show {field}"
-    body = text_of(built()).lower()
-    assert "what the database wrote, read back off its answer" in body
-
-
-def test_the_page_still_offers_nothing_to_approve_after_it_started_sending():
+def test_the_return_leg_offers_nothing_to_approve():
     """The thing a holding table turns into if nobody watches. `DECISIONS.md`
     2026-09-17 records why a review step with no stated rule fills with the
     reviewer's taste, and the namespace being the handle is why there is no
     question to ask in the first place."""
     body = text_of(built()).lower()
-    assert "nothing to approve" in body
     # `position` alone is not on this list, and the reason is the trap
     # `CLAUDE.md` names: `steering_position` is a field on every intervention
-    # here, so the bare substring flags the form for containing the schema. The
+    # here, so the bare substring flags a page for containing the schema. The
     # queue is "your position", not a column called position.
     for queueing in ("pending review", "awaiting approval", "in the queue",
-                     "your position", "position in", "your turn", "under review"):
+                     "your position", "position in", "your turn", "under review",
+                     "will be reviewed", "once approved", "moderat"):
         assert queueing not in body, f"{queueing!r} is a queue arriving in prose"
 
 
@@ -685,96 +634,73 @@ def test_the_session_is_never_rendered_and_the_provider_token_is_never_held():
     remembered handle an over-promise, so it was the property that had to go.
 
     **What replaced it.** The session is held in one variable and written to one
-    key through one function, which is the test above. The provider token is
-    held in one local inside the function that uses it and never assigned to
-    anything that outlives the call. And neither is rendered, which did not
-    change: a token in the DOM is a token in a screenshot, in a bug report and
-    in whatever reads the page.
+    key through one function in one module, which is the test above. The
+    provider token is held in one local inside the function that uses it and
+    never assigned to anything that outlives the call. And neither is rendered,
+    which did not change: a token in the DOM is a token in a screenshot, in a
+    bug report and in whatever reads the page.
+
+    Both pages that hold a session are read, because the rule is about the
+    thing rather than about a file, and the second page is where it would be
+    broken next.
     """
-    source = PAGE.read_text()
-    assert re.search(r"let signed = null;", source), "the session is held elsewhere"
-    # Kept under one key and nothing else. The count in the test above covers
-    # the bundle; this covers the name, which a bundler renames away.
-    assert not re.search(r"setItem\([^)]*signed", source)
-    assert re.search(r"function keep\(held\)", source), (
-        "the page no longer writes the session through one function"
-    )
-    # The provider token is a parameter and a local, and never a variable with
-    # a lifetime. `let token` at module scope is the edit this refuses.
-    assert not re.search(r"^\s*(?:let|var)\s+token\b", source, re.M), (
-        "the provider token is held in a variable outside the call that uses it"
-    )
-    for holding in (r"signed\.provider_token", r"held\.provider_token",
-                    r"provider_token\s*:"):
-        assert not re.search(holding, source), (
-            f"the provider token is kept on an object: {holding}"
+    for source in (PAGE.read_text(), SUBMIT.read_text()):
+        # Kept under one key and nothing else. The count in the test above
+        # covers the bundle; this covers the name, which a bundler renames
+        # away.
+        assert not re.search(r"setItem\([^)]*signed", source)
+        # The provider token is a parameter and a local, and never a variable
+        # with a lifetime. `let token` at module scope is the edit this
+        # refuses.
+        assert not re.search(r"^\s*(?:let|var)\s+token\b", source, re.M), (
+            "the provider token is held in a variable outside the call that "
+            "uses it"
         )
-    # Not rendered, either of them.
-    for rendering in (r'say\("[^"]*",\s*signed', r"textContent\s*=\s*signed",
-                      r'say\("[^"]*",\s*[^)]*\.access_token\b',
-                      r'say\("[^"]*",\s*token\b'):
-        assert not re.search(rendering, source), (
-            f"a credential reaches the page: {rendering}"
-        )
+        for holding in (r"signed\.provider_token", r"held\.provider_token",
+                        r"provider_token\s*:"):
+            assert not re.search(holding, source), (
+                f"the provider token is kept on an object: {holding}"
+            )
+        # Not rendered, either of them.
+        for rendering in (r'say\("[^"]*",\s*signed', r"textContent\s*=\s*signed",
+                          r'say\("[^"]*",\s*[^)]*\.access_token\b',
+                          r'say\("[^"]*",\s*token\b'):
+            assert not re.search(rendering, source), (
+                f"a credential reaches the page: {rendering}"
+            )
+    assert re.search(r"let signed = null;", SUBMIT.read_text()), (
+        "the page that sends holds the session somewhere this has not read"
+    )
 
 
 def test_a_refused_renewal_is_a_state_with_its_own_words():
     """Not an error and not silence. A reader whose session was signed out
     somewhere else did nothing wrong, and there is one thing to do about it, so
-    the page says what happened, drops the session and shows the button."""
-    source = PAGE.read_text()
-    assert "function staleSaid(problem)" in source
-    assert 'show("stale", true)' in source
-    said = re.search(r"function staleSaid\(problem\) \{(.*?)\n  \}", source, re.S)
+    the page says what happened, drops the session and shows the button.
+
+    The sentence is in `held.mjs` because two pages say it, and saying it twice
+    is how two pages start saying different things about one state.
+    """
+    module = HELD.read_text()
+    assert "export function staleSaid(problem)" in module
+    said = re.search(r"export function staleSaid\(problem\) \{(.*?)\n\}",
+                     module, re.S)
     assert said, "nothing builds the sentence"
     assert "not a failure of anything you typed" in said.group(1)
     # The session goes, so the next press does not fail the same way and the
     # bar stops offering a way in that has nothing behind it.
-    assert re.search(r"forget\(\);", source), (
+    assert re.search(r"forget\(\);", module), (
         "a session the identity service refuses is kept anyway"
     )
-    assert re.search(r"function forget\(\) \{\s*\n\s*localStorage\.removeItem\(HELD\);",
-                     source)
-
-
-def test_the_submit_path_renews_rather_than_asking_for_a_new_authorization():
-    """The press that matters most is the one most likely to land on a spent
-    access token, since the page may have been open for an hour. Renewing is a
-    request; re-authorizing is a redirect that loses the record on the page."""
-    source = PAGE.read_text()
-    assert re.search(r"const now = await usable\(\);", source), (
-        "the send path does not renew, so a spent token is a failed submission"
+    assert re.search(
+        r"export function forget\(\) \{\s*\n\s*localStorage\.removeItem\(HELD\);",
+        module,
     )
-    usable = re.search(r"async function usable\(\) \{(.*?)\n  \}", source, re.S)
-    assert usable, "there is no renewal before the send"
-    assert "accessSpent(signed)" in usable.group(1)
-    assert "refreshSession(" in usable.group(1)
-    # And it renews rather than starting an authorization, which would leave
-    # the page and take the typed record with it.
-    assert "begin(" not in usable.group(1), (
-        "the send path re-authorizes, which navigates away from the record"
-    )
-
-
-def test_nothing_is_editable_or_withdrawable_from_the_page():
-    """No update and no delete policy exists, so neither is possible through
-    the publishable key. The page says so rather than offering a button that
-    would fail."""
-    code = bundle()
-    for verb in ("DELETE", "PATCH", "PUT"):
-        assert f'method: "{verb}"' not in code, (
-            f"the page can {verb} a row, and the table has no policy for it"
-        )
-    body = text_of(built()).lower()
-    assert "no way to edit or withdraw this from here" in body
-
-
-def test_the_page_offers_no_queue_and_nothing_to_approve():
-    body = text_of(built()).lower()
-    for absent in ("pending review", "awaiting approval", "submission queue",
-                   "will be reviewed", "once approved", "moderat"):
-        assert absent not in body, f"{absent!r} is a review step arriving in prose"
-    assert "nothing to approve" in body
+    # And both pages show it rather than swallowing it.
+    for page in (PAGE, SUBMIT):
+        source = page.read_text()
+        assert 'show("stale", true)' in source, f"{page.name} hides the state"
+        assert "staleSaid(" in source, f"{page.name} shows it with no words"
 
 
 def test_the_page_names_what_the_handle_rule_makes_impossible():
@@ -791,13 +717,6 @@ def test_the_page_says_reading_stays_anonymous():
 
 def test_a_membership_on_the_page_is_never_called_verified():
     assert not re.search(r"\bverif", text_of(built()), re.I)
-
-
-def test_the_upload_offer_says_whose_account_the_bytes_go_to():
-    body = text_of(built()).lower()
-    assert "your own account" in body
-    assert "never to this project" in body
-    assert "one more permission at that point and not before" in body
 
 
 def test_the_page_is_reachable():

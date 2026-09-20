@@ -46,6 +46,12 @@ site:
 # once. This was a manual step for exactly as long as the falsifier failed any
 # row with no local file, which every row from the form is.
 	$(PY) artifacts/intake.py replay
+# The prompt `/submit/` hands to a coding agent, built from the spec list and
+# the values this corpus holds. After the replay, because a row that arrived
+# through the form is one of the values it observes, and generated rather than
+# written into the page because a second copy of a document that changes
+# whenever a field does is a second copy that goes stale.
+	$(PY) artifacts/intake.py prompt
 	PYTHONPATH=src $(PY) -m controlbun.export
 	cd astro && npm ci --silent && npm run build
 
