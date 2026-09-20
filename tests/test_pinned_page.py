@@ -281,9 +281,13 @@ def offsite_links(html_by_page: dict[str, str], origin: str) -> dict[str, str]:
 # from rather than a thing it points at. That is exactly the case this dict is
 # for. A URL maps to one page, so each of these lives on `/contact/` and nowhere
 # else, and the same link appearing on a submission page is still a finding.
+# `https://huggingface.co/login` came out on 2026-09-20. It was the outbound
+# half of a page that could not receive anybody back, and the return leg landing
+# on `/signed-in/` made it the wrong link: it sent somebody to a login that
+# returned them to Hugging Face rather than here. The registration link stays,
+# because registering is still Hugging Face's and not this registry's.
 AUTHORED_OFFSITE = {
     "https://huggingface.co/join": "sign-in/index.html",
-    "https://huggingface.co/login": "sign-in/index.html",
     "https://github.com/controlbun/registry": "contact/index.html",
     "mailto:sohampadia10@gmail.com": "contact/index.html",
 }

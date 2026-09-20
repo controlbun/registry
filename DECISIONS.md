@@ -92,7 +92,8 @@ Format:
 - `2026-09-20` `artifacts/signin.py` goes when the browser path lands
 - `2026-09-20` A submission is a link, and a private repo is not a blocker
 - `2026-09-20` GAP: nothing notices when a pin stops resolving  **[open gap]**
-- `2026-09-20` The site holds a session, submits to nobody, and uploads only where it is told
+- `2026-09-20` The site holds a session, submits to nobody, and uploads only where it is told  **[amended]**
+- `2026-09-20` The form posts, Postgres stamps who sent it, and a pull is the only way in
 
 <!-- end index -->
 
@@ -3299,6 +3300,14 @@ stays, the reader is told, and nothing is withdrawn on an author's behalf.
 token-sequence gaps.
 
 ## 2026-09-20 The site holds a session, submits to nobody, and uploads only where it is told
+**Amended by:** 2026-09-20 "The form posts, Postgres stamps who sent it, and a
+pull is the only way in". One section of this entry stopped being true the same
+day: "What a submission is, and where it goes" says the page sends a submission
+nowhere because the Supabase project exposes no table. It exposes one now and
+the page posts to it. The title's "submits to nobody" reads as live and is not.
+Everything else here stands, including the incremental-scope verification, the
+`contribute-repos` argument and the guard rewrite.
+
 **Decided:** `/signed-in/` ships. It receives the redirect after Hugging Face and
 Supabase send somebody back, reads the handle and the organizations from a live
 userinfo call while `provider_token` is available, renders both with the date,
@@ -3441,6 +3450,21 @@ entry, a copied link or a referrer. Tests hold all of it, on the bundle for how
 many writes there are and on the source for what is written, because the bundler
 renames the constant.
 
+**A capture is now somebody else's file, and that changes what it is evidence
+of.** `artifacts/signin.py` wrote a capture on the author's own machine during a
+sign-in the author was sitting in front of. A browser capture is a JSON file a
+stranger downloads and hands over, so its `sub`, its handle and its
+`captured_at` are whatever is in the file by the time it arrives, and
+`captured_at` is the submitter's clock rather than anyone's server. Nothing in
+`artifacts/claim.py` can tell an edited one from a real one, and it never could:
+its refusals are about shape and credentials, not provenance. What this means is
+that a claim made from a handed-over capture is worth what the person handing it
+over is worth, which is the same register everything else authored here sits in.
+It is flagged rather than fixed. Fixing it means checking a signature on the
+provider's `id_token` or re-reading userinfo, and both are decisions with their
+own costs. **Not taken here, and the author should see it before the first claim
+is made this way.**
+
 **The capture shape did not change and that is the point of deleting the tool.**
 `orgs` still has three states and they are still three different facts: a list is
 what the provider said, `[]` is membership of nothing and is a real answer, and
@@ -3487,3 +3511,145 @@ names no account of its own. Carries out 2026-09-20 "`artifacts/signin.py` goes
 when the browser path lands", whose condition this is. Answers the verification
 the same day's "A submission is a link, and a private repo is not a blocker" made
 a precondition.
+
+## 2026-09-20 The form posts, Postgres stamps who sent it, and a pull is the only way in
+**Decided:** `/signed-in/` sends. A signed-in submitter presses submit and the
+record goes to `pending_submission` on the Supabase project, over their own
+session, through the publishable key. `artifacts/intake.py pull` is the other
+end: the author reads the rows with a secret key held in the environment, hands
+each one to `take`, and marks it `taken_at`. Mail goes back to not being a
+submission route, which is what `/contact/` said before the last pass edited it.
+
+**What the table changes, stated before anything that follows it.** The
+2026-09-20 entry above says a submission is "a file the submitter builds in the
+browser and hands over" and that the page "sends it nowhere, because there is
+nowhere to send it: the Supabase project exposes no table today". There is one
+now. `schema/supabase/001_pending_submission.sql` is run and the page writes to
+it, so that paragraph is superseded and the rest of the entry stands.
+
+**Mail was never the route and was briefly documented as one.** The record was
+downloadable and there was nowhere to send it, so `/contact/` was edited to say
+mail took a submission record. That sentence was the shape of a missing feature
+rather than a decision, and it is reversed here. What `/contact/` has always
+said is that the day mail stops being a non-route will be written down. The day
+changed and this is the writing down: the route is `/signed-in/`, and mail is
+still not one.
+
+### Identity is stamped by Postgres, which is the whole of why a table is safe
+
+A capture that arrives as a file is a stranger's JSON. Nothing downstream can
+tell an edited one from a real one, so a submission that carried its own author
+would be a submission anybody could publish under anybody's name. The insert
+policy refuses any row whose `account`, `subject` or `handle` disagrees with the
+verified session, and the page builds those three off the session rather than
+off the record for that reason: `pendingRowFrom` in `astro/src/lib/handshake.mjs`
+never reads the record's own copy.
+
+**Where the two disagree, the stamped one wins and the disagreement is printed.**
+The record still carries the browser's copy, unedited, because deleting it would
+hide the thing worth seeing. `intake.stamped` substitutes the stamped pair and
+returns the difference, and a difference is not a refusal: the record's subject
+comes from Hugging Face's userinfo endpoint at the moment of the capture and the
+stamped one from the claims Supabase held for the session, and a handle renamed
+between those two reads is a real fact about a real person.
+
+**What this was verified against.** The live project, on 2026-09-20, twice. An
+anonymous read of `pending_submission` answers `200 []`. An anonymous insert
+carrying a forged `subject` answers `401` with `new row violates row-level
+security policy for table "pending_submission"`. Both were run with the
+publishable key out of `.env`, and neither needed an account.
+
+**Where the claims come from, read rather than recalled.** The policy compares
+`user_metadata ->> 'sub'` and `user_metadata ->> 'preferred_username'`, and the
+page builds the row from `session.user.user_metadata`, so the two have to be
+the same object. `parseGenericIDToken` in `internal/api/provider/oidc.go` in
+supabase/auth maps the whole ID-token claim set into `UserProvidedData.Metadata`
+for a custom OIDC provider, with no per-claim filtering, and that becomes
+`raw_user_meta_data` and then `user_metadata` in the JWT. Read on 2026-09-20.
+What that does not establish is whether Hugging Face puts `preferred_username`
+in the ID token as well as at the userinfo endpoint, and if it does not, every
+insert refuses with a sentence saying the session carries no handle rather than
+failing obscurely. **One real sign-in answers it and nothing else can**; it is
+the one thing here that has not been run end to end.
+
+**What is not proved and is stated rather than implied.** That probe shows the
+policy refuses a caller who is not the person the row names. It does not
+separately exercise the `with check` against an *authenticated* session whose
+payload disagrees with its own JWT, because doing that needs a real account and
+a signed token. `make verify` runs offline from a clean checkout, which is a
+property `tests/test_signed_in_page.py` states, so no network probe is in the
+gate. What is in the gate is the two halves that can be:
+`tests/test_pending_submission.py` fails the build if the policy text stops
+binding any one of the three columns to the session, and it fails the build if
+the browser starts building the row out of the record. The live half is dated
+here and re-runnable in two `curl` calls.
+
+### Not a queue, and the words that would make it one
+
+Nothing is approved, rejected, ranked, counted or ordered. `taken_at` means read
+in and never means accepted, and it is the only state a row has. `pending` asks
+for `received_at.asc`, which is arrival order and the only thing a list can be
+in; nothing reads a position, a count or a score off a row, and a test fails the
+build on `sort=`, `rank`, `score`, `priority`, `approve` and `reject` appearing
+in that code.
+
+A refusal stops one row and not the run, and the refused row keeps `taken_at`
+null so it is still there. What refuses is what the schema already refuses: a
+shape with no reader, bytes nobody can fetch at the pin, a field given both a
+value and a reason for having none. The 2026-09-17 concern, that a review step
+with no stated rule fills with whatever the reviewer thinks that day, is
+untouched: there is still no rule because there is still no step, and the
+namespace being the sender's own handle is why there is no question to ask.
+
+**What this makes impossible to express.** A submission from somebody who is not
+on Hugging Face, which was already true and is now true at a second point.
+A correction: there is no update and no delete policy, so a sent row cannot be
+edited or withdrawn through the publishable key, and a correction is another
+submission. And a submission under a name the sender does not hold an account
+for, which is the same cost the handle rule already carried and is now enforced
+by Postgres rather than by the page.
+
+### The guard was green for the wrong reason and that is the finding
+
+`MAY_SEND_TO` in `tests/test_intake.py` names every origin the site may send a
+reader's data to. The clause that checks it reads `_astro/` scripts, and the
+Supabase project URL is not in one: it is built into `signed-in/index.html` as
+`data-supabase-url` and read off the element at runtime, because it comes from a
+`.env` this repository does not carry. So the destination the site sends the
+most to was outside the enumeration entirely, and had been since the day the
+enumeration was written.
+
+`test_every_origin_configured_on_a_page_is_accounted_for` is the second clause,
+over `data-` attributes carrying an absolute URL, with a bite beside it and a
+third test asserting the scan actually finds the project rather than matching
+nothing. This is the failure this repository keeps catching, written out in
+full: a check that passes because it cannot see the thing it is about.
+
+The `MAY_SEND_TO` entry for `supabase.co` now spells out the POST rather than
+being read as covering it, and names the three properties that keep it narrow:
+the identity is stamped and refused when it disagrees, the table is not the
+corpus and nothing in it reaches a reader until the author publishes a rebuild,
+and reading stays anonymous because no read anywhere goes through it.
+
+### The secret key, and where it does not live
+
+It bypasses every row-level policy on the project. It is read from
+`SUPABASE_SECRET_KEY` in the environment and from nowhere else, deliberately not
+from `.env`, which is where the project URL and the publishable key are because
+the built page carries both by necessity. It goes into two headers and into no
+output: a test fails the build if `{secret` is interpolated anywhere that is not
+an `add_header` call, and the first version of that test failed on
+`refuse_credentials`, which interpolates a submission's own JSON field name into
+a message. The fix was renaming the variable rather than adding an exemption,
+because an exemption would have been a hole shaped like whatever else got called
+`key` later.
+
+**What the author has to do once.** Nothing was pushed and nothing was deployed.
+`make verify` is green locally and the build in `astro/dist` is the one that
+passed it.
+
+**Supersedes:** 2026-09-20 "The site holds a session, submits to nobody, and
+uploads only where it is told", in the one section where it says a submission is
+handed over and the project exposes no table. Everything else in that entry,
+including the scope work and the guard rewrite, stands. Reverses the `/contact/`
+sentence added the same day, which was never a decision.

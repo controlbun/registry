@@ -7,18 +7,19 @@ field it collects is open, the suggestions beside them are read out of what this
 corpus already holds, and the only things this refuses are bytes it cannot read
 without running them and rows the schema will not take.
 
-**This is not the submission route, and the binding is what makes that true.** It
-listens on 127.0.0.1 and on nothing else. There is no `--host`. A submission route
-is one of the three capabilities that fire the dual-use trigger (`DECISIONS.md`,
-2026-09-17: "anything can be submitted"), and that policy does not exist yet, so
-the thing that must not exist is a listener anybody but the operator can reach.
-`astro.config.mjs` stays `output: "static"` for the same reason in a different
-register, and its comment says it: "a build that emits files cannot drift into
-being a public surface the way a running process can". This is a running process,
-so it carries the constraint in code rather than in a build flag: the loopback
-bind, a per-run token in the URL, a `Host` header check and an `Origin` check,
-because a browser on this machine will happily post to 127.0.0.1 on behalf of a
-page the operator did not open. `tests/test_intake.py` holds all four.
+**The form is not the submission route, and the binding is what makes that
+true.** It listens on 127.0.0.1 and on nothing else. There is no `--host`. There
+is a submission route now, and it is the published page plus the table it posts
+to rather than anything in this process; what must not exist here is a listener
+anybody but the operator can reach, because this one writes the tracked record
+directly and answers to no session. `astro.config.mjs` stays `output: "static"`
+for a related reason in a different register, and its comment says it: "a build
+that emits files cannot drift into being a public surface the way a running
+process can". This is a running process, so it carries the constraint in code
+rather than in a build flag: the loopback bind, a per-run token in the URL, a
+`Host` header check and an `Origin` check, because a browser on this machine
+will happily post to 127.0.0.1 on behalf of a page the operator did not open.
+`tests/test_intake.py` holds all four.
 
 **Two modes, one end state.** Both finish as a row pointing at a pinned remote,
 and neither writes `served_repo`.
@@ -54,7 +55,39 @@ and every row this writes is one of those, so wiring the replay into the build
 needs that check to learn that a pinned remote with no local copy is a state.
 That is a decision for the author, not something to slip in here.
 
+**A third way in, since 2026-09-20: a submission built in a browser and sent.**
+Somebody signs in at `/signed-in/`, fills in the same contract fields this form
+collects, and presses submit. The record lands in `pending_submission` on the
+Supabase project, over their own session, with `account`, `subject` and `handle`
+stamped by Postgres out of the verified session; `schema/supabase/001` carries
+that argument and the policy that enforces it. `pull` reads those rows with the
+secret key and hands each one to `take`, which goes down the link path: the
+bytes are fetched at the pin and handed to `controlbun.artifact` here, so
+nothing the submitter says about the tensor is taken on trust and nothing about
+it was computed in their browser. `take` is also what reads a file somebody
+mailed, so there is one function that writes a submission and not two.
+
+**On a pull, the stamped identity is the one that counts.** The row's `subject`
+and `handle` came through the insert policy; the record's copies came from a
+browser. `stamped` substitutes the first for the second and returns the
+disagreement rather than swallowing it, because a handle renamed between the
+capture and the session is a real fact about a real person and preferring one
+copy silently would hide it.
+
+**`pending_submission` is not a queue.** Nothing is approved, rejected, ranked,
+counted or ordered, and `taken_at` means read in rather than accepted. There is
+no review step and nothing to approve: the namespace is the handle the provider
+reported, so there is no question for a reviewer to answer, and `DECISIONS.md`
+2026-09-17 records why a review step with no stated rule fills with the
+reviewer's taste. What `take` refuses is what this file already refuses: a shape
+with no reader, bytes that do not resolve, a field given both a value and a
+reason for having none. A refused row keeps `taken_at` null and stays where it
+is.
+
     .venv/bin/python artifacts/intake.py serve
+    .venv/bin/python artifacts/intake.py take submission-someone-label-....json
+    SUPABASE_SECRET_KEY=... .venv/bin/python artifacts/intake.py pull --dry-run
+    SUPABASE_SECRET_KEY=... .venv/bin/python artifacts/intake.py pull
     .venv/bin/python artifacts/intake.py replay
 """
 
@@ -64,12 +97,16 @@ import argparse
 import hashlib
 import html
 import json
+import os
 import secrets
 import shutil
 import sqlite3
 import sys
 import tempfile
 import threading
+import urllib.error
+import urllib.parse
+import urllib.request
 import webbrowser
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -2123,6 +2160,464 @@ def serve(database: str, repo: str, port: int, *, open_browser: bool = True) -> 
 # --------------------------------------------------------------------------- #
 
 
+# --------------------------------------------------------------------------- #
+# Taking a submission somebody built in a browser.
+
+
+# The shape `/signed-in/` writes, namespaced and versioned, because whatever
+# reads one has to know which shape it is holding and the shape will change.
+LINK_SUBMISSION = "controlbun.registry/link-submission@1"
+
+# Substrings, matched against key names and never against values. A record from
+# `/signed-in/` can carry none of these by construction; one that does was
+# written by something else and is not going to be turned into a tracked row.
+# Same list and same argument as `artifacts/claim.py`, one object along.
+CREDENTIAL_WORDS = (
+    "token", "secret", "password", "credential", "authorization",
+    "apikey", "api_key", "private_key", "bearer", "verifier",
+)
+
+
+def refuse_credentials(value, *, where: str) -> None:
+    """Walk every key. A name that reads like a credential stops the run."""
+    if isinstance(value, dict):
+        for key, inner in value.items():
+            if any(word in str(key).lower() for word in CREDENTIAL_WORDS):
+                raise Refused(
+                    f"{where} carries a key named {key!r}. This is read in "
+                    "order to make a tracked row in a public repository, and "
+                    "nothing that reads like a credential is going into one. "
+                    "Nothing was written."
+                )
+            refuse_credentials(inner, where=where)
+    elif isinstance(value, list):
+        for inner in value:
+            refuse_credentials(inner, where=where)
+
+
+def take(conn: sqlite3.Connection, submission: dict,
+         path: Path | None = None) -> dict:
+    """One browser-built submission into the corpus, checking the bytes first.
+
+    **Nothing here trusts the record about the bytes.** The submitter states a
+    repo, a commit and a path and states nothing about the tensor, and this
+    calls `check_link`, which fetches through `controlbun.fetch` exactly the way
+    a consumer will and hands what came back to `controlbun.artifact`. So the
+    shape, the dtype, the norm and the digest on the row are what the file at
+    that commit says, derived by the one thing in this project that reads bytes.
+    A submission that names bytes nobody can fetch refuses here with the reason,
+    which is the state `DECISIONS.md` 2026-09-20 says the page has to be honest
+    about rather than the state it quietly becomes.
+
+    **The namespace is not read out of a field.** `author` on a browser-built
+    record is the handle the provider reported, written by
+    `astro/src/lib/handshake.mjs` from the capture and never from the form. This
+    carries it through and checks nothing about it, because checking it here
+    against anything would be this file deciding who somebody is.
+
+    **There is no review step and nothing to approve.** What this refuses is
+    what the schema refuses: a shape with no reader, bytes that do not resolve,
+    a contradiction between a value and a reason for having none. None of that
+    is a judgment about the work.
+    """
+    refuse_credentials(submission, where="the submission")
+    shape = submission.get("shape")
+    if shape != LINK_SUBMISSION:
+        raise Refused(
+            f"that file carries shape {shape!r}, and there is no reader for it "
+            f"here, so nothing was written. This version reads "
+            f"{LINK_SUBMISSION}. That is a refusal to write what cannot be "
+            "read rather than a statement that the shape is illegitimate."
+        )
+    artifact_at = submission.get("artifact") or {}
+    iv = submission.get("intervention") or {}
+
+    # Flattened into the shape `entry_from` already takes, so there is one
+    # function building a record line rather than two. Every value is passed
+    # through as a string and nothing is defaulted: a field the submitter left
+    # empty reaches `_text` and refuses there with the sentence that says why
+    # the field exists, which is the same refusal the form gives.
+    form = {
+        "author": str(submission.get("author") or ""),
+        "label": str(submission.get("label") or ""),
+        "version": str(submission.get("version") or ""),
+        "definition": str(submission.get("definition") or ""),
+        "created_at": str(submission.get("created_at") or ""),
+        "intervention_id": str(iv.get("id") or ""),
+    }
+    for field in ("kind", "model_id", "model_revision", "layer",
+                  "layer_convention", "hook_point", "chat_template_hash",
+                  "activation_norm", "coeff_low", "coeff_high",
+                  "steering_position", "license_status"):
+        value = iv.get(field)
+        form[field] = "" if value is None else str(value)
+
+    checked = check_link(
+        str(artifact_at.get("repo") or ""),
+        str(artifact_at.get("commit") or ""),
+        str(artifact_at.get("path") or ""),
+        stated={},
+        host=str(artifact_at.get("host") or ""),
+        url_template=str(artifact_at.get("url_template") or ""),
+    )
+    entry = entry_from(
+        form, checked,
+        repo=checked.repo, commit=checked.commit,
+        host=checked.host, url_template=checked.url_template,
+        absent=submission.get("absent") or {},
+    )
+    # The row goes in first, for the reason `artifacts/claim.py` gives at the
+    # same line: a row with no record line is lost on the next `make site`,
+    # which is a rerun of one command, and a record line the database refused
+    # is permanent because `replay` stops on a duplicate.
+    insert(conn, entry)
+    append_record(entry, path)
+    return entry
+
+
+# --------------------------------------------------------------------------- #
+# Pulling what the site received into the record the build replays.
+
+
+# The environment variable the secret key is read from, and it is read from the
+# environment and from nowhere else. `.env` holds the project URL and the
+# publishable key because the built page carries both by necessity; this one
+# bypasses every row-level policy on the project, so it does not go in a file
+# that sits in the working tree next to tracked ones. Nothing below prints it,
+# logs it, writes it or puts it in an error message.
+SECRET_KEY_ENV = "SUPABASE_SECRET_KEY"
+
+# Read from `.env` if it is there, so the author does not restate a value the
+# site build already reads from the same place. Overridden by the environment.
+PROJECT_URL_ENV = "SUPABASE_URL"
+
+PENDING_TABLE = "pending_submission"
+
+
+def dotenv(path: Path | None = None) -> dict[str, str]:
+    """The repository-root `.env`, which is gitignored and has been from the start.
+
+    The same file `astro/src/pages/signed-in.astro` reads at build time, parsed
+    the same way, because a second copy of the project URL is a second place for
+    it to disagree.
+    """
+    path = path or (ROOT / ".env")
+    out: dict[str, str] = {}
+    try:
+        text = path.read_text()
+    except OSError:
+        return out
+    for line in text.splitlines():
+        trimmed = line.strip()
+        if not trimmed or trimmed.startswith("#") or "=" not in trimmed:
+            continue
+        name, _, value = trimmed.partition("=")
+        out[name.strip()] = value.strip().strip("'\"")
+    return out
+
+
+def credentials(environ: dict[str, str] | None = None,
+                env_file: dict[str, str] | None = None) -> tuple[str, str]:
+    """The project URL and the secret key, or a refusal naming what is missing.
+
+    Two refusals rather than one, because "it did not work" and "you have not
+    set the variable" are different problems and the second one is the whole of
+    what usually happened. Neither message carries a value: the key never
+    appears in output from this module, including when it is wrong.
+    """
+    environ = os.environ if environ is None else environ
+    env_file = dotenv() if env_file is None else env_file
+    url = (environ.get(PROJECT_URL_ENV) or env_file.get(PROJECT_URL_ENV) or "").strip()
+    if not url:
+        raise Refused(
+            f"no {PROJECT_URL_ENV}, in the environment or in .env, so there is "
+            "no project to read from. Nothing was written."
+        )
+    secret = (environ.get(SECRET_KEY_ENV) or "").strip()
+    if not secret:
+        raise Refused(
+            f"{SECRET_KEY_ENV} is not set. It is read from the environment and "
+            "from nowhere else, and it is deliberately not in .env: it bypasses "
+            "every row-level policy on the project, so it does not live in a "
+            "file in the working tree. Set it for the length of this command "
+            "and nothing was written in the meantime."
+        )
+    return url.rstrip("/"), secret
+
+
+def _ask(url: str, secret: str, *, method: str = "GET", body: bytes | None = None,
+         headers: dict[str, str] | None = None) -> tuple[int, bytes]:
+    """One request, with the secret key in the headers and never in a message.
+
+    The exception a failure raises names the endpoint, the status and what the
+    endpoint said. `urllib` puts the URL in its own messages and the key is in a
+    header rather than in the URL, so no path here can put it in output.
+    """
+    request = urllib.request.Request(url, data=body, method=method)
+    request.add_header("apikey", secret)
+    request.add_header("Authorization", f"Bearer {secret}")
+    for name, value in (headers or {}).items():
+        request.add_header(name, value)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return response.status, response.read()
+    except urllib.error.HTTPError as refused:
+        said = refused.read().decode("utf-8", "replace")[:400]
+        raise Refused(
+            f"the project answered {refused.code} to a {method} on "
+            f"{PENDING_TABLE}. {said}"
+        ) from refused
+    except urllib.error.URLError as unreachable:
+        raise Refused(
+            f"the project could not be reached ({unreachable.reason}). Nothing "
+            "was written, here or there."
+        ) from unreachable
+
+
+def pending(url: str, secret: str, *, include_taken: bool = False) -> list[dict]:
+    """Every row not yet read in, oldest first.
+
+    Oldest first because that is the order they arrived in and an order has to
+    be something. It is not a ranking and it decides nothing: every row is read
+    in, and a row's position in this list changes nothing about it.
+    """
+    query = f"{url}/rest/v1/{PENDING_TABLE}?select=*&order=received_at.asc"
+    if not include_taken:
+        query += "&taken_at=is.null"
+    _, raw = _ask(query, secret)
+    rows = json.loads(raw)
+    if not isinstance(rows, list):
+        raise Refused(
+            f"the project answered with {type(rows).__name__} rather than a "
+            "list of rows, so nothing here knows what it is holding."
+        )
+    return rows
+
+
+def stamped(row: dict) -> tuple[dict, list[str]]:
+    """The submission as the author reads it, and where the row disagrees with it.
+
+    **The stamped columns win.** `subject` and `handle` on the row were written
+    by Postgres out of the verified session and refused if they disagreed with
+    it; `subject` and `author` inside `record` are what the browser put there,
+    and a browser's copy of anything is a stranger's JSON. So the record that
+    goes into the corpus carries the stamped pair.
+
+    **The disagreement is returned rather than swallowed.** The two should agree
+    and one case where they will not is ordinary: the record's `subject` comes
+    from Hugging Face's userinfo endpoint at the moment of the capture and the
+    stamped one comes from the claims Supabase held for the session, and a
+    handle renamed between those two reads is a real difference about a real
+    person. Preferring one silently would make that invisible. It is printed,
+    and it is not a refusal: there is nothing here for anybody to adjudicate.
+    """
+    record = row.get("record")
+    if not isinstance(record, dict):
+        raise Refused(
+            f"row {row.get('id')} carries no record object, so there is nothing "
+            "to read. Nothing was written."
+        )
+    subject = row.get("subject") or ""
+    handle = row.get("handle") or ""
+    if not subject or not handle:
+        raise Refused(
+            f"row {row.get('id')} has no stamped subject or handle, which the "
+            "table refuses to write, so this row did not come through the "
+            "insert policy. Nothing was written."
+        )
+    differs = []
+    if record.get("subject") not in (None, subject):
+        differs.append(
+            f"the record says subject {record.get('subject')!r} and the session "
+            f"stamped {subject!r}"
+        )
+    if record.get("author") not in (None, handle):
+        differs.append(
+            f"the record says author {record.get('author')!r} and the session "
+            f"stamped handle {handle!r}"
+        )
+    return {**record, "subject": subject, "author": handle}, differs
+
+
+def mark_taken(url: str, secret: str, row_id: str, at: str) -> None:
+    """`taken_at`, which means read in and never means approved.
+
+    Set after the row and the record line are both written, so a run that dies
+    between them leaves the row unmarked and the next pull refuses it as a
+    duplicate rather than losing it silently.
+    """
+    _ask(
+        f"{url}/rest/v1/{PENDING_TABLE}?id=eq.{urllib.parse.quote(str(row_id))}",
+        secret,
+        method="PATCH",
+        body=json.dumps({"taken_at": at}).encode(),
+        headers={"Content-Type": "application/json", "Prefer": "return=minimal"},
+    )
+
+
+def pull(conn: sqlite3.Connection, rows: list[dict], *,
+         path: Path | None = None,
+         mark=None, at: str | None = None) -> list[dict]:
+    """Every pending row into the corpus, through the one function that writes.
+
+    `take` is that function, and it is the same one the author calls on a file
+    somebody mailed. So the record and the database cannot come apart and there
+    is no second path that writes a row, which is the shape `artifacts/claim.py`
+    and `artifacts/publish.py` already use.
+
+    **A refusal stops that row and not the run.** A pin nobody can fetch is one
+    submitter's problem and the rows behind it are other people's. The refused
+    row keeps `taken_at` null, so it is still there next time and the author can
+    write back about it. Refusing is not rejecting: nothing here judges the work,
+    and what stops a row is what the schema stops, which `take` documents.
+
+    Returns one dict per row saying what happened, for the caller to print.
+    """
+    at = at or _now()
+    out = []
+    for row in rows:
+        report: dict = {"id": row.get("id"), "received_at": row.get("received_at"),
+                        "handle": row.get("handle")}
+        try:
+            submission, differs = stamped(row)
+            report["differs"] = differs
+            entry = take(conn, submission, path)
+        except sqlite3.IntegrityError as clash:
+            # Not the same thing as a refusal and it gets its own sentence. The
+            # corpus already holds this one, which is either a row that was read
+            # in by a run that died before it could be marked, or a version
+            # string somebody reused. `taken_at` stays null either way: marking
+            # it here would assert the record line exists, and whether it does
+            # is the thing to go and look at.
+            report["refused"] = (
+                f"the corpus already holds this submission ({clash}). A "
+                "submission is immutable and a correction is a new version, so "
+                "this is a row already read in or a version string reused. "
+                "Check artifacts/intake.jsonl before marking it by hand."
+            )
+            out.append(report)
+            continue
+        except (Refused, ValueError, OSError) as refused:
+            report["refused"] = str(refused)
+            out.append(report)
+            continue
+        report["entry"] = entry
+        report["ref"] = registry_ref.format(
+            entry["author"], entry["intervention"].get("model_id"),
+            entry["label"], entry["version"],
+        )
+        if mark is not None:
+            mark(row.get("id"), at)
+            report["taken_at"] = at
+        out.append(report)
+    return out
+
+
+def cmd_pull(args) -> int:
+    url, secret = credentials()
+    rows = pending(url, secret)
+    if not rows:
+        print("nothing pending. The table is empty of unread rows, which is a "
+              "state and not a problem.")
+        return 0
+    conn = opened(args.db)
+    try:
+        if args.dry_run:
+            results = []
+            for row in rows:
+                try:
+                    _, differs = stamped(row)
+                except Refused as refused:
+                    results.append({"id": row.get("id"), "refused": str(refused)})
+                    continue
+                results.append({"id": row.get("id"), "differs": differs,
+                                "handle": row.get("handle"),
+                                "received_at": row.get("received_at")})
+        else:
+            results = pull(
+                conn, rows, path=args.record,
+                mark=lambda row_id, at: mark_taken(url, secret, row_id, at),
+            )
+    finally:
+        conn.close()
+
+    refused = 0
+    for result in results:
+        print(f"  row       {result['id']}  from {result.get('handle')} "
+              f"at {result.get('received_at')}")
+        for line in result.get("differs") or []:
+            print(f"    stamped identity wins: {line}")
+        if result.get("refused"):
+            refused += 1
+            print(f"    refused   {result['refused']}")
+            print("              taken_at is still null, so it is there next time")
+            continue
+        if args.dry_run:
+            print("    would take this row; nothing was written")
+            continue
+        iv = result["entry"]["intervention"]
+        print(f"    wrote     {result['ref']}")
+        print(f"    pinned    {iv['artifact_repo']} at {iv['artifact_commit']}, "
+              f"path {iv['artifact_path']}")
+        print(f"    bytes     sha256 {iv['artifact_sha256']}, shape {iv['shape']}, "
+              f"dtype {iv['dtype']}")
+        print(f"    taken_at  {result['taken_at']}")
+
+    print()
+    if args.dry_run:
+        print("nothing was written and no row was marked. Drop --dry-run to "
+              "take them.")
+    else:
+        print(f"{len(results) - refused} written, {refused} refused. The record "
+              "is tracked and this is the durable copy. Commit it, then "
+              "`make verify` and publish; nothing is on the site until you do.")
+    return 0
+
+
+def opened(path: str) -> sqlite3.Connection:
+    """A database that already has the schema, or a sentence saying it does not.
+
+    Migrating here instead would let a mistyped `--db` conjure a database and
+    then report success at having written a submission into it, which is a
+    worse answer than the traceback it replaces. Same guard and same argument
+    as `artifacts/claim.py opened`.
+    """
+    conn = db.connect(path)
+    got = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        ("submission",),
+    ).fetchone()
+    if not got:
+        conn.close()
+        raise Refused(
+            f"{path} has no `submission` table, so there is nowhere to write. "
+            "Build the corpus first with `artifacts/seed.py`, or point --db at "
+            "the one you meant. Nothing was written, here or to the record."
+        )
+    return conn
+
+
+def cmd_take(args) -> int:
+    given = json.loads(Path(args.file).read_text())
+    conn = opened(args.db)
+    try:
+        entry = take(conn, given, args.record)
+    finally:
+        conn.close()
+    iv = entry["intervention"]
+    ref = registry_ref.format(entry["author"], iv.get("model_id"),
+                              entry["label"], entry["version"])
+    print(f"  wrote     {ref}")
+    print(f"  pinned    {iv['artifact_repo']} at {iv['artifact_commit']}, "
+          f"path {iv['artifact_path']}")
+    print(f"  bytes     sha256 {iv['artifact_sha256']}, shape {iv['shape']}, "
+          f"dtype {iv['dtype']}")
+    print()
+    print("the record is tracked and this is the durable copy. Commit it, then "
+          "`make verify` and publish; nothing is on the site until you do.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--db", default=str(ROOT / "registry.db"))
@@ -2141,10 +2636,30 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("replay", parents=[common],
                    help="reinsert everything in the record, after a rebuild")
 
+    took = sub.add_parser(
+        "take", parents=[common],
+        help="a submission somebody built at /signed-in/ and handed over")
+    took.add_argument("file", help="the JSON file they downloaded")
+    took.add_argument("--record", type=Path, default=None,
+                      help=f"default {RECORD.relative_to(ROOT)}, which is tracked")
+
+    pulled = sub.add_parser(
+        "pull", parents=[common],
+        help="every submission the site received, into the tracked record")
+    pulled.add_argument("--record", type=Path, default=None,
+                        help=f"default {RECORD.relative_to(ROOT)}, which is tracked")
+    pulled.add_argument("--dry-run", action="store_true",
+                        help="read and report, write nothing and mark nothing")
+
     args = ap.parse_args(argv)
     if args.command == "serve":
         serve(args.db, args.repo, args.port, open_browser=not args.no_browser)
         return 0
+    if args.command in ("take", "pull"):
+        try:
+            return cmd_take(args) if args.command == "take" else cmd_pull(args)
+        except Refused as refused:
+            raise SystemExit(str(refused)) from refused
 
     conn = db.connect(args.db)
     try:

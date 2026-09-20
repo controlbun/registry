@@ -133,6 +133,21 @@ design. Tests that fail the build:
   pass quietly. `falsifier/verify.py` runs the synthetic-marker rule against two
   strings on every run, so the rule cannot go inert now that nothing in the
   corpus is fabricated
+- The published site has no origin that receives, and every origin its own
+  script can send a reader's data to is named in a test with the reason. The
+  build emits files and runs no route, so nothing here can be posted to; since
+  2026-09-20 the site is a client, and the question a guard asks is where a
+  request is aimed rather than whether one exists. A new destination is a test
+  edit, which is a decision somebody made rather than a line that arrived. A
+  destination configured in markup counts: the project URL reaches the script
+  through a `data-` attribute and was outside that enumeration until
+  2026-09-20, so both the bundle and the built HTML are scanned, and a test
+  asserts the scan finds a real one rather than matching nothing
+- A submission's author is stamped by the database from the verified session,
+  never read off the payload, and the browser builds those columns off the
+  session for that reason. Where the stamped identity and the record's own copy
+  disagree, the stamped one is used and the disagreement is surfaced rather
+  than either being preferred silently
 
 Add one whenever a new invariant is settled. An invariant that is only in prose
 is not an invariant.

@@ -2,12 +2,15 @@
 
 Facts about the running system, not commitments. Every claim carries the check
 that produced it, so rerun them rather than trusting them. Last checked
-2026-09-17 against `main`.
+2026-09-20 against `main`.
 
 **This was drafted as a dual-use policy and is not one.** A policy governs
-decisions, and there are none to govern yet: nothing can be submitted, nothing is
-served, and the client sends no credentials at anything. `DECISIONS.md`
-2026-09-17 records when that changes and why writing it earlier would be worse.
+decisions, and the decisions it would govern still do not exist. Something can
+be submitted now, and no decision was added with it: nothing is approved,
+rejected, ranked or ordered, because the namespace is the sender's own handle
+and there is no question for anybody to answer about it. `DECISIONS.md`
+2026-09-19 records that no policy is required and that what a review step does,
+if there is ever one, is a separate question that this did not answer.
 
 ---
 
@@ -36,17 +39,34 @@ links there.
 and `find astro/dist -name "*.safetensors" -o -name "*.npz" -o -name "*.pt"` is
 empty.*
 
-**There is no API and no bulk fetch.** A static build with no server behind it.
-No endpoint returns a list of artifacts and no machine-readable dump is
-published. `src/controlbun/fetch.py` resolves one artifact at a time from an
-explicit `author/model_id/label@version` reference, by commit SHA, sending no
-credentials.
+**There is no API over the corpus and no bulk fetch.** The site is a static
+build with no server behind it. No endpoint returns a list of artifacts and no
+machine-readable dump is published. `src/controlbun/fetch.py` resolves one
+artifact at a time from an explicit `author/model_id/label@version` reference,
+by commit SHA, sending no credentials.
+
+The one endpoint this project owns is the Supabase table a submission is sent
+to, and nothing about the corpus goes through it. A signed-in person can insert
+their own row and read their own rows back; there is no policy that lets anybody
+read anybody else's, and no update or delete policy exists, so neither is
+possible with the key the site carries.
 
 *Check: no `.json` in `astro/dist` outside the search index; `fetch.py` has no
-listing function.*
+listing function; `schema/supabase/001_pending_submission.sql` has one insert
+policy and one select policy, both scoped to `auth.uid()`.*
 
-**There is no rate limit because there is nothing to limit.** Static files. True
-of the current architecture and false the day anything is served dynamically.
+**Reading is anonymous and nothing meters it.** Browsing, comparing, following a
+pin and fetching an artifact send no credential and go through no account. The
+only thing signing in permits is sending a submission.
+
+*Check: `tests/test_signed_in_page.py` fails the build if an identity endpoint
+appears on any page other than `/signed-in/`.*
+
+**There is no rate limit on the site because there is nothing to limit.** Static
+files. True of the current architecture and false the day anything is served
+dynamically. The submission endpoint is a different thing and whatever limits
+Supabase applies to it are Supabase's rather than this project's; nothing here
+has been configured or measured, so nothing here is claimed.
 
 **Nothing is ranked and no popularity signal is collected.** Downloads and stars
 render as "not tracked" rather than as zero, because a zero would be a
@@ -58,7 +78,34 @@ rather than by restraint.
 invariant 4 in `tests/test_invariants.py` fails the build on an ordering derived
 from an eval result.*
 
-**There are no accounts and no uploads.** Nothing can be submitted.
+**This registry receives no artifact bytes, and a submission is a pointer.**
+Identity is Hugging Face's, and this registry issues no password. Somebody who
+signs in at `/signed-in/` can send one submission: a pointer to bytes in their
+own account, plus the contract describing them. The bytes stay where their
+author put them. Nothing sent appears on the site until the corpus is rebuilt
+and published, which is what lets the falsifier check the build readers read.
+
+*Check: `SELECT count(*) FROM intervention WHERE served_repo IS NOT NULL` is 0,
+which holds for rows that arrived this way as well as for the seeded ones.*
+
+**Who a submission is from is stamped by Postgres, not claimed by the sender.**
+The insert policy on `pending_submission` refuses any row whose account,
+subject or handle disagrees with the verified session, so a submission cannot
+claim to be from somebody it is not. There is no review step behind that and
+nothing to approve: the namespace is the handle the provider reported, so there
+is no question for a reviewer to answer, and nothing in the table is ranked,
+counted or ordered.
+
+*Check: `schema/supabase/001_pending_submission.sql`, and
+`tests/test_pending_submission.py`, which fails the build if the policy stops
+binding all three columns.*
+
+*Accuracy note, 2026-09-20, prose left to the author: this paragraph has been
+wrong twice in two days and both are worth seeing. It read "There are no
+accounts and no uploads. Nothing can be submitted", which stopped being true
+when `/signed-in/` shipped, and then "issues no account and receives no upload
+... a file the submitter hands over", which stopped being true the same day when
+the form started posting. `DECISIONS.md` 2026-09-20 has both changes.*
 
 ## What the search index covers
 

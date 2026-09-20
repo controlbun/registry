@@ -14,6 +14,14 @@ import data from "../data/controlbun.json";
 // page is gone. Same criterion as `/sign-in/`, which is the other page whose
 // whole job is to point somewhere else.
 //
+// **Mail is still not a submission route, and this page said otherwise for a
+// day.** It was edited on 2026-09-20 to say mail takes a submission record,
+// which was true of the hour between `/signed-in/` producing a downloadable
+// record and the table existing for it to be sent to. The sentence here has
+// always been "the day that changes it will be written down"; the day changed,
+// what it changed to is a route on `/signed-in/`, and `DECISIONS.md` 2026-09-20
+// is where it is written down.
+//
 // **The address is written out, not obfuscated, and that is a decision rather
 // than an oversight.** It is the git author identity on every commit in a public
 // repository, so it is already fetchable from the GitHub API by anybody who
@@ -55,7 +63,7 @@ const contested = data.model_index.some((m) =>
 
   <p>
     This is {size} submissions by {authors === 1 ? "one author" : `${authors} authors`},
-    and nothing here takes an upload yet.{!contested && (
+    and what a submission records is a pointer rather than bytes.{!contested && (
       " No label has a second claimant, so the disagreement this is built to " +
       "hold has not happened here once."
     )}
@@ -69,8 +77,11 @@ const contested = data.model_index.some((m) =>
   </p>
 
   <p class="note">
-    There is no form on this site and no account. Mail is not a submission route
-    either: nothing here publishes what you send it, and the day that changes it
-    will be written down.
+    Mail is not a submission route: nothing here publishes what you send it, and
+    that has not changed. What has changed is that there is now a route, and it
+    is <a href="/signed-in/">/signed-in/</a>. Sign in with Hugging Face, fill in
+    the pointer and the contract, and press submit. Arriving does not publish it
+    either: the bytes are fetched at the pin and checked, the row is written
+    where the corpus is rebuilt, and it appears on the site when I publish.
   </p>
 </Base>

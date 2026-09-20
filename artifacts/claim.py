@@ -11,17 +11,28 @@ rather than asserted in this paragraph.
 
 ## The gap this closes
 
-`artifacts/signin.py` writes a dated capture of what Hugging Face said about one
-account. `schema/migrations/009` defines the three tables a claim is made of.
-Nothing joined them, so the one real claim in this corpus was made by a person
-reading a capture on screen and typing its values into `artifacts/seed.py`. Every
-other real value here is derived from a file by a script, and transcription is
-what this project refuses everywhere else: a fact that was typed in is a fact
-that can be typed in wrong, and the row is what every later check reads.
+`/signed-in/` writes a dated capture of what Hugging Face said about one account
+and hands it to the person who signed in, as a file they download.
+`schema/migrations/009` defines the three tables a claim is made of. Nothing
+joined them, so the one real claim in this corpus was made by a person reading a
+capture on screen and typing its values into `artifacts/seed.py`. Every other
+real value here is derived from a file by a script, and transcription is what
+this project refuses everywhere else: a fact that was typed in is a fact that
+can be typed in wrong, and the row is what every later check reads.
+
+**The capture used to come from a loopback tool and now comes from the browser.**
+`artifacts/signin.py` was deleted on 2026-09-20 with the work that made signing
+in work on the published site, for the reason `DECISIONS.md` gives: two paths
+producing the same object is the failure this repository has hit more than any
+other. Nothing about the shape changed. A capture is still one JSON object with
+the same keys, `orgs` still has the same three states, and this file still reads
+it without knowing which half of the project wrote it.
 
 ## Three files, and the line between them is deliberate
 
     artifacts/memberships.jsonl   the capture. Gitignored, and stays that way.
+                                  Either the downloaded file itself or a file
+                                  the downloads were appended to; both read.
     artifacts/claims.jsonl        the record. Tracked, append-only, this file's.
     registry.db                   rebuilt from the record on every `make site`.
 
@@ -73,11 +84,13 @@ no id is ever typed.
 
 ## Nothing here writes a token
 
-A capture written by `artifacts/signin.py` carries none, by construction. This
+A capture written by `/signed-in/` carries none, by construction. This
 refuses one anyway: every key in the capture is walked, and a name that reads
 like a credential stops the whole run before anything is appended or inserted.
 A capture is read in order to make a tracked row, and the cost of being wrong in
-that direction is a secret in a public repository.
+that direction is a secret in a public repository. That matters more now, not
+less: a capture arrives as a file somebody else downloaded from a browser and
+handed over, rather than as a file this machine wrote.
 
 ## No closed enum, anywhere
 
@@ -94,9 +107,14 @@ no way to hand-write a capture that this will read, so an author whose identity
 is real and unprovable through a configured provider cannot be claimed by this
 path. `adopt` is not that door: it reads rows that already exist and cannot
 invent an account. That absence is deliberate for the machine-read half of a
-claim, and `artifacts/SIGNIN.md` records the same gap one object earlier. The
-authored half stays open, which is where an entry for somebody else's published
-direction goes.
+claim: `/signed-in/` has no way to write a capture by hand either, and the same
+gap sits one object earlier there. The authored half stays open, which is where
+an entry for somebody else's published direction goes.
+
+Also impossible: a claim somebody makes without the author. Claiming is still a
+command run on this machine against a capture somebody handed over, because a
+claim is a row in a corpus that is a file in git. `/signed-in/` produces the
+evidence and persists nothing, and there is no table behind it that would.
 
 Also impossible: a claim made at a moment other than a capture. `claimed_at` is
 the capture's own timestamp and there is no way to give it another, so a claim
@@ -124,8 +142,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from controlbun import db  # noqa: E402
 
-# The capture, written by `artifacts/signin.py` and gitignored. Read here and
-# never copied: what leaves this file is the projection below, field by field.
+# The capture, downloaded from `/signed-in/` and gitignored. Read here and never
+# copied: what leaves this file is the projection below, field by field. Point
+# `--captures` straight at the downloaded file, or append downloads to this one.
 CAPTURES = HERE / "memberships.jsonl"
 
 # The record. Tracked, because it is the only durable copy of a claim.
@@ -139,7 +158,7 @@ CLAIM = "controlbun.registry/namespace-claim@1"
 OBSERVATION = "controlbun.registry/membership-observation@1"
 
 # Substrings, matched against key names and not against values. A capture from
-# `signin.py` can contain none of these; a file that does was written by
+# `/signed-in/` can contain none of these; a file that does was written by
 # something else and is not going to be turned into a tracked row.
 CREDENTIAL_WORDS = (
     "token", "secret", "password", "credential", "authorization",
@@ -186,16 +205,50 @@ def append_record(entry: dict, path: Path | None = None) -> None:
 
 
 def read_captures(path: Path | None = None) -> list[dict]:
-    """Every capture, oldest first. Absent names the tool that writes it."""
+    """Every capture, oldest first. Absent names where one comes from.
+
+    **Two spellings of the same thing, because the browser writes one of them.**
+    A download from `/signed-in/` is one JSON object in a file. A file somebody
+    has been appending downloads to is one object per line. Both are read, and
+    neither is the correct one: what this cares about is the objects, and a
+    version that took only the line-per-object form would make a person reformat
+    a file before a tool would look at it, which is a transcription step with a
+    text editor in it.
+
+    An array is read too, for the person who concatenated several.
+    """
     path = path or CAPTURES
     if not path.exists():
         raise Refused(
-            f"no {path} to read. That file is written by `artifacts/signin.py "
-            "serve` and is gitignored, so a fresh checkout has none and a claim "
-            "starts with a sign-in rather than with this command."
+            f"no {path} to read. A capture is the file `/signed-in/` hands you "
+            "after Hugging Face sends you back, and it is gitignored, so a "
+            "fresh checkout has none and a claim starts with a sign-in rather "
+            "than with this command. Point --captures at the download, or "
+            f"move it to {path}."
         )
-    return [json.loads(line) for line in path.read_text().splitlines()
-            if line.strip()]
+    text = path.read_text().strip()
+    if not text:
+        return []
+    if text.startswith("["):
+        loaded = json.loads(text)
+    elif text.startswith("{") and "\n" in text.strip("{} \n"):
+        # Pretty-printed, so it is one object across many lines rather than
+        # many objects one to a line. Parsed whole; a file holding two
+        # pretty-printed objects back to back raises here rather than being
+        # guessed at, which is the right answer to bytes nobody can read
+        # unambiguously.
+        loaded = json.loads(text)
+    else:
+        loaded = [json.loads(line) for line in text.splitlines() if line.strip()]
+    entries = loaded if isinstance(loaded, list) else [loaded]
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise Refused(
+                f"{path} holds a {type(entry).__name__} where a capture should "
+                "be. A capture is a JSON object, and there is no reader here "
+                "for anything else. Nothing was written."
+            )
+    return entries
 
 
 # --------------------------------------------------------------------------- #
@@ -218,7 +271,7 @@ def refuse_credentials(value, *, where: str) -> None:
                     f"{where} carries a key named {key!r}. A capture is read "
                     "here to make a tracked row in a public repository, and "
                     "nothing that reads like a credential is going into one. "
-                    "`artifacts/signin.py` writes no token, so a capture that "
+                    "`/signed-in/` writes no token, so a capture that "
                     "holds one came from somewhere else. Nothing was written."
                 )
             refuse_credentials(inner, where=where)
@@ -238,7 +291,7 @@ def pick(captures: list[dict], *, at: str | None = None,
     if not captures:
         raise Refused(
             "the capture file is empty, so there is nothing to claim from. "
-            "Run `artifacts/signin.py serve` and sign in first."
+            "Sign in at /signed-in/ and keep the file it hands you."
         )
     found = [c for c in captures
              if (at is None or c.get("captured_at") == at)
@@ -357,7 +410,7 @@ def observations_from(capture: dict, *, is_synthetic: bool = False) -> list[dict
     """One record line per organization the capture reported.
 
     **Three states, and they are three different facts**, the same three
-    `artifacts/signin.py` writes and `schema/migrations/008` describes. A list
+    `/signed-in/` writes and `schema/migrations/008` describes. A list
     is what the provider said. An empty list is a real answer, that the account
     was in no organization at that moment, and it produces no rows because
     there is no observation to record. A null is that the provider said nothing
@@ -569,7 +622,7 @@ def cmd_observe(args, conn) -> int:
     if not entries:
         print("the capture reported no organization, so there is nothing to "
               "observe. That is an answer rather than a failure: see the three "
-              "states in `artifacts/SIGNIN.md`.")
+              "states in `schema/migrations/008_absence_reason.sql`.")
         return 0
     for line in write(conn, entries, args.record):
         print(f"  {line}")

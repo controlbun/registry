@@ -10,6 +10,10 @@ _local/
 # carries the fields the row carries and no others; `artifacts/claim.py` is the
 # projection between them, and `tests/test_claim_record.py` fails the build on a
 # version of it that copies the capture instead.
+#
+# Since 2026-09-20 a capture is a file somebody downloads from `/signed-in/` and
+# hands over, rather than one a local tool wrote. That makes this line matter
+# more, not less: it is now somebody else's dated statement about themselves.
 artifacts/memberships.jsonl
 __pycache__/
 *.pyc

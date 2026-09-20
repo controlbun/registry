@@ -56,7 +56,7 @@ ENDPOINT = "https://test-provider.invalid/oauth/userinfo"
 
 
 def capture(**over) -> dict:
-    """One synthetic capture in the shape `artifacts/signin.py` writes."""
+    """One synthetic capture in the shape `/signed-in/` writes."""
     entry = {
         "shape": "controlbun.registry/membership-capture@1",
         "captured_at": "2026-01-05T00:00:00Z",
@@ -267,7 +267,7 @@ def test_an_observation_never_loses_the_endpoint_that_answered(conn):
 def test_orgs_null_and_orgs_empty_are_two_facts_and_neither_is_a_row():
     """Both write nothing, and they write nothing for different reasons.
 
-    `artifacts/signin.py` keeps the three states apart in the capture and this
+    `astro/src/lib/handshake.mjs` keeps the three states apart in the capture and this
     keeps them apart here: neither produces an observation, and neither is an
     error, which is the rule `schema/migrations/008` applies to an absence.
     """

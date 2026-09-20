@@ -9,9 +9,11 @@ separate object. The home page's Account section came out for exactly that
 reason, so the test at the bottom of this file is the one that stops it coming
 back in under a new name.
 
-**The structural rule, taken from `artifacts/SIGNIN.md` rather than invented
-here.** The difference that matters is not whether an element is called "auth".
-It is whether the element is *a target that receives data from this page*:
+**The structural rule, which `tests/test_intake.py` now states for the whole
+build.** It was proposed in `artifacts/SIGNIN.md` and moved there on 2026-09-20
+when that file was deleted. The difference that matters is not whether an
+element is called "auth". It is whether the element is *a target that receives
+data from this page*:
 
 - a form, a POST target, an `enctype`, a `formaction`, a field, a file input,
   an `XMLHttpRequest`, a `sendBeacon` or a scripted request with a body
@@ -20,10 +22,15 @@ It is whether the element is *a target that receives data from this page*:
   page's data nowhere. The browser navigates away and the page is gone.
 
 `tests/test_intake.py` holds the first list for the whole site and
-`tests/test_signin.py` holds the identity-endpoint line. Neither is touched
-here and neither is weakened. What this file adds is the same criterion applied
-to the one page whose whole job is to point at an identity provider, plus a
-counterexample proving the criterion is not inert.
+`tests/test_signed_in_page.py` holds the identity-endpoint line. Neither is
+touched here and neither is weakened. What this file adds is the same criterion
+applied to the one page whose whole job is to explain what signing in is for,
+plus a counterexample proving the criterion is not inert.
+
+**This page still ships no script, and that is the interesting part now that
+the site holds a session.** `/signed-in/` does the work. Explaining and doing
+are two pages, so there is one place in this build that holds a session rather
+than two, and the checks below stay exactly as strict as they were.
 
 **Every URL in this file is either root-relative or Hugging Face's own.**
 Nothing here fabricates an identity, a date or a number.
@@ -129,9 +136,9 @@ def test_the_page_points_out_and_receives_nothing():
     found = targets_that_receive(built())
     assert not found, (
         "the sign-in page grew a target that receives:\n  " + "\n  ".join(found)
-        + "\n\nAn outbound anchor is fine and is the whole page. Anything that "
-        "takes data off the reader is the write path arriving, and the dual-use "
-        "question a write path raises has not been answered."
+        + "\n\nAn outbound anchor is fine and is the whole page. The page that "
+        "takes data off the reader is /signed-in/, and keeping the two apart "
+        "is what keeps this one checkable by reading it."
     )
 
 
@@ -139,9 +146,10 @@ def test_the_page_carries_no_identity_endpoint_and_no_session_handling():
     """The half `tests/test_intake.py` cannot see.
 
     An authorize URL is an anchor, so the write-surface guard says nothing about
-    it, and it is the exact thing that matters here. `tests/test_signin.py`
-    holds this for the whole of `astro/dist`; this repeats it on the one page
-    that would carry it first, so the failure names the page.
+    it, and it is the exact thing that matters here. `tests/test_signed_in_page.py`
+    holds this for the rest of `astro/dist`, where exactly one page is allowed
+    to carry it; this is the other side of that allowance, saying that this page
+    is not the one.
     """
     offenders = [
         m.group(0) for m in
@@ -149,10 +157,9 @@ def test_the_page_carries_no_identity_endpoint_and_no_session_handling():
                     r"location\.hash", built(), re.I)
     ]
     assert not offenders, (
-        f"the sign-in page carries session handling: {offenders}. The return "
-        "leg needs client-side script to read a session out of the redirect, "
-        "and shipping it reverses a decision recorded twice. It is the "
-        "author's to take explicitly."
+        f"the sign-in page carries session handling: {offenders}. One page in "
+        "this build holds a session and it is /signed-in/. Two would be two "
+        "places for a token to live, which is the shape that leaks one."
     )
 
 
@@ -236,15 +243,31 @@ def test_creating_an_account_is_hugging_face_s_and_leaves_this_site():
         )
 
 
-def test_it_says_the_return_trip_does_not_exist():
+def test_it_says_what_signing_in_produces_and_what_it_does_not():
     """The one thing the page must not let a reader misread.
 
-    Every link here works, and a reader who clicks one and comes back to find
-    nothing changed has been misled unless the page said so first.
+    This used to check for "none of this works yet", which was honest while the
+    return leg did not exist and became a lie on 2026-09-20 when it did. Its
+    replacement, "signing in writes nothing here", lasted until later the same
+    day, when the form started posting: signing in on its own still writes no
+    submission, but a page whose banner says nothing is written and whose next
+    page writes a row is a page a reader is entitled to feel misled by.
+
+    What is checked now is the narrow claim that is true and stays true.
+    Signing in publishes nothing and submits nothing; sending is a separate
+    press, named as one; and reading needs none of it.
     """
     body = " ".join(text_of(built()).split()).lower()
-    assert "none of this works yet" in body
-    assert "does not sign you in here" in body
+    assert "signing in publishes nothing and submits nothing" in body
+    assert "separate press" in body, (
+        "the page no longer says that sending is its own act, which is the "
+        "thing that keeps the banner above it honest"
+    )
+    assert "dated reading" in body
+    assert "needs none of it" in body, (
+        "reading stays anonymous, and the page that explains signing in is "
+        "where somebody learns they do not have to"
+    )
 
 
 def test_the_namespace_is_shown_and_never_offered():
@@ -262,7 +285,7 @@ def test_the_namespace_is_shown_and_never_offered():
 def test_a_membership_is_dated_and_never_called_verified():
     """Nothing rechecks a membership, so a word implying something does is the
     word that turns dated evidence into a standing. Same rule as
-    `tests/test_signin.py` applies to the tool, one layer out."""
+    `tests/test_signed_in_page.py` applies to the page that does the reading."""
     html = built()
     assert not re.search(r"\bverif", text_of(html), re.I), (
         "'verified' claims a freshness this registry does not have"
@@ -311,8 +334,8 @@ def test_the_page_contributes_no_script_of_its_own():
     source = SOURCE.read_text()
     assert "<script" not in source, (
         "the sign-in page grew a script. Reading a session out of a redirect "
-        "is what that script would be for, and shipping it reverses a decision "
-        "recorded twice."
+        "is what that script would be for, and /signed-in/ already does it. "
+        "A second copy is a second place for a token to live."
     )
 
 

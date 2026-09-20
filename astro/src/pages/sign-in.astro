@@ -17,42 +17,38 @@ import Base from "../layouts/Base.astro";
 // claiming a namespace are different acts and only the last one is visible in
 // the corpus. A page that leads with the button implies the button is the point.
 //
-// **No session handling, and that is the constraint rather than an oversight.**
-// `astro.config.mjs` is `output: "static"` with no adapter. An outbound anchor to
-// somebody else's authorization endpoint is fine: the browser navigates away and
-// this page is gone, so it is not a target that receives anything. The return leg
-// is the part that cannot be built here. After a provider redirects back, the
-// session lands where only client-side script can read it, so "signed in as X"
-// needs JavaScript that this build deliberately does not ship. Two guards in the
-// test suite hold that line, one on write surfaces anywhere in `astro/dist` and
-// one on identity endpoints, and neither is weakened by anything on this page.
-// Neither is named here: both of them fail the build if the view layer so much
-// as mentions the loopback tools they belong to, which is the point of them, so
-// the file names live in `tests/test_sign_in_page.py` next door instead.
+// **No session handling here, and that is still the case after the return leg
+// landed.** `astro.config.mjs` is `output: "static"` with no adapter and this
+// page ships no script of its own. The session, the exchange and the form all
+// live on `/signed-in/`, which is one page, so there is one place in this build
+// that holds a session rather than two. This page explains; that page does.
 //
-// So every link here goes to Hugging Face's own pages, which work today, and the
-// page says plainly that the trip back does not exist yet.
+// The reason to keep them apart is the reason the Account section came out: a
+// page that leads with a button implies the button is the point, and signing in
+// on its own still gives somebody nothing. Holding an account, signing in and
+// claiming a namespace are three acts and only the last is visible in the
+// corpus.
 //
 // **The copy is drafted, not dictated.** Structure and accuracy are mine; the
 // sentences are the author's to rewrite.
 
 const HF_CREATE = "https://huggingface.co/join";
-const HF_LOGIN = "https://huggingface.co/login";
 ---
 
 <Base title="Sign in" trail={[{ text: "controlbun", href: "/" }]} synthetic="none">
   <h1 slot="heading">Sign in</h1>
 
   <p class="lede">
-    Identity here is Hugging Face's. This registry issues no account, holds no
-    password and has nothing to sign up for.
+    Identity here is Hugging Face's. This registry holds no password and has
+    nothing to sign up for.
   </p>
 
   <p class="banner">
-    <strong>None of this works yet.</strong> The links below go to Hugging Face
-    and they work. The trip back does not exist: this site is built as files and
-    has nowhere to receive a session, so signing in at Hugging Face today changes
-    nothing here and claiming a namespace is not yet possible from a browser.
+    <strong>Signing in publishes nothing and submits nothing.</strong> It
+    produces one thing: a dated reading of what Hugging Face says about your
+    account at that moment, which you keep. Sending a submission is a separate
+    press on the page after this one, and reading this site is metered by
+    nothing and needs none of it.
   </p>
 
   <h2>Three steps, and the middle one is the smallest</h2>
@@ -78,11 +74,12 @@ const HF_LOGIN = "https://huggingface.co/login";
         sent here.
       </p>
       <p>
-        <a href={HF_LOGIN}>Sign in at Hugging Face</a>{" "}
+        <a href="/signed-in/">Sign in with Hugging Face</a>{" "}
         <span class="note">
-          This signs you in at Hugging Face and returns you there. It does not
-          sign you in here, and nothing on this site will look different
-          afterwards.
+          That page sends you to Hugging Face and receives you back. It holds
+          the reading in the tab and nowhere else, so closing the tab ends it.
+          Signing in on its own writes no submission; that is a button further
+          down that page.
         </span>
       </p>
     </li>
@@ -107,8 +104,9 @@ const HF_LOGIN = "https://huggingface.co/login";
   <h2>Your namespace is your handle, and there is no field for it</h2>
 
   <p>
-    If you ever submit through a signed-in path, the namespace is the handle
-    Hugging Face reported when you signed in. It is shown to you, not offered:
+    When you submit, the namespace is the handle Hugging Face reported when you
+    signed in, and the database writes it from your session rather than from
+    anything you typed. It is shown to you, not offered:
     no box, and no default to type over. Somebody signed in under one handle
     cannot publish under a name belonging to somebody else, and a dispute about
     who really holds a name is Hugging Face's to settle rather than ours.
@@ -157,7 +155,11 @@ const HF_LOGIN = "https://huggingface.co/login";
   <h2>What is missing, in one sentence</h2>
 
   <p>
-    A page that can receive you after Hugging Face sends you back.{" "}
+    A way in for somebody who is not on Hugging Face, and a way to correct a
+    submission that is not another submission. What a submission does not wait
+    for is a person's opinion of it: it lands, and it appears on the site when
+    the author rebuilds and publishes, because the corpus is a file in git and
+    that is what the falsifier checks.{" "}
     <a href="/about/">What this registry is and where it came from</a>.
   </p>
 </Base>

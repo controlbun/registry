@@ -22,6 +22,7 @@ no number here is a measurement of anything.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -941,45 +942,293 @@ def test_the_record_replays_into_a_rebuilt_database(tool):
 
 DIST = ROOT / "astro" / "dist"
 
-# What a write surface looks like in built output. `<input>` on its own is not
-# on the list: the situation picker on the front page is two of them, and
-# banning the tag would ban the control that makes the open fields open.
-WRITE_SURFACE = {
-    r"<form\b": "a form element",
-    r"method\s*[:=]\s*[\"']?\s*post\b": "a POST target",
-    r"\benctype\b": "a form encoding, which only a submitting form needs",
-    r"\bformaction\b": "a submit button with its own target",
-    r'type\s*=\s*["\']?file\b': "a file input",
-    r"\bmultipart/form-data\b": "an upload encoding",
-    r"\bXMLHttpRequest\b": "a scripted request older than fetch",
-    r"\bsendBeacon\b": "a fire-and-forget POST",
-    r"\b127\.0\.0\.1\b": "a loopback address, which is the intake tool's",
-    r"\blocalhost:\d": "a loopback address, which is the intake tool's",
+# --------------------------------------------------------------------------- #
+# The structural criterion, which replaced a list of names on 2026-09-20.
+#
+# This dict used to hold `<form`, `method=post`, `enctype`, `formaction`,
+# `type=file`, `multipart/form-data`, `XMLHttpRequest` and `sendBeacon`, and it
+# read every one of them as a write path arriving. That was right while the
+# published site could not hold a session and became wrong the moment
+# `/signed-in/` did: the page is now a client that signs a reader in at their
+# own provider and, if they ask, puts one file in their own account. Every one
+# of those eight patterns is in the build, and none of them is the thing the
+# guard exists to stop.
+#
+# So the question changed from *does a request exist* to **where is it aimed**,
+# which is the criterion `artifacts/SIGNIN.md` proposed before it was deleted
+# and `DECISIONS.md` 2026-09-20 records. Two properties, and both bite:
+#
+#   1. Nothing on this site is a target that receives. The build emits files,
+#      runs no route, and no element anywhere names this origin as somewhere to
+#      send to. That is `test_the_site_build_emits_files_and_cannot_run_a_route`
+#      below, unchanged, plus `test_nothing_on_the_site_posts_to_this_site`.
+#   2. Every origin the site can send a reader's data to is named here, with the
+#      page it is on and the reason. A new destination is an edit to this file,
+#      which is a decision somebody made rather than a line that arrived.
+#
+# What is gone is the claim that a static build *structurally* cannot write.
+# It can now, to somebody else's origin, with the reader's own credentials. That
+# is the price, it is stated in the decision entry, and these two tests are what
+# keep it from widening quietly.
+#
+# It widened once already, on 2026-09-20, and the widening is in `MAY_SEND_TO`
+# rather than in a new clause: one of those destinations is a table this project
+# owns, and the site writes a submission to it. Property 1 is untouched by that,
+# because the row goes to Supabase and not here, and property 2 is the whole
+# mechanism: the destination was already named, so what the edit had to say is
+# what is now sent there and why that is narrower than it sounds.
+
+# Patterns that are a write surface wherever they appear, because none of them
+# has an honest use on a site with no origin that receives.
+ALWAYS_REFUSED = {
+    r"\b127\.0\.0\.1\b": "a loopback address, which is a local tool's and not this site's",
+    r"\blocalhost:\d": "a loopback address, which is a local tool's and not this site's",
+    r"\bnavigator\.sendBeacon\b": "a fire-and-forget POST, which exists to send without being noticed",
+    r"\bmultipart/form-data\b": "an upload encoding, which only a submitting form needs",
+}
+
+# Every origin the built site may send a reader's data to, mapped to why.
+#
+# An enumeration on purpose, which is the opposite of how this repository treats
+# user-supplied values and the right way round here: the values being enumerated
+# are this project's own, and what is being constrained is the registry rather
+# than a contributor. `DECISIONS.md` 2026-09-15 named that inversion as the one
+# legitimate closed set in this design.
+#
+# Neither of these is this site. The reader's data goes to the reader's identity
+# provider and to the reader's own account, and this project receives none of it.
+MAY_SEND_TO = {
+    "huggingface.co": (
+        "the reader's identity provider and the host of the reader's own "
+        "account. Discovery, userinfo, and, only when the reader takes the "
+        "upload offer, creating one repository under their own namespace and "
+        "committing one file to it."
+    ),
+    "supabase.co": (
+        "the project that holds the Hugging Face provider configuration and "
+        "performs the code exchange. It is a confidential client so this site "
+        "holds no client secret; what it returns is a session that lives in "
+        "one variable in one tab. **Since 2026-09-20 the site also writes "
+        "there**: `POST /rest/v1/pending_submission` puts one submission in a "
+        "holding table, over the submitter's own session, when they press "
+        "submit. That is a write to a destination this project owns and it is "
+        "the widest thing on this list, so it is spelled out rather than "
+        "covered by the sentence above. Three properties make it the narrow "
+        "thing it is, and each is held somewhere that fails a build: the row's "
+        "identity is stamped by Postgres and refused when the payload "
+        "disagrees with the verified session, which is "
+        "`schema/supabase/001_pending_submission.sql` and "
+        "`tests/test_pending_submission.py`; the table is not the corpus and "
+        "nothing in it reaches a reader until the author pulls it into a "
+        "tracked file and publishes a rebuild, which is `intake.pull`; and "
+        "reading stays anonymous, because no read anywhere on this site goes "
+        "through it."
+    ),
 }
 
 
-def test_the_built_site_ships_no_form_and_no_post_target():
-    """The site is `output: "static"` and has to stay a thing that cannot accept.
+def receiving_targets(text: str) -> list[str]:
+    """Absolute URLs this text could send to, as bare hosts.
 
-    v0 accepts no uploads and serves nothing publicly, and the dual-use policy
-    that a submission route needs does not exist. The intake form is the first
-    code in this repository that takes a file and writes a row, so this is the
-    check that it never arrives on the published site by being copied, imported
-    or reimplemented there.
+    Scheme-bearing literals only. A relative URL cannot leave the origin, and an
+    origin that cannot receive is the property held separately below.
     """
+    return sorted({
+        m.group(1).lower()
+        for m in re.finditer(r"https?://([A-Za-z0-9.-]+)", text)
+    })
+
+
+def built_files():
+    for path in sorted(DIST.rglob("*")):
+        if path.is_file() and path.suffix in {".html", ".js", ".mjs", ".css"}:
+            yield path
+
+
+def test_the_built_site_carries_no_surface_that_sends_unasked():
+    """The patterns with no honest use here, whatever else the page does."""
     if not DIST.exists():
         pytest.skip("site not built; run `make site`")
     offenders = []
-    for path in sorted(DIST.rglob("*")):
-        if not path.is_file() or path.suffix not in {".html", ".js", ".mjs", ".css"}:
-            continue
+    for path in built_files():
         text = path.read_text(errors="ignore")
-        for pattern, what in WRITE_SURFACE.items():
+        for pattern, what in ALWAYS_REFUSED.items():
             for m in re.finditer(pattern, text, re.I):
                 offenders.append(f"{path.relative_to(DIST)}: {what} ({m.group(0)!r})")
     assert not offenders, (
         "the built site carries a write surface:\n  " + "\n  ".join(offenders)
     )
+
+
+def test_nothing_on_the_site_posts_to_this_site():
+    """The property that survived the reversal intact.
+
+    The site has no origin that receives. A form whose `action` is this site, a
+    `formaction`, or a request literal naming this origin would each be the
+    first one, and all three are absent because there is nothing behind them to
+    answer. The page that signs somebody in submits no form at all: it reads its
+    fields with script and sends them nowhere.
+    """
+    if not DIST.exists():
+        pytest.skip("site not built; run `make site`")
+    origin = re.search(
+        r'site:\s*"([^"]+)"', (ROOT / "astro" / "astro.config.mjs").read_text()
+    ).group(1)
+    host = re.sub(r"^https?://", "", origin).rstrip("/")
+    offenders = []
+    for path in built_files():
+        text = path.read_text(errors="ignore")
+        for m in re.finditer(r"\b(?:form)?action\s*=\s*[\"']?([^\"'\s>]+)", text, re.I):
+            offenders.append(f"{path.relative_to(DIST)}: a submit target {m.group(1)!r}")
+        for m in re.finditer(rf"https?://{re.escape(host)}\S*", text):
+            # The canonical link and the link-preview tags name this origin and
+            # send nothing; a request literal is what this is looking for.
+            if re.search(r"(fetch|method|body|action)", text[max(0, m.start() - 120):m.start()], re.I):
+                offenders.append(f"{path.relative_to(DIST)}: a request aimed at this site ({m.group(0)!r})")
+    assert not offenders, (
+        "the built site aims a request at itself:\n  " + "\n  ".join(offenders)
+        + "\n\nThere is nothing here to answer one. The build emits files and "
+        "runs no route, which is the property the reversal on 2026-09-20 kept."
+    )
+
+
+def test_every_origin_the_site_can_send_to_is_accounted_for():
+    """A new destination is an edit to `MAY_SEND_TO`, which is a decision.
+
+    Scoped to the script, because the HTML's off-site links are anchors and
+    `tests/test_pinned_page.py` already asks whether the build invented one. An
+    anchor navigates away and sends this page's data nowhere; a literal in a
+    bundle is somewhere a request can be aimed.
+
+    Scoped further to `_astro/`, which is what this project's own source
+    compiles to. `pagefind/` is a vendored bundle from a version pinned in the
+    lockfile, and the URLs in it are documentation links in its own comments, so
+    listing them here would be this project accounting for somebody else's
+    prose. What still covers that directory is the clause above, which reads
+    every built file and refuses a loopback address and a beacon wherever one
+    appears.
+    """
+    if not DIST.exists():
+        pytest.skip("site not built; run `make site`")
+    unaccounted = {}
+    for path in built_files():
+        if path.suffix not in {".js", ".mjs"}:
+            continue
+        if path.relative_to(DIST).parts[0] != "_astro":
+            continue
+        for host in receiving_targets(path.read_text(errors="ignore")):
+            if not any(host == known or host.endswith("." + known)
+                       for known in MAY_SEND_TO):
+                unaccounted.setdefault(host, str(path.relative_to(DIST)))
+    assert not unaccounted, (
+        f"the built script can reach origins nobody accounted for: {unaccounted}. "
+        "Add it to MAY_SEND_TO with the reason, or take it out. A destination "
+        "that arrives without a test edit is one nobody decided on."
+    )
+
+
+def configured_targets(html: str) -> list[str]:
+    """Hosts handed to script through a `data-` attribute, as bare hosts.
+
+    A URL in a data attribute is a destination the build configured and the
+    script reads at runtime, which is the same category as a literal in a
+    bundle and not the same category as an anchor.
+    """
+    return sorted({
+        m.group(1).lower()
+        for m in re.finditer(r'data-[\w-]+="https?://([A-Za-z0-9.-]+)', html)
+    })
+
+
+def test_every_origin_configured_on_a_page_is_accounted_for():
+    """The half the clause above could not see, and did not, for a day.
+
+    `test_every_origin_the_site_can_send_to_is_accounted_for` reads `_astro/`
+    scripts. The Supabase project URL is not in one: it is built into
+    `signed-in/index.html` as `data-supabase-url` and read off the element at
+    runtime, because it comes from a `.env` this repository does not carry. So
+    the destination the site sends the most to was outside the enumeration
+    entirely, and the enumeration was green because it was looking in the one
+    place that value never appears.
+
+    Found when the submission POST was added on 2026-09-20 and the guard did
+    not move. It is the failure this repository keeps catching written out in
+    full: a check that passes because it cannot see the thing it is about.
+    """
+    if not DIST.exists():
+        pytest.skip("site not built; run `make site`")
+    unaccounted = {}
+    for path in DIST.rglob("*.html"):
+        for host in configured_targets(path.read_text(errors="ignore")):
+            if not any(host == known or host.endswith("." + known)
+                       for known in MAY_SEND_TO):
+                unaccounted.setdefault(host, str(path.relative_to(DIST)))
+    assert not unaccounted, (
+        f"a page configures a destination nobody accounted for: {unaccounted}. "
+        "Add it to MAY_SEND_TO with the reason, or take it out."
+    )
+
+
+def test_the_configured_origin_clause_actually_sees_the_project():
+    """And is not green because it matches nothing.
+
+    The clause above would pass on a build with no data attributes at all,
+    which is exactly how the scoped-to-`_astro` one passed. So this asserts the
+    scan finds the destination it exists for, by shape rather than by the
+    project's own subdomain, which is in a file this repository does not carry.
+    """
+    if not DIST.exists():
+        pytest.skip("site not built; run `make site`")
+    page = (DIST / "signed-in" / "index.html").read_text(errors="ignore")
+    found = configured_targets(page)
+    assert any(host.endswith("supabase.co") for host in found), (
+        "the page that signs somebody in configures no Supabase project, so "
+        "either this build had no .env or the attribute moved and this clause "
+        "is now looking at nothing"
+    )
+
+
+def test_the_criterion_flags_what_it_claims_to_flag():
+    """The bite. A guard that is green for the wrong reason is the failure this
+    repository has hit more than once, so every clause above is shown refusing
+    a plausible next edit rather than asserted to work.
+    """
+    for bad, pattern in (
+        ('fetch("http://127.0.0.1:8931/x")', r"\b127\.0\.0\.1\b"),
+        ('open("http://localhost:8931/")', r"\blocalhost:\d"),
+        ("navigator.sendBeacon('/x', d)", r"\bnavigator\.sendBeacon\b"),
+        ('enctype="multipart/form-data"', r"\bmultipart/form-data\b"),
+    ):
+        assert any(re.search(p, bad, re.I) for p in ALWAYS_REFUSED), (
+            f"the guard missed {bad!r}"
+        )
+        assert re.search(pattern, bad, re.I), f"{pattern!r} no longer matches {bad!r}"
+
+    # An origin nobody accounted for is caught, and the two that are named pass.
+    assert receiving_targets('fetch("https://example.invalid/collect")') == \
+        ["example.invalid"]
+    for allowed in ("https://huggingface.co/oauth/userinfo",
+                    "https://abc.supabase.co/auth/v1/token"):
+        host = receiving_targets(allowed)[0]
+        assert any(host == known or host.endswith("." + known)
+                   for known in MAY_SEND_TO), f"{host} is not accounted for"
+    assert not any(
+        "example.invalid" == known or "example.invalid".endswith("." + known)
+        for known in MAY_SEND_TO
+    )
+
+    # A configured destination is caught in the attribute it arrives in, and an
+    # anchor to the same host is not one: an anchor navigates away and sends
+    # this page's data nowhere.
+    assert configured_targets('<div data-collect-url="https://example.invalid/x">') == \
+        ["example.invalid"]
+    assert configured_targets('<a href="https://example.invalid/x">read</a>') == []
+
+    # And a submit target is caught wherever it is spelled.
+    for bad in ('<form action="/claim">', '<button formaction="/claim">'):
+        assert re.search(r"\b(?:form)?action\s*=\s*[\"']?([^\"'\s>]+)", bad, re.I), (
+            f"the submit-target clause missed {bad!r}"
+        )
 
 
 def test_the_site_build_emits_files_and_cannot_run_a_route():
@@ -1001,15 +1250,35 @@ def test_the_site_build_emits_files_and_cannot_run_a_route():
 
 
 def test_the_site_does_not_know_the_intake_tool_exists():
+    """A loopback tool named on a published page is an invitation nobody but
+    the operator can accept.
+
+    The lookbehind excludes `test_intake.py`, which is this file. Naming a
+    guard that constrains the view layer is not a reference to the tool the
+    guard is about, and a substring match said it was: `/signed-in/` cites the
+    test that permits it, which is the citation an auditor wants and exactly
+    what the unqualified version flagged.
+    """
     hits = [
         p.relative_to(ROOT) for p in (ROOT / "astro" / "src").rglob("*")
-        if p.is_file() and "intake" in p.read_text(errors="ignore")
+        if p.is_file()
+        and re.search(r"(?<!test_)intake", p.read_text(errors="ignore"))
     ]
     assert not hits, (
         f"the view layer references the intake tool: {hits}. It is a separate "
         "process on loopback, and a link to it from a published page is an "
         "invitation the page cannot honor for anybody but the operator."
     )
+
+
+def test_that_guard_still_catches_the_tool_it_is_about():
+    """The bite for the lookbehind, because a narrowing that goes one character
+    too far is how a guard goes quiet."""
+    wanted = re.compile(r"(?<!test_)intake")
+    for named in ("artifacts/intake.py", "intake.jsonl", "run the intake form",
+                  "from intake import serve"):
+        assert wanted.search(named), f"the guard stopped seeing {named!r}"
+    assert not wanted.search("see tests/test_intake.py for the criterion")
 
 
 # --------------------------------------------------------------------------- #
@@ -1158,3 +1427,372 @@ def test_a_digest_matching_neither_side_keeps_the_original_message(tmp_path):
         intake.check_bytes(blob, "d.safetensors", "v/d.safetensors",
                            stated={"sha256": "a" * 64})
     assert "one of the two moved" in str(apart.value)
+
+
+# --------------------------------------------------------------------------- #
+# `take`: a submission somebody built in a browser, replayed into the corpus.
+#
+# The other half of the 2026-09-20 write path. `/signed-in/` produces the
+# pointer and the contract and computes no tensor fact, so everything the row
+# says about the bytes is derived here, by `controlbun.artifact`, from the file
+# fetched at the pin. These tests are what make that claim executable rather
+# than a paragraph in a module docstring.
+#
+# The helpers come from `tests/test_signed_in_page.py` rather than being written
+# again, so the object under test is the one the page actually builds. A second
+# hand-written copy of the shape in this file would pass forever after the page
+# stopped producing it.
+
+from test_signed_in_page import a_form, submission  # noqa: E402
+
+
+@pytest.fixture
+def taker(tmp_path, monkeypatch, hub):
+    """An empty corpus, a tree of its own, and a host serving one file."""
+    from controlbun import fetch
+
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    monkeypatch.setattr(intake, "ROOT", tree)
+    monkeypatch.setattr(fetch, "HUB", hub)
+    monkeypatch.setattr(fetch, "CACHE", tmp_path / "cache")
+
+    database = tmp_path / "registry.db"
+    conn = db.connect(str(database))
+    db.migrate(conn)
+    yield conn, tmp_path / "intake.jsonl"
+    conn.close()
+
+
+def a_submission(**over):
+    form = a_form(repo=REPO, commit=SHA, path=REMOTE_PATH)
+    form.update(over)
+    return submission(form)
+
+
+def test_take_derives_every_tensor_fact_from_the_bytes(taker):
+    """The record says nothing about the tensor and the row says everything.
+
+    So a submitter cannot state a shape, a dtype or a digest that the file does
+    not have, because there is no field for one and nothing here reads one.
+    """
+    conn, record = taker
+    entry = intake.take(conn, a_submission(), record)
+
+    iv = entry["intervention"]
+    assert iv["shape"] == "[8]"
+    assert iv["dtype"] == "float32"
+    assert iv["l2_norm"] is not None
+    assert iv["artifact_sha256"] == hashlib.sha256(
+        synthetic_blob(record.parent)).hexdigest()
+
+    row, = conn.execute("SELECT * FROM intervention").fetchall()
+    assert row["artifact_repo"] == REPO
+    assert row["artifact_commit"] == SHA
+    assert row["artifact_path"] == REMOTE_PATH
+
+
+def test_take_writes_the_row_and_the_record_together(taker):
+    conn, record = taker
+    intake.take(conn, a_submission(), record)
+    assert conn.execute("SELECT COUNT(*) c FROM submission").fetchone()["c"] == 1
+    lines = [json.loads(line) for line in record.read_text().splitlines()]
+    assert len(lines) == 1
+    # And the record replays into a database that was dropped and rebuilt.
+    conn.execute("DELETE FROM intervention")
+    conn.execute("DELETE FROM submission")
+    conn.commit()
+    assert intake.replay(conn, record) == [
+        "sohampadia/allenai/Olmo-3-1125-32B/pro-human@meandiff"
+    ]
+
+
+def test_the_namespace_on_the_row_is_the_handle_and_not_a_field(taker):
+    """`DECISIONS.md` 2026-09-19. The page builds `author` from the capture and
+    this carries it through; an `author` typed into the form reaches neither."""
+    conn, record = taker
+    entry = intake.take(conn, a_submission(author="meta"), record)
+    assert entry["author"] == "sohampadia"
+
+
+def test_a_shape_with_no_reader_is_refused_and_says_so(taker):
+    conn, record = taker
+    with pytest.raises(intake.Refused) as refused:
+        intake.take(conn, {"shape": "controlbun.registry/link-submission@99"},
+                    record)
+    said = str(refused.value)
+    assert "no reader for it here" in said
+    assert "rather than a statement that the shape is illegitimate" in said
+    assert not record.exists()
+
+
+def test_a_record_carrying_anything_that_reads_like_a_credential_stops(taker):
+    """Belt and braces: the projection copies named fields and could not carry
+    a stray key anyway. This refuses before that, because the failure being
+    guarded against is a secret in a public repository and the cheap check is
+    the one that runs first."""
+    conn, record = taker
+    for key in ("provider_token", "apiKey", "Authorization", "code_verifier"):
+        given = a_submission()
+        given["intervention"][key] = "should never travel"
+        with pytest.raises(intake.Refused) as refused:
+            intake.take(conn, given, record)
+        assert key in str(refused.value)
+        assert "Nothing was written." in str(refused.value)
+    assert not record.exists()
+
+
+def test_bytes_nobody_can_fetch_refuse_here_rather_than_becoming_a_row(taker):
+    """A submission whose pin does not resolve is refused with the reason, and
+    the reason is a fact about the artifact rather than a credential to go find.
+    `DECISIONS.md` 2026-09-20 names the failure this stops: a registry whose
+    pages mostly point at things nobody can fetch is a bibliography."""
+    conn, record = taker
+    with pytest.raises(Exception) as refused:
+        intake.take(conn, a_submission(commit="c" * 40), record)
+    assert "has no" in str(refused.value)
+    assert "does not fall back to another revision" in str(refused.value)
+    assert conn.execute("SELECT COUNT(*) c FROM submission").fetchone()["c"] == 0
+    assert not record.exists()
+
+
+def test_take_refuses_a_value_and_a_reason_for_having_none(taker):
+    """The contradiction `insert` refuses, reached through this path too,
+    because both the live write and the replay come through one function."""
+    conn, record = taker
+    given = a_submission(
+        model_revision="abc123",
+        absent={"model_revision": "the manifest records no revision anywhere"},
+    )
+    with pytest.raises(intake.Refused) as refused:
+        intake.take(conn, given, record)
+    assert "two claims about one field" in str(refused.value)
+
+
+# --------------------------------------------------------------------------- #
+# `pull`: every submission the site received, into the record the build replays.
+#
+# The site posts to `pending_submission` now, and this is the other end of that.
+# What it must not become is a queue: nothing here approves, rejects, ranks,
+# counts or orders anything, and `taken_at` means read in rather than accepted.
+#
+# **Nothing here touches the network.** `pending` and `mark_taken` are the two
+# functions that do, and they are one `urllib` call each; `pull` takes the rows
+# it is given and a callback to mark them, so the part with the rule in it runs
+# against a list of dicts. That split is the reason the rule is testable at all.
+# Whether the project answers is not this gate's question, and a gate that
+# depended on it would go red for reasons that have nothing to do with this
+# repository.
+
+
+def a_row(record=None, *, subject="opaque", handle="sohampadia", **over):
+    """One `pending_submission` row, shaped the way PostgREST returns one.
+
+    `subject` and `handle` are the stamped columns. Postgres wrote them from
+    the verified session and refused the insert if they disagreed with it, so
+    in this fixture they are the ground the record is read against.
+    """
+    row = {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "received_at": "2026-09-20T12:00:00Z",
+        "account": "11111111-2222-3333-4444-555555555555",
+        "subject": subject,
+        "handle": handle,
+        "record": a_submission() if record is None else record,
+        "taken_at": None,
+    }
+    row.update(over)
+    return row
+
+
+def test_pull_writes_through_the_same_function_a_mailed_file_goes_through(taker):
+    """One function writes a submission and there is not a second one.
+
+    `take` is what `intake.py take` calls on a file somebody handed over and it
+    is what this calls on a row the site received. So the record and the
+    database cannot come apart, which is the shape `artifacts/claim.py` and
+    `artifacts/publish.py` already use and the reason this is not its own
+    module.
+    """
+    conn, record = taker
+    marked = []
+    results = intake.pull(conn, [a_row()], path=record,
+                          mark=lambda row_id, at: marked.append((row_id, at)),
+                          at="2026-09-20T13:00:00Z")
+
+    assert len(results) == 1
+    assert results[0]["ref"] == "sohampadia/allenai/Olmo-3-1125-32B/pro-human@meandiff"
+    assert conn.execute("SELECT COUNT(*) c FROM submission").fetchone()["c"] == 1
+    assert len(record.read_text().splitlines()) == 1
+    assert marked == [("00000000-0000-0000-0000-000000000001", "2026-09-20T13:00:00Z")]
+
+    # And the tracked record replays into a database that was dropped, which is
+    # what `make site` does on every build.
+    conn.execute("DELETE FROM intervention")
+    conn.execute("DELETE FROM submission")
+    conn.commit()
+    assert intake.replay(conn, record) == [
+        "sohampadia/allenai/Olmo-3-1125-32B/pro-human@meandiff"
+    ]
+
+
+def test_the_stamped_identity_wins_over_the_record_s_own():
+    """The property the table exists for, at the point the author reads it.
+
+    A capture that arrives as a file is a stranger's JSON and nothing
+    downstream can tell an edited one from a real one. The columns came through
+    an insert policy that refused the row unless they matched the verified
+    session, so where the two disagree the columns are the answer.
+    """
+    claimed = a_submission()
+    claimed["author"] = "somebody-else"
+    claimed["subject"] = "somebody-elses-subject"
+    out, differs = intake.stamped(a_row(claimed))
+
+    assert out["author"] == "sohampadia"
+    assert out["subject"] == "opaque"
+    assert len(differs) == 2
+    assert any("somebody-else" in line and "sohampadia" in line for line in differs)
+    assert any("somebody-elses-subject" in line and "opaque" in line
+               for line in differs)
+
+
+def test_agreement_is_silent_and_disagreement_is_not_a_refusal():
+    """It is a fact about two reads of one account at two moments, not a
+    finding against anybody. A handle renamed between the capture and the
+    session would produce it, and that is a real thing that happens to real
+    people rather than an attack."""
+    out, differs = intake.stamped(a_row())
+    assert differs == []
+    assert out["author"] == "sohampadia"
+
+    renamed = a_submission()
+    renamed["author"] = "old-name"
+    out, differs = intake.stamped(a_row(renamed))
+    assert out["author"] == "sohampadia"
+    assert len(differs) == 1
+    # Surfaced and not raised. Nothing about it stops the row.
+    assert "stamped" not in out
+
+
+def test_a_row_the_insert_policy_could_not_have_written_is_refused():
+    """`subject` and `handle` are `not null` and the policy binds both. A row
+    with neither did not come through it, so something other than the site put
+    it there and it is not going into a tracked file."""
+    for missing in ({"subject": ""}, {"handle": ""}):
+        with pytest.raises(intake.Refused) as refused:
+            intake.stamped(a_row(**missing))
+        assert "did not come through the insert policy" in str(refused.value)
+
+
+def test_a_refused_row_stays_unread_and_does_not_stop_the_others(taker):
+    """A pin nobody can fetch is one submitter's problem and the rows behind it
+    are other people's. The refused row keeps `taken_at` null, so it is there
+    next time and the author can write back about it. Refusing is what the
+    schema refuses and never a judgment about the work."""
+    conn, record = taker
+    marked = []
+    bad = a_submission()
+    bad["shape"] = "controlbun.registry/link-submission@99"
+    results = intake.pull(
+        conn,
+        [a_row(bad, id="row-bad"), a_row(id="row-good")],
+        path=record,
+        mark=lambda row_id, at: marked.append(row_id),
+    )
+
+    assert "no reader for it" in results[0]["refused"]
+    assert "refused" not in results[1]
+    # Only the one that was written is marked, so the other is still pending.
+    assert marked == ["row-good"]
+    assert len(record.read_text().splitlines()) == 1
+
+
+def test_pull_marks_nothing_it_did_not_write(taker):
+    """The order matters and it is the order `take` already uses: row, then
+    record line, then the mark. A run that dies between them leaves the row
+    unmarked and the next pull refuses it as a duplicate rather than losing it.
+    """
+    conn, record = taker
+    intake.pull(conn, [a_row()], path=record, mark=lambda *_: None)
+    results = intake.pull(conn, [a_row(id="again")], path=record,
+                          mark=lambda *_: pytest.fail("a duplicate was marked"))
+    said = results[0].get("refused") or ""
+    assert "already holds this submission" in said, (
+        "the same submission was written twice"
+    )
+    # And the record did not grow a second line for it.
+    assert len(record.read_text().splitlines()) == 1
+
+
+def test_pull_orders_nothing_and_counts_nothing_about_a_submission():
+    """`CLAUDE.md`: no ordering is ever derived from an eval result, and this is
+    not a queue. `pending` asks for `received_at.asc`, which is arrival order
+    and the only thing a list of rows can be in; nothing anywhere reads a
+    position, a count or a score off a row."""
+    source = (ROOT / "artifacts" / "intake.py").read_text()
+    block = source[source.index("def pending("):source.index("def cmd_pull(")]
+    assert "received_at.asc" in block
+    # The prose is taken out first. Every one of these words is in the comments
+    # here, saying the code does not do it, which is the trap a substring scan
+    # walks into every time in this repository. The bite below shows the strip
+    # still keeping a real line.
+    code = _code_only(block)
+    for ranking in ("sort=", "rank", "score", "priority", "approve", "reject"):
+        assert ranking not in code.lower(), (
+            f"the pull reads {ranking!r} off a pending row, which makes it a queue"
+        )
+
+
+def _code_only(source: str) -> str:
+    """Python with its docstrings and comments removed."""
+    out = re.sub(r'"""(?:.|\n)*?"""', "", source)
+    return "\n".join(line.split("#")[0] for line in out.splitlines())
+
+
+def test_the_prose_strip_does_not_hide_a_real_line():
+    """The bite. A filter that got too wide is how a guard goes green for the
+    wrong reason, which is the failure this repository has hit more than once."""
+    sample = (
+        'def f():\n'
+        '    """Nothing here sorts or ranks anything."""\n'
+        '    # and nothing scores it either\n'
+        '    rows.sort(key=lambda r: r["score"])\n'
+    )
+    stripped = _code_only(sample)
+    assert 'rows.sort(key=lambda r: r["score"])' in stripped
+    assert "Nothing here sorts" not in stripped
+    assert "nothing scores it either" not in stripped
+
+
+def test_the_pull_refuses_without_the_secret_key_and_names_it():
+    """And does not fall back to `.env`, which is where it is deliberately not."""
+    with pytest.raises(intake.Refused) as refused:
+        intake.credentials({"SUPABASE_URL": "https://x.supabase.co"},
+                           {"SUPABASE_SECRET_KEY": "would-be-wrong"})
+    said = str(refused.value)
+    assert "SUPABASE_SECRET_KEY is not set" in said
+    assert "would-be-wrong" not in said, "the refusal echoed a key back"
+
+    with pytest.raises(intake.Refused) as refused:
+        intake.credentials({"SUPABASE_SECRET_KEY": "sb_secret_x"}, {})
+    assert "no SUPABASE_URL" in str(refused.value)
+    assert "sb_secret_x" not in str(refused.value)
+
+
+def test_the_project_url_comes_from_the_same_place_the_build_reads_it():
+    """One copy of it. A second would be a second place for it to disagree,
+    and the site build already reads `.env` at the repository root."""
+    url, secret = intake.credentials(
+        {"SUPABASE_SECRET_KEY": "sb_secret_x"},
+        {"SUPABASE_URL": "https://x.supabase.co/"},
+    )
+    assert url == "https://x.supabase.co"
+    assert secret == "sb_secret_x"
+    # And the environment wins, so a one-off run against another project does
+    # not mean editing a file.
+    url, _ = intake.credentials(
+        {"SUPABASE_SECRET_KEY": "sb_secret_x", "SUPABASE_URL": "https://y.supabase.co"},
+        {"SUPABASE_URL": "https://x.supabase.co"},
+    )
+    assert url == "https://y.supabase.co"
