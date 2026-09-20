@@ -174,6 +174,14 @@ design. Tests that fail the build:
   says what it did and what it did not: it ends the session in this browser, it
   tells nobody, so the session is not revoked at the identity service, and the
   account at the provider is untouched
+- Text a page hands a reader to run somewhere else is generated from the code
+  that reads the answer back, never re-typed into a template, and a test pins
+  the built page to that function's output for the same corpus. The prompt on
+  `/submit/` is `agent_handoff.prompt(...)` written into `astro/src/data/` by
+  `make site`, and its parser never crosses into the browser: one thing reads a
+  format, the way one thing reads bytes. A paste is posted as text and checked
+  when the author pulls it, and the page says that in those words rather than
+  implying a check it does not do
 - The bar's signed-in state never comes from anything the page asserts about a
   person. `SiteNav.astro` takes no props and reads nothing about the page it is
   on. A submission page knows an author's handle, so a bar that read its own

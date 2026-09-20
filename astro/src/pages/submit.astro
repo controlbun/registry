@@ -1,0 +1,899 @@
+---
+import Base from "../layouts/Base.astro";
+import { identityConfig } from "../lib/env.mjs";
+import agentPrompt from "../data/agent-prompt.json";
+
+// Where a submission is built and sent. Two ways to fill it in, and neither is
+// the real one.
+//
+// Premise, restated because a premise stated in one file gets violated in every
+// other one: **plurality is the product; the registry never designates,
+// consumers pin, visibly.** Nothing on this page ranks, scores, approves or
+// filters a submission, there is no queue and there is nothing to approve: the
+// namespace is the handle the provider reported, so there is no question for a
+// reviewer to answer.
+//
+// **This page is a split out of `/signed-in/`, taken deliberately.** That page
+// was the return leg and the submission form at once, and the cost showed up in
+// the bar: **Add artifact** pointed at it, so pressing it while the return leg
+// was still running reloaded the page and threw away the exchange in progress.
+// Splitting them is the fix rather than a tidy-up. `/signed-in/` receives the
+// redirect and reads what the provider said; this page holds a record somebody
+// is still typing. The split is only possible because the session persists: a
+// page that is not the return leg can know who is signed in, off one key in the
+// reader's own browser, through `astro/src/lib/held.mjs`.
+//
+// **The upload offer's second authorization comes back through `/signed-in/`.**
+// The redirect URL registered with the identity service is that page and only
+// that page, so the popup lands there, and that page relays the code to
+// whichever window opened it and closes. No console change, and nothing here
+// depends on one. The exchange happens in this window, against the verifier
+// this window wrote, exactly as it did when both halves lived on one page.
+//
+// **Two routes in, and one of them is not checked here.** Somebody with a
+// coding agent copies a prompt, runs it where the extraction happened, and
+// pastes what comes back. That paste crosses as text and **nothing in this
+// browser reads it**: `artifacts/agent_handoff.py` holds the parser, in Python,
+// and it runs when the author pulls the row in. So a mistake in a paste
+// surfaces then rather than as somebody types, which is a real difference from
+// the field route and is said on the page in those words. What it buys is that
+// there is one parser rather than two that drift, which is the failure this
+// repository has hit most often.
+//
+// **The prompt is generated, never typed here.** `artifacts/intake.py prompt`
+// writes `astro/src/data/agent-prompt.json` during `make site`, out of
+// `agent_handoff.prompt(suggestions(conn))`, so the text a reader copies is the
+// text the parser was written against. `tests/test_submit_page.py` holds the
+// built page to that function, so the two cannot come apart.
+//
+// **This page writes a row, and the row is not the corpus.** A completed
+// submission is sent to `pending_submission` over the submitter's own session.
+// It is not a queue and there is nothing to approve. The published corpus is
+// still a file in git, a submission appears on the site when the author pulls
+// it in and publishes a rebuild, and that is what makes the falsifier mean
+// anything.
+//
+// **The identity on that row is stamped by Postgres and never read off the
+// form.** The insert policy refuses a row whose `account`, `subject` or
+// `handle` disagrees with the verified session, so a submission cannot claim to
+// be from somebody it is not. The record inside still carries the browser's own
+// copy of both, unedited, and where the two disagree the author's pull says so.
+//
+// **The copy is drafted, not dictated.** Structure and accuracy are mine; every
+// sentence a reader sees is the author's to rewrite.
+
+const { url: supabaseUrl, key: supabaseKey, configured } = identityConfig();
+
+// Addressed rather than enumerated. A custom OIDC provider in Supabase is named
+// `custom:<name>`, and this is the one that is configured. Nothing anywhere
+// compares it against a set of names.
+const PROVIDER = "custom:huggingface";
+
+// The fields the schema takes, each with why it is there. Free text, every one
+// of them: nothing on this page checks a value against a set, and a value
+// nobody has used before is the ordinary way a corpus grows.
+const CONTRACT = [
+  {
+    group: "The submission",
+    fields: [
+      ["label", "label", "text",
+        "The thing other people will disagree with you about. A bare label is a view across everyone claiming it, owned by nobody."],
+      ["version", "version", "text",
+        "author/model/label@version resolves to one frozen submission forever, so there has to be a version to freeze."],
+      ["created_at", "created at", "text",
+        "When the work happened, which is not when it was typed in here."],
+      ["definition", "your definition", "textarea",
+        "Load bearing twice: it feeds contrast-pair generation and it is the thing another author disagrees with."],
+    ],
+  },
+  {
+    group: "The intervention",
+    fields: [
+      ["intervention_id", "intervention id", "text",
+        "The primary key, and the thing an eval report or an attack points at."],
+      ["kind", "kind", "text",
+        "An open string. Whatever you call this. Nothing checks it against a list."],
+      ["model_id", "model id", "text",
+        "A direction has no meaning apart from the model it was read out of, which is why the model is part of the identity."],
+      ["model_revision", "model revision", "text",
+        "Optional. Absent renders as absent rather than as an error."],
+      ["layer", "layer", "text",
+        "A whole number. A band across several layers cannot be stated in this column at all, which is a recorded gap."],
+      ["layer_convention", "layer convention", "text",
+        "Getting this wrong is silent. block-0indexed is a common value and not the only one."],
+      ["hook_point", "hook point", "text",
+        "An open string. Where in the block this acts."],
+      ["chat_template_hash", "chat template hash", "text",
+        "Optional."],
+      ["activation_norm", "activation norm", "text",
+        "Optional. A number, or nothing."],
+      ["coeff_low", "coefficient, low", "text", "Optional."],
+      ["coeff_high", "coefficient, high", "text", "Optional."],
+      ["steering_position", "steering position", "text", "Optional."],
+      ["license_status", "license status", "textarea",
+        "What the source model's license says about an artifact derived from it, with the URL and the date you read it. Yours to assert, not ours to decide."],
+    ],
+  },
+  {
+    group: "The artifact, which is a link",
+    fields: [
+      ["repo", "repository", "text",
+        "owner/name. The bytes stay yours and this records where they are."],
+      ["commit", "commit", "text",
+        "Forty hex characters. A branch or a tag is movable by whoever owns the repository, so neither can be pinned."],
+      ["path", "path in the repository", "text",
+        "The same string the client will fetch by."],
+      ["host", "host", "text",
+        "Optional. Empty means the Hub, which is where a row recording no host has always resolved."],
+      ["url_template", "url template", "text",
+        "Optional, and how the four fields above become a URL on a host this project has never met."],
+    ],
+  },
+];
+---
+
+<Base title="Submit a direction" trail={[{ text: "controlbun", href: "/" }]} synthetic="none">
+  <h1 slot="heading">Submit a direction</h1>
+
+  <div
+    id="handshake"
+    data-supabase-url={supabaseUrl}
+    data-supabase-key={supabaseKey}
+    data-provider={PROVIDER}
+  >
+  </div>
+
+  {!configured && (
+    <p class="banner">
+      <strong>This build was made without an identity endpoint.</strong> There
+      is nothing to press on this page, because a button that cannot work is
+      worse than no button. The endpoint is read at build time from a file this
+      repository does not carry.
+    </p>
+  )}
+
+  <p class="lede">
+    A submission is one author's complete take on one label against one model,
+    frozen at <code>author/model/label@version</code> forever. Yours does not
+    replace anybody's and nobody's replaces yours. There are two ways to fill
+    this in and neither is the better one: type it, or hand a prompt to the
+    coding agent that already has your extraction scripts open.
+  </p>
+
+  <p id="working" hidden class="note">Reading the session this browser kept.</p>
+
+  <p id="failed" hidden class="banner"></p>
+
+  {/* Nobody is signed in here. Its own state with its own words, and a way on
+      rather than a dead end. */}
+  <p id="nosession" hidden class="banner">
+    <strong>There is no session in this browser.</strong> A submission is sent
+    as somebody, because the database stamps the namespace from the session
+    rather than taking it from a field. <a href="/signed-in/">Sign in with
+    Hugging Face</a>, which comes back and sends you here, or read{" "}
+    <a href="/sign-in/">what signing in is for</a> first. Reading this site
+    needs none of it.
+  </p>
+
+  <p id="remembered" hidden class="banner"></p>
+
+  <p id="stale" hidden class="banner"></p>
+
+  <section id="submit-section" hidden>
+    <p class="banner">
+      <strong>A submission does not appear on this site until the author
+      rebuilds and publishes it.</strong> The corpus is a file in git and the
+      site is built from it on one machine, which is what lets the falsifier
+      check the thing readers actually read. Pressing send puts what you wrote
+      in a holding table, where it waits to be read. That is not a queue and
+      there is nothing to approve: your namespace is the handle Hugging Face
+      reported, so there is no question for anybody to answer about it.
+    </p>
+
+    <p>
+      Your namespace is <strong id="namespace-shown"></strong>, which is the
+      handle Hugging Face reported when you signed in. There is no field for it
+      and no default to type over. What that makes impossible: publishing under
+      a pseudonym, under a lab name you hold no account for, or into one
+      namespace shared by several people who each sign in as themselves.
+    </p>
+
+    <p class="note">
+      A submission is a pointer to bytes a stranger can fetch. If your
+      repository is private, the section further down will publish the one file
+      to your own account, with your permission, and then fill in the pin.
+    </p>
+
+    <section id="handoff">
+      <h2>Hand it to your coding agent</h2>
+
+      <p>
+        An agent sitting in the checkout where the extraction happened can read
+        most of this off your own scripts, which is where the answers are. Copy
+        the prompt, run it there, and paste back what it produces. The prompt
+        tells it what each field is for and tells it, in the strongest terms the
+        text can manage, never to write a value it did not read.
+      </p>
+
+      <p class="banner">
+        <strong>A paste is not checked until the author pulls it in.</strong>
+        Nothing in this browser reads what you paste. The parser is one piece of
+        Python and it runs on the author's machine when the row is read in, so a
+        paste that is missing a field or carries a placeholder comes back to you
+        then, by mail, rather than the moment you paste it. The fields below are
+        the other way round: a mistake in one of those surfaces as you type. The
+        reason there is only one parser is that two of them drift, and a paste
+        that parsed in a browser and refused on the author's machine is worse
+        than waiting.
+      </p>
+
+      <p>
+        <button type="button" id="copy-prompt" class="go">Copy the prompt</button>{" "}
+        <span class="note" id="copy-said"></span>
+      </p>
+
+      <details id="prompt-shown">
+        <summary>Read the prompt first</summary>
+        <p class="note">
+          This is the whole of what gets copied. It is generated from the same
+          field list the parser reads, so what it asks for and what the parser
+          takes cannot come apart.
+        </p>
+        <pre id="agent-prompt-text" data-pagefind-ignore>{agentPrompt.prompt}</pre>
+      </details>
+
+      <div class="field">
+        <label for="f-pasted">what your agent produced</label>
+        <textarea id="f-pasted" rows="8" spellcheck="false"></textarea>
+        <p class="why">
+          Paste the whole reply, including anything it wrote to you around the
+          block. The parser finds the block inside surrounding prose and reads
+          past the rest, so explanation costs nothing.
+        </p>
+      </div>
+
+      <p class="note">
+        Pasting and filling the fields in at once is refused, and neither is
+        preferred. Those are two accounts of one submission and nothing here can
+        tell which was meant, which is the same reason a field cannot carry both
+        a value and a reason for having none.
+      </p>
+    </section>
+
+    <h2>Or fill it in yourself</h2>
+
+    <p class="note">
+      Every field is an open string. Nothing here is checked against a list of
+      permitted values, and a value nobody has used before is the ordinary way
+      this corpus grows.
+    </p>
+
+    <div id="fields">
+      {CONTRACT.map((group) => (
+        <fieldset>
+          <legend>{group.group}</legend>
+          {group.fields.map(([name, title, kind, why]) => (
+            <div class="field">
+              <label for={`f-${name}`}>{title}</label>
+              {kind === "textarea" ? (
+                <textarea id={`f-${name}`} name={name} rows="3"></textarea>
+              ) : (
+                <input id={`f-${name}`} name={name} type="text" />
+              )}
+              <p class="why">{why}</p>
+            </div>
+          ))}
+        </fieldset>
+      ))}
+    </div>
+
+    <details id="offer">
+      <summary>The file is not at a public URL yet</summary>
+      <p>
+        This registry can put one file in <strong id="offer-namespace"></strong>,
+        your own account, in a new public repository, and then fill in the
+        repository, the commit and the path above. The bytes go to your account
+        and never to this project's, which is a different column in the schema
+        and a different question.
+      </p>
+      <p>
+        Hugging Face will ask you for one more permission at that point and not
+        before: creating repositories for this app, which cannot reach any other
+        repository you own. It asks every time, including on a visit where this
+        browser already had your session, because the token that permission
+        returns is the one credential here that is never stored, logged or
+        written anywhere. It lives in one variable for the length of the upload.
+      </p>
+      <p class="note">
+        Taking this offer fills three fields in, so it is part of filling the
+        fields in rather than something to do beside a paste. An agent that
+        knows where the file will be published answers those three itself.
+      </p>
+      <div class="field">
+        <label for="f-upload-name">repository to create</label>
+        <input id="f-upload-name" type="text" />
+        <p class="why">A new one, under your namespace. An existing one stops the
+          offer rather than being written into.</p>
+      </div>
+      <div class="field">
+        <label for="f-upload-path">path inside it</label>
+        <input id="f-upload-path" type="text" />
+        <p class="why">The same string the client will fetch by, so it is also
+          the path recorded on the row.</p>
+      </div>
+      <div class="field">
+        <label for="f-upload-file">the file</label>
+        <input id="f-upload-file" type="file" />
+        <p class="why">It is read in this tab and sent to Hugging Face. It does
+          not reach this site, which has nowhere to receive it.</p>
+      </div>
+      <p>
+        <button type="button" id="do-upload">Ask permission and publish it to my
+          account</button>
+      </p>
+      <p id="upload-said" class="note"></p>
+    </details>
+
+    <details id="absences">
+      <summary>Something is absent and you want to say why</summary>
+      <p class="note">
+        An absence is a positive statement with a reason, never an omission and
+        never an error. One line per field, as <code>field: your sentence</code>.
+        The field name is any string; it is not checked against a list. An agent
+        writes these itself, on the <code>not-found:</code> lines the prompt asks
+        for, so this box belongs to the fields above.
+      </p>
+      <div class="field">
+        <label for="f-absent">absences</label>
+        <textarea id="f-absent" rows="3"></textarea>
+        <p class="why">A field cannot carry both a value above and a reason for
+          having none. That is two claims about one field, and the author's
+          rebuild refuses it rather than picking one.</p>
+      </div>
+    </details>
+
+    <p>
+      <button type="button" id="build-record" class="go">Build my submission</button>
+    </p>
+    <p id="record-said" class="banner" hidden></p>
+
+    <div id="record-out" hidden>
+      <h3>Your submission</h3>
+      <p>
+        Nothing has been sent yet. This is the record. Read it, then send it.
+      </p>
+      <pre id="record-json"></pre>
+      <p>
+        <button type="button" id="send-record" class="go">Send it</button>{" "}
+        <button type="button" id="keep-record">Download a copy</button>
+      </p>
+      <p class="note">
+        Sending puts this record and three columns beside it in a holding table:
+        the account, the subject and the handle, all three taken from your signed
+        session by the database rather than from anything above. So a submission
+        cannot claim to be from somebody it is not. The copy is for you; it is
+        not needed for anything and nothing here depends on your keeping it.
+      </p>
+      <p class="note">
+        Reading it later fetches the bytes at the pin, checks them against what
+        this record says, writes the row and rebuilds the site. The shape, the
+        dtype, the norm and the digest are read off the bytes on that machine
+        rather than computed here, because one thing in this project reads bytes
+        and a second implementation of it is the failure this repository has hit
+        most often. A pin nobody can fetch is refused there, with the reason. A
+        paste is read there too, and by the same argument.
+      </p>
+    </div>
+
+    <section id="sent" hidden>
+      <h3>Received</h3>
+      <p class="banner">
+        <strong>It is in the holding table and it is not on the site.</strong>
+        It appears when the author reads it in, rebuilds the corpus and
+        publishes, because the corpus is a file in git. Nothing was approved and
+        nothing was ranked.
+      </p>
+      <dl class="said">
+        <dt>received at</dt><dd id="sent-when"></dd>
+        <dt>row</dt><dd id="sent-id"></dd>
+        <dt>stamped handle</dt><dd id="sent-handle"></dd>
+        <dt>stamped subject</dt><dd id="sent-sub"></dd>
+      </dl>
+      <p class="note">
+        Those four are what the database wrote, read back off its answer rather
+        than off what this page sent. The handle and the subject beside them are
+        the ones your session carries; the record above carries the browser's own
+        copy of both, and where the two disagree the stamped ones are the ones
+        the author reads.
+      </p>
+      <p class="note">
+        There is no way to edit or withdraw this from here, on purpose: a
+        submission is a statement somebody made at a time, and a correction is
+        another submission. Mail the author if you need one removed.
+      </p>
+    </section>
+    <p id="send-said" hidden class="banner"></p>
+  </section>
+
+  <h2>What this page is not</h2>
+  <p class="note">
+    It is not a queue, and nothing here is reviewed, ranked, counted or ordered.
+    It keeps no cookie. The one thing it writes into this browser is the session
+    it renews before sending, under the key Sign out deletes. The Hugging Face
+    token is the thing it never writes down anywhere, because that one reaches
+    your account rather than this table. A namespace takes any number of
+    claimants, and two people claiming one name render as two claims with their
+    dates rather than as a conflict anybody here resolves.
+  </p>
+
+  <p>
+    <a href="/sign-in/">What signing in is for, and what a claim is</a>.
+  </p>
+</Base>
+
+<style>
+  .said { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; }
+  .said dt { font-weight: 600; }
+  .said dd { margin: 0; overflow-wrap: anywhere; }
+  fieldset { border: 1px solid var(--rule, #ddd); border-radius: 0.3rem;
+    margin: 1.2rem 0; padding: 0.6rem 1rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  .field { margin: 0.9rem 0; }
+  .field label { display: block; font-weight: 600; }
+  .field input, .field textarea { width: 100%; box-sizing: border-box;
+    font: inherit; padding: 0.35rem 0.5rem; }
+  .why { margin: 0.25rem 0 0; font-size: 0.85em; opacity: 0.75; }
+  pre { overflow-x: auto; padding: 0.8rem; background: var(--tint, #f5f5f5);
+    border-radius: 0.3rem; }
+  #agent-prompt-text { max-height: 24rem; overflow-y: auto; white-space: pre-wrap;
+    font-size: 0.85em; }
+  details { margin: 1.2rem 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  #handoff { border: 1px solid var(--rule, #ddd); border-radius: 0.3rem;
+    padding: 0.2rem 1rem 1rem; margin: 1.6rem 0; }
+</style>
+
+<script>
+  import {
+    authorizeUrl,
+    chosenRoute,
+    downloadName,
+    nowStamp,
+    pasteFrom,
+    pendingRowFrom,
+    pkcePair,
+    refuseOurNamespace,
+    signerFrom,
+    submissionFrom,
+    WRITE_SCOPES,
+    Refused,
+  } from "../lib/handshake.mjs";
+  import {
+    commit,
+    createRepo,
+    digestOf,
+    exchange,
+    HubError,
+    inlineFile,
+    putLfs,
+    sendPending,
+    uploadMode,
+  } from "../lib/hub.mjs";
+  import { restore, resume, staleSaid, usable } from "../lib/held.mjs";
+
+  const config = document.getElementById("handshake").dataset;
+  const SUPABASE = config.supabaseUrl;
+  const KEY = config.supabaseKey;
+
+  // Where the permission window lands, which is not this page.
+  //
+  // The redirect URL registered with the identity service is `/signed-in/` and
+  // adding a second one is a console change only the account holder can make.
+  // Nothing here needs it: that page relays the code to whoever opened the
+  // window and closes, this window holds the verifier, and the exchange happens
+  // here. So the round trip works from any page that can open a window, which
+  // is what let the form move off the return leg at all.
+  const RETURN_TO = new URL("/signed-in/", location.origin).href;
+
+  // The one thing that survives a navigation, because a PKCE verifier has to by
+  // definition. Removed the moment it is used, and it is not a credential for
+  // anything on its own: without the authorization code it exchanges for
+  // nothing. The session lives under its own key and `held.mjs` is the only
+  // thing that writes it.
+  const VERIFIER = "controlbun.pkce";
+  // Names the window so a second press reuses it rather than stacking two
+  // consent screens.
+  const POPUP_NAME = "controlbun-scope";
+
+  const show = (id, on = true) => {
+    const node = document.getElementById(id);
+    if (node) node.hidden = !on;
+  };
+  const say = (id, text) => {
+    const node = document.getElementById(id);
+    if (node) node.textContent = text;
+  };
+
+  function stop(problem) {
+    show("working", false);
+    show("failed", true);
+    say(
+      "failed",
+      problem instanceof Refused || problem instanceof HubError
+        ? problem.message
+        : `${problem}`,
+    );
+  }
+
+  function download(name, text) {
+    const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ------------------------------------------------------------------ //
+  // Who is here, off the session this browser kept.
+
+  // The session itself, held in one variable for the length of the page, and
+  // written only by `held.mjs`.
+  let signed = null;
+  // Who the submission is built under: the three fields `submissionFrom` reads,
+  // and never the session record, so a token is never one property access from
+  // the thing being built.
+  let signer = null;
+
+  function ready(held, { renewed }) {
+    signed = held;
+    signer = signerFrom(held);
+    say("namespace-shown", signer.preferred_username ?? "");
+    say("offer-namespace", signer.preferred_username ?? "");
+    show("working", false);
+    show("nosession", false);
+    show("stale", false);
+    show("submit-section", Boolean(signer.preferred_username));
+    show("remembered", true);
+    say(
+      "remembered",
+      `This browser kept the session from a sign-in on ${held.recorded_at}, ` +
+        "so Hugging Face was not asked again. " +
+        (renewed
+          ? "Its access token had expired and the identity service issued a " +
+            "new one just now. "
+          : "Its access token has not expired yet. ") +
+        "What that session can do is put one row in the holding table as you. " +
+        "It reads nobody else's rows, it changes and deletes nothing, and it " +
+        "reaches nothing in your Hugging Face account. Sign out in the bar " +
+        "deletes it from this browser, tells nobody, and does not end your " +
+        "Hugging Face session.",
+    );
+  }
+
+  /** A plain visit: restore, renew if the access token is spent, say which. */
+  async function arrive() {
+    if (!SUPABASE || !KEY) return;
+    show("working", true);
+    const answer = await resume(SUPABASE, KEY, { provider: config.provider });
+    show("working", false);
+    if (answer.state === "none") {
+      show("nosession", true);
+      return;
+    }
+    if (answer.state === "stale") {
+      show("stale", true);
+      say("stale", staleSaid(answer.problem));
+      show("nosession", true);
+      return;
+    }
+    ready(answer.held, { renewed: answer.state === "renewed" });
+  }
+
+  // The bar deletes the session on Sign out, and this page is one of the pages
+  // it is sitting on. Without this, somebody who signs out here keeps a form
+  // that would refuse on send with a sentence about a session that is already
+  // gone.
+  window.addEventListener("controlbun:session", () => {
+    if (signed && !restore()) {
+      signed = null;
+      signer = null;
+      show("submit-section", false);
+      show("remembered", false);
+      show("nosession", true);
+    }
+  });
+
+  // ------------------------------------------------------------------ //
+  // The permission window, for the upload offer and for nothing else.
+
+  async function askPermission() {
+    const { verifier, challenge } = await pkcePair();
+    sessionStorage.setItem(VERIFIER, verifier);
+    const url = authorizeUrl(SUPABASE, {
+      provider: config.provider,
+      redirectTo: RETURN_TO,
+      challenge,
+      scopes: WRITE_SCOPES.split(/\s+/).filter(Boolean),
+    });
+    const child = window.open(url, POPUP_NAME, "width=620,height=760");
+    if (!child) {
+      throw new Refused(
+        "the browser stopped the permission window from opening. Allow popups " +
+          "for this site and press the button again. Nothing was sent.",
+      );
+    }
+    return new Promise((resolve, reject) => {
+      const done = (event) => {
+        if (event.origin !== location.origin || !event.data) return;
+        if (event.data.controlbun !== "scope") return;
+        window.removeEventListener("message", done);
+        clearInterval(watch);
+        if (event.data.error) reject(new Refused(event.data.error));
+        else if (!event.data.code) {
+          reject(new Refused(
+            "the permission window came back with no authorization code, so " +
+              "there is nothing to exchange and nothing was uploaded.",
+          ));
+        } else resolve(event.data.code);
+      };
+      window.addEventListener("message", done);
+      const watch = setInterval(() => {
+        if (child.closed) {
+          clearInterval(watch);
+          window.removeEventListener("message", done);
+          reject(
+            new Refused(
+              "the permission window was closed before Hugging Face answered. " +
+                "Nothing was sent and nothing was uploaded.",
+            ),
+          );
+        }
+      }, 400);
+    });
+  }
+
+  /** The exchange for the elevated scope, returning only the token. */
+  async function elevated(code) {
+    const verifier = sessionStorage.getItem(VERIFIER);
+    sessionStorage.removeItem(VERIFIER);
+    const session = await exchange(SUPABASE, KEY, { code, verifier });
+    if (!session.provider_token) {
+      throw new Refused(
+        "Hugging Face returned a session with no provider token, so there is " +
+          "nothing to upload with. Nothing was written to your account.",
+      );
+    }
+    return session.provider_token;
+  }
+
+  // ------------------------------------------------------------------ //
+  // What the reader typed, or pasted.
+
+  // Whether the registry made the upload on this person's behalf. A fact about
+  // how the bytes got where they are, recorded on the submission, and never a
+  // property of the submission itself.
+  let uploaded = false;
+
+  function readForm() {
+    const value = (name) => (document.getElementById(`f-${name}`) || {}).value ?? "";
+    const absent = {};
+    for (const line of value("absent").split("\n")) {
+      const at = line.indexOf(":");
+      if (at > 0) absent[line.slice(0, at).trim()] = line.slice(at + 1).trim();
+    }
+    return {
+      label: value("label"),
+      version: value("version"),
+      created_at: value("created_at"),
+      definition: value("definition"),
+      intervention_id: value("intervention_id"),
+      kind: value("kind"),
+      model_id: value("model_id"),
+      model_revision: value("model_revision"),
+      layer: value("layer"),
+      layer_convention: value("layer_convention"),
+      hook_point: value("hook_point"),
+      chat_template_hash: value("chat_template_hash"),
+      activation_norm: value("activation_norm"),
+      coeff_low: value("coeff_low"),
+      coeff_high: value("coeff_high"),
+      steering_position: value("steering_position"),
+      license_status: value("license_status"),
+      repo: value("repo"),
+      commit: value("commit"),
+      path: value("path"),
+      host: value("host"),
+      url_template: value("url_template"),
+      absent,
+      uploaded_by_registry: uploaded,
+    };
+  }
+
+  // ------------------------------------------------------------------ //
+  // The upload offer, which runs only when somebody presses the button.
+
+  async function publish() {
+    const namespace = signer && signer.preferred_username;
+    const name = document.getElementById("f-upload-name").value.trim();
+    const path = document.getElementById("f-upload-path").value.trim();
+    const chosen = document.getElementById("f-upload-file").files[0];
+    if (!namespace) throw new Refused("nobody is signed in, so there is no account to publish to.");
+    if (!name) throw new Refused("name the repository to create.");
+    if (!path) throw new Refused("say where the file goes inside it.");
+    if (!chosen) throw new Refused("choose the file.");
+    const repo = refuseOurNamespace(`${namespace}/${name}`);
+
+    say("upload-said", "Asking Hugging Face for permission.");
+    const code = await askPermission();
+    // One variable, one function, one frame. It reaches no file and no log.
+    const token = await elevated(code);
+
+    say("upload-said", `Creating ${repo}.`);
+    await createRepo(token, { namespace, name });
+
+    const bytes = await chosen.arrayBuffer();
+    const oid = await digestOf(bytes);
+    say("upload-said", `Sending ${bytes.byteLength} bytes.`);
+    const mode = await uploadMode(token, repo, {
+      path,
+      size: bytes.byteLength,
+      sample: btoa(
+        String.fromCharCode(...new Uint8Array(bytes.slice(0, 512))),
+      ),
+    });
+    const entry =
+      mode === "lfs"
+        ? await putLfs(token, repo, { path, bytes, oid })
+        : inlineFile(path, bytes);
+
+    const sha = await commit(token, repo, {
+      entry,
+      summary: "Add a steering direction",
+    });
+    uploaded = true;
+    document.getElementById("f-repo").value = repo;
+    document.getElementById("f-commit").value = sha;
+    document.getElementById("f-path").value = path;
+    say(
+      "upload-said",
+      `Published to ${repo} at ${sha}. The pin above is filled in. ` +
+        "The bytes are in your account and this registry holds none of them.",
+    );
+  }
+
+  // ------------------------------------------------------------------ //
+  // Wiring.
+
+  document.getElementById("copy-prompt").addEventListener("click", async () => {
+    const text = document.getElementById("agent-prompt-text").textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      say(
+        "copy-said",
+        "Copied. Run it where the extraction happened and paste back what it " +
+          "produces.",
+      );
+    } catch (refused) {
+      document.getElementById("prompt-shown").open = true;
+      say(
+        "copy-said",
+        "The clipboard refused, so the prompt is open below instead. Select it " +
+          "and copy it by hand.",
+      );
+    }
+  });
+
+  document.getElementById("do-upload").addEventListener("click", () => {
+    publish().catch((problem) =>
+      say("upload-said", problem.message ?? `${problem}`),
+    );
+  });
+
+  let record = null;
+  document.getElementById("build-record").addEventListener("click", () => {
+    try {
+      const form = readForm();
+      const pasted = document.getElementById("f-pasted").value;
+      // Which of the two this is, refused when it is both. Neither wins and
+      // nothing is dropped: the sentence names what is filled in as well as the
+      // paste, so whoever wrote them decides which to clear.
+      record =
+        chosenRoute(form, pasted) === "paste"
+          ? pasteFrom(pasted, { capture: signer, submittedAt: nowStamp() })
+          : submissionFrom(form, { capture: signer, submittedAt: nowStamp() });
+      document.getElementById("record-json").textContent = JSON.stringify(
+        record,
+        null,
+        2,
+      );
+      show("record-said", false);
+      show("record-out", true);
+      // Building again after a send is a new record, so the receipt for the
+      // old one comes off the screen rather than sitting under a record it is
+      // not a receipt for.
+      show("sent", false);
+      show("send-said", false);
+      document.getElementById("send-record").disabled = false;
+    } catch (problem) {
+      show("record-out", false);
+      show("record-said", true);
+      say("record-said", problem.message ?? `${problem}`);
+    }
+  });
+
+  document.getElementById("keep-record").addEventListener("click", () => {
+    if (!record) return;
+    download(
+      downloadName(
+        "submission",
+        `${record.author}-${record.label ?? "paste"}`,
+        record.submitted_at,
+      ),
+      JSON.stringify(record, null, 2),
+    );
+  });
+
+  // The send, which is the path. The download beside it is a copy for the
+  // person who made it and is not how anything gets here.
+  async function send() {
+    if (!SUPABASE || !KEY) {
+      throw new Refused(
+        "this build was made without an endpoint, so there is nowhere to send " +
+          "this. That is a fact about how the site was built rather than about " +
+          "your submission, and nothing else here is a way round it: mail is " +
+          "not a submission route. Keep the record and try again later.",
+      );
+    }
+    // Renewed first if the access token is spent, which is the ordinary case
+    // on a page that has been open a while and on every visit after the first.
+    // A person who pressed send should not be told to sign in again for a
+    // reason a request could have settled.
+    const now = await usable(SUPABASE, KEY, {
+      provider: config.provider,
+      held: signed,
+      onStale: (problem) => {
+        show("stale", true);
+        say("stale", staleSaid(problem));
+        show("nosession", true);
+      },
+    });
+    signed = now;
+    // Built from the session and never from the record above, because the
+    // database refuses a row whose columns disagree with the session and
+    // because a submission that could name its own author would not be worth
+    // stamping. The user comes out of the held record rather than the held
+    // record going in, so there is still no parameter here a token can reach.
+    const row = pendingRowFrom(now.user, record);
+    const written = await sendPending(SUPABASE, KEY, {
+      accessToken: now.access_token,
+      row,
+    });
+    say("sent-when", written.received_at ?? "the answer carried no time");
+    say("sent-id", written.id);
+    say("sent-handle", written.handle);
+    say("sent-sub", written.subject);
+    show("send-said", false);
+    show("record-out", false);
+    show("sent", true);
+  }
+
+  document.getElementById("send-record").addEventListener("click", (event) => {
+    const button = event.currentTarget;
+    if (!record) return;
+    // Disabled for the length of the request, so a second press is a second
+    // row rather than a duplicate of the first one by accident. Re-enabled on
+    // failure, because a failure means nothing was written.
+    button.disabled = true;
+    say("send-said", "Sending.");
+    show("send-said", true);
+    send()
+      .catch((problem) => {
+        button.disabled = false;
+        show("send-said", true);
+        say("send-said", problem.message ?? `${problem}`);
+      });
+  });
+
+  arrive().catch(stop);
+</script>

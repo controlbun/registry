@@ -19,9 +19,9 @@ import Base from "../layouts/Base.astro";
 //
 // **No session handling here, and that is still the case after the return leg
 // landed.** `astro.config.mjs` is `output: "static"` with no adapter and this
-// page ships no script of its own. The session, the exchange and the form all
-// live on `/signed-in/`, which is one page, so there is one place in this build
-// that holds a session rather than two. This page explains; that page does.
+// page ships no script of its own. The exchange is `/signed-in/`'s and the form
+// is `/submit/`'s, and `astro/src/lib/held.mjs` is the one thing that writes the
+// session either of them reads. This page explains; those pages do.
 //
 // The reason to keep them apart is the reason the Account section came out: a
 // page that leads with a button implies the button is the point, and signing in
@@ -82,7 +82,8 @@ const HF_CREATE = "https://huggingface.co/join";
           keeps is the token that can write to your Hugging Face account: that
           one is asked for again at the moment you agree to an upload, and is
           gone when the upload is. Signing in on its own writes no submission;
-          that is a button further down that page.
+          that is a separate press on <a href="/submit/">the page that builds
+          one</a>.
         </span>
       </p>
     </li>
