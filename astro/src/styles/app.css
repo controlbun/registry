@@ -713,3 +713,41 @@ ul.memberships li { margin-bottom: .25rem; }
 .steps h3 { margin: 0 0 .4rem; font-size: 1rem; }
 .steps p { margin: 0 0 .5rem; }
 .steps .note { display: block; margin-top: .3rem; }
+
+/* Native cross-document view transitions. Page navigation cross-fades with no
+   client JavaScript at all; a browser that does not know the rule ignores it
+   under CSS's forward-compatible parsing and the reader just navigates.
+
+   Nesting `@view-transition` in `@media` is legal, not a workaround: "the
+   @view-transition rule can be nested inside a conditional group rule such as
+   @media or @supports" (CSS View Transitions Module Level 2 draft, section
+   8.3.1, drafts.csswg.org/css-view-transitions-2, read 2026-09-20). Support is
+   Chrome and Edge 126+, Safari 18.2+; Firefox has not implemented it
+   (bugzil.la/1860854, per MDN's browser-compat-data for
+   css/at-rules/view-transition, read 2026-09-20).
+
+   The theme toggle (SiteNav.astro) sets `data-theme` from the classic,
+   parser-blocking script in Head.astro, and the built page places that script
+   before the stylesheet link in <head> on every route (checked in the built
+   HTML under astro/dist, one index.html per route, after a local build). A
+   cross-document transition's "new" snapshot is taken when the incoming
+   document is "ready for its first rendering opportunity" (same spec, section
+   8.1.4), which is the ordinary first-paint checkpoint and comes after both.
+   So the incoming page never paints light before the script runs, the
+   guarantee this project already relies on for a plain reload, and there is
+   nothing here to fix for the flash that would otherwise cause. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+}
+/* Duration only, not `animation-name`. The browser's own cross-fade fades the
+   old root from opaque to transparent and the new root from transparent to
+   opaque in lockstep, then blends the pair with `mix-blend-mode:
+   plus-lighter` so identical pixels in both add back up to the original
+   color (CSS View Transitions Module Level 1 draft, the note under the
+   default UA style sheet in section 7.3.3, drafts.csswg.org/
+   css-view-transitions-1, read 2026-09-20). That pairing is what keeps
+   `plus-lighter` correct; replacing one side's keyframes without the other is
+   a documented cause of a bright flash mid-fade. Setting the same duration on
+   both selectors, and nothing else, keeps the pairing intact. */
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: 240ms; }
