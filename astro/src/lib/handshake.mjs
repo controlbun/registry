@@ -34,12 +34,38 @@
  *   absence is a positive statement with a reason, never an omission and never
  *   an error.
  *
- * ## No token, ever
+ * ## Two credentials, opposite lifetimes
  *
- * Nothing here takes a token as an argument or returns one. The session and the
- * provider token live in one local variable in the page for the length of the
- * calls that need them, and no function in this file can be handed one by
- * accident because none of them has a parameter for it.
+ * This section read "No token, ever" and was true of every function here until
+ * one of them had to build the thing a return visit is restored from. What
+ * replaced it is narrower, and it is the rule the whole sign-in turns on.
+ *
+ * - **The Supabase session**, `access_token` with its `refresh_token`, is what
+ *   row-level security scopes to inserting one row into `pending_submission` as
+ *   yourself. It reads nobody else's rows, and there is no update or delete
+ *   policy at all, so it changes and removes nothing. It **persists**, in
+ *   `localStorage`, under one key, so a visit tomorrow is not a second sign-in.
+ *   `heldSessionFrom` is the projection that builds what is written, and it is
+ *   the only function in this file that touches a credential.
+ * - **The Hugging Face `provider_token`** can, with `contribute-repos`, create
+ *   and write repositories in somebody's own namespace. It **never persists**,
+ *   anywhere, in any form: it is held in one local variable in the page for the
+ *   moment somebody agrees to an upload, and the frame ends. Storing it would
+ *   buy nothing past its expiry, because Hugging Face returns it on the sign-in
+ *   itself and never on a renewal.
+ *
+ * That last clause is read rather than recalled. Against supabase/auth
+ * v2.197.0, which is the version the live project reports at `/auth/v1/health`,
+ * checked 2026-09-20: `AccessTokenResponse` in `internal/tokens/service.go`
+ * carries `provider_token` as `omitempty`, `RefreshTokenGrant` in that file
+ * sets `Token`, `TokenType`, `ExpiresIn`, `ExpiresAt`, `RefreshToken` and
+ * `User` and nothing else, and `ProviderAccessToken` is assigned in exactly one
+ * place in `internal/api/token.go`, inside the PKCE branch, off the flow state.
+ *
+ * `heldSessionFrom` names its fields, so a token endpoint that grows a claim
+ * cannot push one into a browser, and `provider_token` is not among the names.
+ * `pendingRowFrom` still has no parameter a token can arrive in, which is why
+ * it takes the user out of the held record rather than the record.
  *
  * ## No closed enum, anywhere
  *
@@ -430,10 +456,14 @@ export function submissionFrom(form, { capture, submittedAt }) {
  * any good: the table is a place a stranger's statement lands, not a queue and
  * not a review step.
  *
- * **No token crosses this function.** It takes the user object out of the
- * session and never the session, so there is no parameter a token can arrive
- * in and no branch that could put one in the body. The access token is the
- * caller's problem and it goes in a header, one function along, in `hub.mjs`.
+ * **No token crosses this function.** It takes the user out of the held record
+ * and never the held record, so there is no parameter a token can arrive in and
+ * no branch that could put one in the body. That mattered less when the session
+ * died with the tab and matters more now that it does not: `heldSessionFrom`
+ * puts the access token and the refresh token in the same object as the three
+ * identity fields, and this function is the seam that keeps them apart. The
+ * access token is the caller's problem and it goes in a header, one function
+ * along, in `hub.mjs`.
  */
 export function pendingRowFrom(user, record) {
   const id = user && user.id;
@@ -464,43 +494,120 @@ export function pendingRowFrom(user, record) {
 }
 
 // --------------------------------------------------------------------------
-// What the bar at the top is allowed to remember.
+// The session, which is the one thing that outlives the tab.
 
-export const WHO_SHAPE = "controlbun.registry/remembered-who@1";
+export const HELD_SHAPE = "controlbun.registry/held-session@1";
+
+/** Seconds of headroom before the access token is treated as spent. */
+export const RENEW_MARGIN = 60;
+
+/** Unix seconds this access token stops being accepted, or null. */
+function expiryOf(said, now) {
+  const at = Number(said.expires_at);
+  if (Number.isFinite(at) && at > 0) return at;
+  const within = Number(said.expires_in);
+  if (Number.isFinite(within)) {
+    return Math.floor((now ?? Date.now()) / 1000) + within;
+  }
+  return null;
+}
 
 /**
- * Display facts, and nothing a request could be made with.
+ * The session, projected down to what a return visit needs and no further.
  *
- * The bar at the top ships both ways in and one of them is wrong for whoever is
- * reading. Deciding which needs something that outlives a page load, and the
- * session does not: the access token lives in one variable in one tab and is
- * gone on a reload, deliberately, and that is not moving.
+ * This replaced `whoFrom`, which kept three display facts so the bar could name
+ * a handle while the session died with the tab. That arrangement was honest
+ * about what it held and dishonest about what it offered: the bar said **Add
+ * artifact** to somebody whose session had been gone since the last reload, and
+ * pressing it led to a page that could only ask them to sign in again. One key
+ * holding the session and the identity together is what stops those two from
+ * disagreeing, because there is no longer a second thing to disagree with.
  *
- * So what survives is three display facts, written here by name rather than by
- * spreading a capture. A projection that names its fields cannot pick up a
- * token when the capture grows one, which is the same reason `captureFrom`
- * names its fields, and it is the property `tests/test_nav_account.py` checks
- * by handing this a capture carrying three of them.
+ * **What goes in, by name.** The access token, the refresh token, when the
+ * access token is spent, the provider this session was made at, and the three
+ * identity fields `pendingRowFrom` needs. **What does not.** `provider_token`
+ * and `provider_refresh_token`, which is the whole rule: those reach a Hugging
+ * Face account, Hugging Face returns them on a sign-in and never on a renewal,
+ * so keeping one buys nothing and risks everything. The email on the Supabase
+ * user row is not here either, for the reason `/signed-in/` gives: the address
+ * exists in the identity service's own row and in no file, page or table of
+ * this project's.
  *
- * **Remembering a handle is not holding a session and nothing here pretends
- * otherwise.** It changes what the bar offers and it changes nothing about what
- * anybody can do: `/signed-in/` asks for a fresh sign-in when the tab has no
- * session, and that page is reachable, linked and usable by somebody who has
- * never signed in at all.
+ * A projection that names its fields cannot pick up a claim the endpoint grows
+ * later, which is the same reason `captureFrom` names its fields, and it is the
+ * property `tests/test_nav_account.py` checks by handing this a response
+ * carrying both provider tokens.
  *
- * Null rather than a refusal when the provider named no handle. That is a real
- * state, it is the one `captureFrom` records as `preferred_username: null`, and
- * the honest reading of it is that there is nothing for the bar to show rather
- * than that something went wrong.
+ * Refused rather than half kept when either token is missing. A record with no
+ * refresh token is a session that cannot outlive the hour, and writing one
+ * would put the bar back where it was: offering a way in that stops working
+ * without saying when.
  */
-export function whoFrom(capture) {
-  const handle = capture && capture.preferred_username;
-  if (!handle) return null;
+export function heldSessionFrom(said, { provider, recordedAt, now } = {}) {
+  const access = said && said.access_token;
+  const refresh = said && said.refresh_token;
+  if (!access || !refresh) {
+    const missing = [
+      access ? null : "no access token",
+      refresh ? null : "no refresh token",
+    ].filter(Boolean);
+    throw new Refused(
+      `the identity service answered with ${missing.join(" and ")}, so there ` +
+        "is no session to hold and nothing was written to this browser. " +
+        "Signing in again is the fix; there is nothing here to retry.",
+    );
+  }
+  const user = (said && said.user) || {};
+  const metadata = user.user_metadata || {};
   return {
-    shape: WHO_SHAPE,
-    handle,
-    subject: capture.sub ?? null,
-    recorded_at: capture.captured_at || nowStamp(),
+    shape: HELD_SHAPE,
+    recorded_at: recordedAt || nowStamp(),
+    provider: provider ?? null,
+    access_token: access,
+    refresh_token: refresh,
+    expires_at: expiryOf(said, now),
+    // Shaped the way `pendingRowFrom` reads a session, so that function keeps
+    // its one parameter and keeps having no parameter a token can arrive in.
+    user: {
+      id: user.id ?? null,
+      user_metadata: {
+        sub: metadata.sub ?? null,
+        preferred_username: metadata.preferred_username ?? null,
+      },
+    },
+  };
+}
+
+/**
+ * Whether the access token is spent, with a minute of headroom.
+ *
+ * An unknown expiry counts as spent. Renewing a token that had time left costs
+ * one request; using one that did not costs a person the press they had
+ * already made, and the row is not written.
+ */
+export function accessSpent(held, { now = Date.now(), margin = RENEW_MARGIN } = {}) {
+  const at = held && Number(held.expires_at);
+  if (!Number.isFinite(at)) return true;
+  return at - margin <= Math.floor(now / 1000);
+}
+
+/**
+ * Who signed in, in the shape `submissionFrom` reads a capture in.
+ *
+ * A restored session carries no membership reading: that needs a Hugging Face
+ * token, and this browser keeps none. So a submission built from a restored
+ * session carries the session's own copy of the subject and the handle, which
+ * are the values Postgres stamps the row with, and the two cannot disagree. A
+ * submission built right after a sign-in carries what the userinfo endpoint
+ * said a moment later, and those two can. That asymmetry is real and is the
+ * reason this returns the identity rather than pretending to be a capture.
+ */
+export function signerFrom(held) {
+  const metadata = (held && held.user && held.user.user_metadata) || {};
+  return {
+    provider: (held && held.provider) ?? null,
+    sub: metadata.sub ?? null,
+    preferred_username: metadata.preferred_username ?? null,
   };
 }
 

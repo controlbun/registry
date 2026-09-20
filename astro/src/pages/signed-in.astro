@@ -39,25 +39,41 @@ import Base from "../layouts/Base.astro";
 // be from somebody it is not. The record inside still carries the browser's own
 // copy of both, unedited, and where the two disagree the author's pull says so.
 //
-// **The token is used for the request it is for and never stored.** Nothing
-// here writes a cookie or a token to storage. What changed with the row is that
-// the session's access token is held in one module variable for as long as the
-// tab is open, rather than dying with the frame that made it, because the
-// submit press happens long after the exchange. Closing the tab ends it, and a
-// reload has no session at all. The PKCE verifier is the one thing in
-// `sessionStorage`, because a verifier has to survive a navigation by
-// definition, and it is removed the moment it is used.
+// **One sign-in returns two credentials and they have opposite lifetimes.**
+// This block said the token is used for the request it is for and never stored,
+// and the bar on top of it offered Add artifact to somebody whose session had
+// died on their last reload. That gap is what this page was changed to close,
+// and closing it meant one of the two credentials now persists.
 //
-// **This page does write one thing to the browser, and it is three display
-// facts.** The bar at the top ships both ways in and needs to know which to
-// show on a page this one did not render, so after an exchange it writes the
-// handle, the subject and the moment they were read under one key. `whoFrom`
-// builds that record by naming its fields, so a token cannot arrive in it when
-// the capture grows one. Remembering a handle is not holding a session: a
-// reader who comes back tomorrow gets a bar that says Add artifact and a page
-// that asks them to sign in again, because the token is gone and nothing here
-// can make a request without one. Sign out in the bar deletes the key, which is
-// all signing out is here.
+// - **The Supabase session**, `access_token` with its `refresh_token`, is what
+//   the insert policy on `pending_submission` scopes to putting one row in as
+//   yourself. It reads nobody else's rows and there is no update or delete
+//   policy at all. It is written to `localStorage` under one key, restored on
+//   every load of this page, and renewed when the access token is spent, so a
+//   visit tomorrow is not a second sign-in. `heldSessionFrom` in
+//   `handshake.mjs` names the fields that go in, so nothing arrives in that
+//   record because the endpoint grew a claim.
+// - **The Hugging Face `provider_token`** can create and write repositories in
+//   somebody's own namespace once `contribute-repos` is granted. It is written
+//   nowhere, in any form. It lives in one local variable for the length of one
+//   upload and the frame ends. Hugging Face returns it on the sign-in itself
+//   and never on a renewal, verified against supabase/auth v2.197.0 on
+//   2026-09-20, so keeping it would buy nothing past its expiry and would put
+//   a credential that reaches an account somewhere that outlives the reason it
+//   was asked for.
+//
+// The PKCE verifier is still in `sessionStorage`, because a verifier has to
+// survive a navigation by definition, and it is removed the moment it is used.
+//
+// **What a restored session cannot do.** Read a membership. That needs the
+// provider token, which is gone, so this page shows the reading only on the
+// load that did the sign-in and says so rather than showing yesterday's answer
+// as today's. The upload offer still works, because it asks Hugging Face for a
+// fresh authorization every time it is used, which it did before this too.
+//
+// **Sign out in the bar deletes the key.** That ends the session in this
+// browser and tells nobody, so the session is not revoked at the identity
+// service and lapses there on its own. The bar says both.
 //
 // **The copy is drafted, not dictated.** Structure and accuracy are mine; every
 // sentence a reader sees is the author's to rewrite.
@@ -251,13 +267,13 @@ const CONTRACT = [
         organizations it says you belong to. It is not asked for write access to
         anything, and it is not asked for your email.
       </p>
-      <p id="remembered" hidden class="banner"></p>
       <p>
         <button type="button" id="begin" class="go">Sign in with Hugging Face</button>
       </p>
       <p class="note">
-        Signing in writes no submission and publishes nothing. The session lives
-        in this tab and closing it ends it. Whether to send anything is a
+        Signing in writes no submission and publishes nothing. It leaves one
+        session in this browser, so coming back later does not ask again, and
+        Sign out in the bar at the top deletes it. Whether to send anything is a
         separate press, further down, after you have read what it would send.
       </p>
     </section>
@@ -267,6 +283,16 @@ const CONTRACT = [
     account.</p>
 
   <p id="failed" hidden class="banner"></p>
+
+  {/* A session came back off this browser. Outside the section above, because
+      it is shown beside the submission form rather than beside the button that
+      would start a sign-in nobody needs. */}
+  <p id="remembered" hidden class="banner"></p>
+
+  {/* And the other answer: there was a session and it could not be renewed.
+      Its own state with its own words, which is what the rest of this project
+      does with an absent eval and an unclaimed namespace. */}
+  <p id="stale" hidden class="banner"></p>
 
   <section id="who" hidden>
     <h2>What Hugging Face said, and when it said it</h2>
@@ -291,14 +317,20 @@ const CONTRACT = [
       </span>
     </p>
     <p class="note">
-      Your handle and your subject are now kept in this browser, under one key,
-      so the bar at the top can offer <strong>Add artifact</strong> on the next
-      page instead of <strong>Sign in</strong>. No token is kept: the one this
-      tab holds lives in a variable and is gone the moment you reload or close
-      it. Keeping a handle is not holding a session, so coming back tomorrow
-      means signing in again. <strong>Sign out</strong> in the bar deletes the
-      key, which forgets the handle in this browser and does not end your
-      Hugging Face session.
+      That sign-in returned two credentials and they are kept differently. The
+      session for this registry, which can put one row in the holding table as
+      you and can read, change and delete nothing else, is <strong>kept in this
+      browser</strong> under one key, with your handle and your subject beside
+      it, so a visit tomorrow is not a second sign-in and the bar at the top can
+      offer <strong>Add artifact</strong> on a page this one did not render. The
+      Hugging Face token, which could create and write repositories in your
+      account if you take the upload offer below, is <strong>kept nowhere at
+      all</strong>: it is held in one variable for the length of that one upload
+      and Hugging Face never returns it on a renewal, so keeping it would buy
+      nothing and risk your account. <strong>Sign out</strong> in the bar
+      deletes the session and the handle from this browser. It tells nobody, so
+      the session is not revoked at the identity service and lapses there on its
+      own, and it does not end your Hugging Face session.
     </p>
   </section>
 
@@ -360,8 +392,10 @@ const CONTRACT = [
       <p>
         Hugging Face will ask you for one more permission at that point and not
         before: creating repositories for this app, which cannot reach any other
-        repository you own. The token is used for that upload and is not stored,
-        logged or written anywhere.
+        repository you own. It asks every time, including on a visit where this
+        browser already had your session, because the token that permission
+        returns is the one credential here that is never stored, logged or
+        written anywhere. It lives in one variable for the length of the upload.
       </p>
       <div class="field">
         <label for="f-upload-name">repository to create</label>
@@ -469,12 +503,14 @@ const CONTRACT = [
   <h2>What this page is not</h2>
   <p class="note">
     It is not an account. It is not a queue, and nothing here is reviewed,
-    ranked, counted or ordered. It keeps no cookie and writes down no token. It
-    writes two things and they are different in kind: the submission you send,
-    which nobody else can read, and your handle in this browser, which is what
-    the bar at the top reads and what Sign out deletes. A namespace takes any
-    number of claimants, and two people claiming one name render as two claims
-    with their dates rather than as a conflict anybody here resolves.
+    ranked, counted or ordered. It keeps no cookie. It writes two things and
+    they are different in kind: the submission you send, which nobody else can
+    read, and the session for this registry, which stays in this browser under
+    one key so a return visit is not a second sign-in and which Sign out
+    deletes. The Hugging Face token is the thing it never writes down anywhere,
+    because that one reaches your account rather than this table. A namespace
+    takes any number of claimants, and two people claiming one name render as
+    two claims with their dates rather than as a conflict anybody here resolves.
   </p>
 
   <p>
@@ -502,16 +538,18 @@ const CONTRACT = [
 
 <script>
   import {
+    accessSpent,
     authorizeUrl,
     captureFrom,
     confirmations,
     downloadName,
+    heldSessionFrom,
     nowStamp,
     pendingRowFrom,
     pkcePair,
     refuseOurNamespace,
+    signerFrom,
     submissionFrom,
-    whoFrom,
     Refused,
   } from "../lib/handshake.mjs";
   import {
@@ -523,6 +561,7 @@ const CONTRACT = [
     HubError,
     inlineFile,
     putLfs,
+    refreshSession,
     sendPending,
     uploadMode,
     userinfo,
@@ -538,10 +577,12 @@ const CONTRACT = [
   // anything on its own: without the authorization code it exchanges for
   // nothing.
   const VERIFIER = "controlbun.pkce";
-  // The one thing that outlives this tab, and it is three display facts. What
-  // goes in is `whoFrom`'s output and nothing else, which is where the rule
-  // about what may be in it is enforced rather than here.
-  const WHO = "controlbun.who";
+  // The one thing that outlives this tab, and since 2026-09-20 it is a
+  // credential: the Supabase session, with the refresh token that makes a
+  // return visit work. What goes in is `heldSessionFrom`'s output and nothing
+  // else, which is where the rule about what may be in it is enforced rather
+  // than here, and the rule is that the Hugging Face provider token is not.
+  const HELD = "controlbun.session";
   // Names the window so a second press reuses it rather than stacking two
   // consent screens. Not used to recognize the window on the way back: see the
   // comment at the bottom of this file for why that cannot work.
@@ -574,6 +615,94 @@ const CONTRACT = [
     link.download = name;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  // ------------------------------------------------------------------ //
+  // The session, which is the one thing here that outlives the tab.
+  //
+  // Three functions and one key, so the page never touches storage anywhere
+  // else and the record can only be the module's projection. Each one tells the
+  // bar, which is on a page this script did not render and would otherwise sit
+  // on the previous answer until a reload.
+
+  let signed = null;
+
+  /** Write the session. The only call into storage on this page. */
+  function keep(held) {
+    localStorage.setItem(HELD, JSON.stringify(held));
+    signed = held;
+    window.dispatchEvent(new Event("controlbun:session"));
+    return held;
+  }
+
+  /** The session is gone. Said in one place, so the bar cannot disagree. */
+  function forget() {
+    localStorage.removeItem(HELD);
+    signed = null;
+    window.dispatchEvent(new Event("controlbun:session"));
+  }
+
+  /**
+   * What this browser kept, or null.
+   *
+   * A record with no refresh token is not restored: it names somebody and
+   * cannot renew, which is the state the bar used to offer a way in on.
+   */
+  function restore() {
+    let held = null;
+    try {
+      held = JSON.parse(localStorage.getItem(HELD) || "null");
+    } catch (unreadable) {
+      return null;
+    }
+    return held && held.access_token && held.refresh_token ? held : null;
+  }
+
+  /** What to say when a session came back and could not be renewed. */
+  function staleSaid(problem) {
+    return (
+      "The session this browser kept could not be renewed, so it has been " +
+      "deleted here and nothing was sent. The identity service said: " +
+      `${problem.message ?? problem} ` +
+      "That is what a session signed out somewhere else looks like, or one " +
+      "left longer than the identity service keeps one. It is " +
+      "not a failure of anything you typed. " +
+      "Signing in again is the whole of the fix. It leaves this page, so take " +
+      "the copy first if you have built a record."
+    );
+  }
+
+  /**
+   * The session, renewed if the access token is spent.
+   *
+   * Called before the one request that needs it rather than on a timer,
+   * because a page left open for an hour and a page opened tomorrow are the
+   * same problem and this is the only place either of them is felt.
+   */
+  async function usable() {
+    if (!signed) {
+      throw new Refused(
+        "there is no session in this browser, so there is nothing to send " +
+          "with. Sign in again and the button at the top of this page starts " +
+          "it. Nothing was sent.",
+      );
+    }
+    if (!accessSpent(signed)) return signed;
+    try {
+      const said = await refreshSession(SUPABASE, KEY, {
+        refreshToken: signed.refresh_token,
+      });
+      return keep(heldSessionFrom(said, { provider: config.provider }));
+    } catch (problem) {
+      forget();
+      show("stale", true);
+      say("stale", staleSaid(problem));
+      throw new Refused(
+        "this session could not be renewed, so nothing was sent. What went " +
+          "wrong is above; the record you built is still on this page and the " +
+          "button beside it still downloads a copy.",
+      );
+    }
   }
 
   // ------------------------------------------------------------------ //
@@ -632,7 +761,17 @@ const CONTRACT = [
   // ------------------------------------------------------------------ //
   // Leg two: arriving.
 
-  /** Code in, capture out. The two tokens live only in this frame. */
+  /**
+   * Code in, capture out, and the session kept on the way through.
+   *
+   * The two tokens the exchange returns go different ways here, which is the
+   * whole of the arrangement. The Supabase session is written the moment it
+   * exists, before the reading below, because the exchange is what made it and
+   * a userinfo failure is a different fact about a different service: somebody
+   * who hits one can reload and carry on rather than signing in twice. The
+   * Hugging Face token goes into `userinfo` and into no variable that outlives
+   * this call.
+   */
   async function capture(code) {
     if (!SUPABASE || !KEY) {
       throw new Refused(
@@ -652,6 +791,7 @@ const CONTRACT = [
       );
     }
     const session = await exchange(SUPABASE, KEY, { code, verifier });
+    keep(heldSessionFrom(session, { provider: config.provider }));
     const token = session.provider_token;
     if (!token) {
       throw new Refused(
@@ -663,24 +803,12 @@ const CONTRACT = [
     }
     const document_ = await discovery(config.discovery);
     const said = await userinfo(document_.userinfo_endpoint, token);
-    return {
-      capture: captureFrom(said, {
-        provider: config.provider,
-        issuer: document_.issuer,
-        endpoint: document_.userinfo_endpoint,
-        capturedAt: nowStamp(),
-      }),
-      token,
-      // The session's own access token, which is a different credential from
-      // `provider_token` above and the only one the database will accept.
-      // Held because the submit press comes long after this frame ends; see
-      // the paragraph about it at the top of this file.
-      access: session.access_token,
-      // What Supabase says this account is, which is what its own insert policy
-      // compares the row against. Distinct from the capture, which is what
-      // Hugging Face's userinfo endpoint said a moment later.
-      user: session.user,
-    };
+    return captureFrom(said, {
+      provider: config.provider,
+      issuer: document_.issuer,
+      endpoint: document_.userinfo_endpoint,
+      capturedAt: nowStamp(),
+    });
   }
 
   /** The same exchange, for the elevated scope, returning only the token. */
@@ -700,13 +828,19 @@ const CONTRACT = [
   // ------------------------------------------------------------------ //
   // What the page shows.
 
+  // The membership reading, when this load is the one that did the sign-in.
+  // Null on a restored session, because reading it needs the provider token and
+  // no browser here keeps one.
   let held = null;
-  // The session, for as long as this tab is open. Never written to storage,
-  // never rendered, and gone on a reload.
-  let signed = null;
+  // Who the submission is built from: the capture on the load that signed in,
+  // the restored session otherwise. Both carry the three fields
+  // `submissionFrom` reads, and `signerFrom` is what puts a session in that
+  // shape without putting a token in it.
+  let signer = null;
 
   function render(entry) {
     held = entry;
+    signer = entry;
     say("who-handle", entry.preferred_username ?? "the provider returned none");
     say("who-sub", entry.sub);
     say("who-when", entry.captured_at);
@@ -736,19 +870,90 @@ const CONTRACT = [
 
     show("start", false);
     show("working", false);
+    show("remembered", false);
+    show("stale", false);
     show("who", true);
     show("submit-section", Boolean(entry.preferred_username));
+  }
 
-    // What the bar at the top reads, on this page and on every page after it.
-    // Written after the render rather than before, so nothing is remembered
-    // about a reading that did not finish.
-    const who = whoFrom(entry);
-    if (who) {
-      localStorage.setItem(WHO, JSON.stringify(who));
-      // The bar decided what to show while this page was parsing, which was
-      // before any of this happened. Telling it is cheaper and more honest than
-      // a reload, and the same listener handles another tab doing it.
-      window.dispatchEvent(new Event("controlbun:who"));
+  /**
+   * A session came back off this browser, so there is no reading to show.
+   *
+   * The namespace and the submission form are all of it. `#who` stays hidden
+   * rather than showing the membership this browser saw last time: a
+   * membership read once and held forever goes stale quietly while still
+   * looking like a fact, which is the sentence already under that section, and
+   * it applies hardest to a reading nothing here even re-fetched.
+   */
+  function resumed(held_, { renewed }) {
+    signer = signerFrom(held_);
+    say("namespace-shown", signer.preferred_username ?? "");
+    say("offer-namespace", signer.preferred_username ?? "");
+    show("working", false);
+    show("start", false);
+    show("stale", false);
+    show("submit-section", Boolean(signer.preferred_username));
+    show("remembered", true);
+    say(
+      "remembered",
+      `This browser kept the session from a sign-in on ${held_.recorded_at}, ` +
+        "so Hugging Face was not asked again. " +
+        (renewed
+          ? "Its access token had expired and the identity service issued a " +
+            "new one just now. "
+          : "Its access token has not expired yet. ") +
+        "What came back is the session for this registry, which is enough to " +
+        "send a submission as you and reaches nothing in your Hugging Face " +
+        "account. What did not come back is the reading of what Hugging Face " +
+        "says about you, because that needs a token this browser keeps " +
+        "nowhere; signing in again takes a fresh reading beside the old one " +
+        "rather than over it. Sign out in the bar deletes the session and the " +
+        "handle from this browser, tells nobody, and does not end your " +
+        "Hugging Face session.",
+    );
+  }
+
+  /**
+   * A plain visit: restore, renew if the access token is spent, say which.
+   *
+   * Only this page renews. The bar is on every page and renewing there would
+   * put the identity endpoint and the publishable key on every page, which
+   * `tests/test_signed_in_page.py` holds to the one page with business for
+   * one. So the bar answers off what the record says it can do, and the one
+   * page that can ask, asks.
+   */
+  async function resume() {
+    if (!SUPABASE || !KEY) return;
+    const kept = restore();
+    if (!kept) {
+      show("start", true);
+      return;
+    }
+    signed = kept;
+    if (!accessSpent(kept)) {
+      resumed(kept, { renewed: false });
+      return;
+    }
+    show("working", true);
+    say("working", "Renewing this session with the identity service.");
+    try {
+      const said = await refreshSession(SUPABASE, KEY, {
+        refreshToken: kept.refresh_token,
+      });
+      resumed(keep(heldSessionFrom(said, { provider: config.provider })), {
+        renewed: true,
+      });
+    } catch (problem) {
+      // A refusal is a state and not an error: the reader did nothing wrong
+      // and there is one thing to do about it. So the session goes, the bar
+      // drops back to Sign in on the same frame, and the button that starts a
+      // fresh one is on the screen under a sentence saying why it is there.
+      forget();
+      show("working", false);
+      show("remembered", false);
+      show("stale", true);
+      say("stale", staleSaid(problem));
+      show("start", true);
     }
   }
 
@@ -796,7 +1001,7 @@ const CONTRACT = [
   // The upload offer, which runs only when somebody presses the button.
 
   async function publish() {
-    const namespace = held && held.preferred_username;
+    const namespace = signer && signer.preferred_username;
     const name = document.getElementById("f-upload-name").value.trim();
     const path = document.getElementById("f-upload-path").value.trim();
     const chosen = document.getElementById("f-upload-file").files[0];
@@ -872,7 +1077,7 @@ const CONTRACT = [
   document.getElementById("build-record").addEventListener("click", () => {
     try {
       record = submissionFrom(readForm(), {
-        capture: held,
+        capture: signer,
         submittedAt: nowStamp(),
       });
       document.getElementById("record-json").textContent = JSON.stringify(
@@ -914,13 +1119,19 @@ const CONTRACT = [
           "not a submission route. Keep the record and try again later.",
       );
     }
+    // Renewed first if the access token is spent, which is the ordinary case
+    // on a page that has been open a while and on every visit after the first.
+    // A person who pressed send should not be told to sign in again for a
+    // reason a request could have settled.
+    const now = await usable();
     // Built from the session and never from the record above, because the
     // database refuses a row whose columns disagree with the session and
     // because a submission that could name its own author would not be worth
-    // stamping.
-    const row = pendingRowFrom(signed && signed.user, record);
+    // stamping. The user comes out of the held record rather than the held
+    // record going in, so there is still no parameter here a token can reach.
+    const row = pendingRowFrom(now.user, record);
     const written = await sendPending(SUPABASE, KEY, {
-      accessToken: signed.access,
+      accessToken: now.access_token,
       row,
     });
     say("sent-when", written.received_at ?? "the answer carried no time");
@@ -983,40 +1194,18 @@ const CONTRACT = [
     // The code is taken out of the address bar before anything else, so it is
     // not in the URL a reader copies, shares or leaves in history.
     history.replaceState(null, "", location.pathname);
-    capture(code)
-      .then(({ capture: entry, access, user }) => {
-        signed = { access, user };
-        render(entry);
-      })
-      .catch(stop);
+    capture(code).then(render).catch(stop);
   } else {
     // A plain visit, which is what the Add artifact button in the bar produces.
-    // Somebody arriving that way may have a remembered handle and certainly has
-    // no session: the token died with the tab or the reload that ended the last
-    // one, and there is no way to get it back except asking again.
+    // Somebody arriving that way has the session this browser kept, or nothing.
     //
-    // Saying so is the point. A button in the bar that led to a page offering
-    // nothing but a second button, with no account of why, would read as the
-    // first press having failed.
-    let remembered = null;
-    try {
-      remembered = JSON.parse(localStorage.getItem(WHO) || "null");
-    } catch (unreadable) {
-      remembered = null;
-    }
-    if (remembered && remembered.handle) {
-      show("remembered", true);
-      say(
-        "remembered",
-        `This browser remembers the handle ${remembered.handle}, read ` +
-          `${remembered.recorded_at ?? "at a moment it did not record"}. That ` +
-          "is a name for the bar at the top and not a session: no token " +
-          "survives a reload, so sending a submission needs a fresh sign-in. " +
-          "Press the button and Hugging Face will ask again. Sign out in the " +
-          "bar forgets the handle in this browser and does not end your " +
-          "Hugging Face session.",
-      );
-    }
-    show("start", true);
+    // This branch used to read the remembered handle and explain that it was
+    // not a session, because it never could be one: the token died with the
+    // tab. That explanation was honest and the arrangement it explained was
+    // not, since the bar had already offered Add artifact to somebody it then
+    // had to ask to sign in again. The session persists now, so the three
+    // answers this page can give are a restored session, a session that could
+    // not be renewed, and nothing at all, and `resume` says which.
+    resume().catch(stop);
   }
 </script>

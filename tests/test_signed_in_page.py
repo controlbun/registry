@@ -478,23 +478,29 @@ def test_the_identity_endpoint_is_on_this_page_and_on_no_other():
     )
 
 
-def test_the_page_stores_no_token_and_no_session():
-    """The token is used for the request it is for and never stored.
+def test_the_page_keeps_the_session_and_never_the_provider_token():
+    """One credential persists and the other never does.
 
-    Two things are written and neither is a credential. The PKCE verifier,
-    because a verifier has to survive a navigation by definition, removed the
-    moment it is used and worth nothing without the authorization code. And
-    three display facts about who signed in, since 2026-09-20, because the bar
-    at the top ships both ways in and has to know which to show on a page this
-    one did not render.
+    **The old property.** This asserted two writes, neither of which was a
+    credential: the PKCE verifier, and three display facts about who signed in.
+    That was true and the arrangement behind it was not honest, because the bar
+    read those display facts and offered **Add artifact** to somebody whose
+    session had died on their last reload.
 
-    This asserted one write, which was the honest count while nothing on the
-    site had a bar to fill in. Counting is not what makes it a guard, though,
-    and a count that gets edited upward each time something is added stops
-    meaning anything: what holds is that both writes are named, that the second
-    is the module's record rather than an object this page assembled, and that
-    neither call mentions a token. `tests/test_nav_account.py` holds the same
-    rule across every file in the view layer.
+    **Why it stopped being the right one.** Making that offer true meant keeping
+    the Supabase session with its refresh token, which is a credential, and
+    which is the whole point: row-level security scopes that JWT to inserting
+    one row as its owner, it reads nobody else's rows, and there is no update or
+    delete policy at all.
+
+    **What replaced it.** The Hugging Face `provider_token` never reaches
+    storage in any spelling. It is the one that can create and write
+    repositories in somebody's own namespace, and Hugging Face returns it on the
+    sign-in itself and never on a renewal, so keeping it would buy nothing past
+    its expiry. What is kept is one key holding `heldSessionFrom`'s projection,
+    and the page writes it through one function.
+    `tests/test_nav_account.py` holds the same rule across every file in the
+    view layer.
     """
     code = bundle()
     writes = [
@@ -503,11 +509,11 @@ def test_the_page_stores_no_token_and_no_session():
             r"[^;]{0,120}", code,
         )
     ]
-    assert len(writes) == 2, f"more than the verifier and the handle: {writes}"
+    assert len(writes) == 2, f"more than the verifier and the session: {writes}"
     assert "removeItem" in code, "the verifier is stored and never removed"
-    for leak in (r"setItem\([^)]*provider_token", r"setItem\([^)]*access",
+    for leak in (r"setItem\([^)]*provider_token", r"setItem\([^)]*providerToken",
                  r"cookie\s*=[^;]*token"):
-        assert not re.search(leak, code, re.I), f"a token is written: {leak}"
+        assert not re.search(leak, code, re.I), f"a provider token is written: {leak}"
 
     # What is written is read off the source rather than the bundle, because
     # the bundler renames the constant and `setItem(F,a)` says nothing about
@@ -517,22 +523,60 @@ def test_the_page_stores_no_token_and_no_session():
     written = re.findall(r"sessionStorage\.setItem\(\s*([A-Za-z_$][\w$]*)", source)
     assert written == ["VERIFIER"], written
     assert re.search(r'VERIFIER\s*=\s*"controlbun\.pkce"', source), (
-        "the one thing stored is no longer the PKCE verifier"
+        "the one thing in sessionStorage is no longer the PKCE verifier"
     )
     assert "sessionStorage.removeItem(VERIFIER)" in source
 
-    remembered = re.findall(r"localStorage\.setItem\(\s*([A-Za-z_$][\w$]*)", source)
-    assert remembered == ["WHO"], remembered
-    assert re.search(r'WHO\s*=\s*"controlbun\.who"', source), (
-        "the key the bar reads moved, and the bar is still reading the old one"
+    kept = re.findall(r"localStorage\.setItem\(\s*([A-Za-z_$][\w$]*)", source)
+    assert kept == ["HELD"], kept
+    assert re.search(r'HELD\s*=\s*"controlbun\.session"', source), (
+        "the key the session lives under moved, and the bar reads the old one"
     )
     # The value is the module's projection and not an object built here. A
     # literal assembled at the call site is how a field nobody intended gets
-    # kept: `whoFrom` names its fields, so a capture that grows a token cannot
-    # push one into a browser.
+    # kept: `heldSessionFrom` names its fields, so neither provider token and
+    # not the email on the Supabase user row can push into a browser.
     assert re.search(
-        r"localStorage\.setItem\(WHO,\s*JSON\.stringify\(who\)\);", source
-    ), "the page assembles what it keeps rather than writing whoFrom's record"
+        r"localStorage\.setItem\(HELD, JSON\.stringify\(held\)\);", source
+    ), "the page assembles what it keeps rather than writing the module's record"
+    for call in re.findall(r"\bkeep\(([^\n]*)", source):
+        if call.startswith("held)"):
+            continue  # the definition
+        assert call.startswith("heldSessionFrom("), (
+            f"keep({call.strip()}) writes something the module did not build"
+        )
+
+
+def test_the_renewal_is_the_endpoint_supabase_documents():
+    """Read rather than recalled, against supabase/auth v2.197.0, which is what
+    the live project answers at `/auth/v1/health`, on 2026-09-20.
+
+    `RefreshTokenGrantParams` in `internal/api/token_refresh.go` is one field,
+    `refresh_token`. `RefreshTokenGrant` in `internal/tokens/service.go` sets
+    `Token`, `TokenType`, `ExpiresIn`, `ExpiresAt`, `RefreshToken` and `User`
+    and nothing else; `ProviderAccessToken` is `omitempty` on that struct and is
+    assigned in exactly one place in the package, inside the PKCE branch of
+    `internal/api/token.go`. So a renewal never returns a Hugging Face token.
+    """
+    source = HUB.read_text()
+    m = re.search(r"export async function refreshSession\(.*?\n\}", source, re.S)
+    assert m, "refreshSession is gone, so a return visit re-authorizes"
+    body = m.group(0)
+    assert "/auth/v1/token?grant_type=refresh_token" in body
+    assert 'method: "POST"' in body
+    assert "refresh_token: refreshToken" in body, (
+        "the body field is not the one the endpoint reads"
+    )
+    # The one call here whose credential is in the request body rather than in
+    # a header, so a failing body is never rendered whole and is dropped
+    # outright if it contains what was sent.
+    assert "ask(" not in body, (
+        "the renewal goes through the shared helper, which reads a failing "
+        "body back into the message. This call carries a refresh token in that "
+        "body and an error page that reflected the request would put it on "
+        "screen."
+    )
+    assert "said.includes(refreshToken)" in body
 
 
 def test_the_code_is_taken_out_of_the_address_bar():
@@ -633,26 +677,83 @@ def test_the_page_still_offers_nothing_to_approve_after_it_started_sending():
         assert queueing not in body, f"{queueing!r} is a queue arriving in prose"
 
 
-def test_the_session_is_held_in_a_variable_and_written_nowhere():
-    """The one real widening in this change, held to what it is.
+def test_the_session_is_never_rendered_and_the_provider_token_is_never_held():
+    """The two halves of the split, at the page that holds both.
 
-    The access token has to outlive the frame that made it, because the submit
-    press comes long after the exchange. It lives in one module variable, it is
-    never put in storage, and it is never rendered: a token in the DOM is a
-    token in a screenshot, in a bug report and in whatever reads the page.
+    **The old property.** The session lived in one module variable, was never
+    put in storage, and was gone on a reload. That is what made the bar's
+    remembered handle an over-promise, so it was the property that had to go.
+
+    **What replaced it.** The session is held in one variable and written to one
+    key through one function, which is the test above. The provider token is
+    held in one local inside the function that uses it and never assigned to
+    anything that outlives the call. And neither is rendered, which did not
+    change: a token in the DOM is a token in a screenshot, in a bug report and
+    in whatever reads the page.
     """
     source = PAGE.read_text()
     assert re.search(r"let signed = null;", source), "the session is held elsewhere"
-    # Not in storage. The count in `test_the_page_stores_no_token_and_no_session`
-    # covers the bundle; this covers the name, which a bundler renames away.
+    # Kept under one key and nothing else. The count in the test above covers
+    # the bundle; this covers the name, which a bundler renames away.
     assert not re.search(r"setItem\([^)]*signed", source)
-    assert not re.search(r"setItem\([^)]*access", source)
-    # Not rendered. `say` and `textContent` are how anything reaches the page.
-    for rendering in (r'say\("[^"]*",\s*signed', r"textContent\s*=\s*signed",
-                      r'say\("[^"]*",\s*[^)]*\.access\b'):
-        assert not re.search(rendering, source), (
-            f"the session reaches the page: {rendering}"
+    assert re.search(r"function keep\(held\)", source), (
+        "the page no longer writes the session through one function"
+    )
+    # The provider token is a parameter and a local, and never a variable with
+    # a lifetime. `let token` at module scope is the edit this refuses.
+    assert not re.search(r"^\s*(?:let|var)\s+token\b", source, re.M), (
+        "the provider token is held in a variable outside the call that uses it"
+    )
+    for holding in (r"signed\.provider_token", r"held\.provider_token",
+                    r"provider_token\s*:"):
+        assert not re.search(holding, source), (
+            f"the provider token is kept on an object: {holding}"
         )
+    # Not rendered, either of them.
+    for rendering in (r'say\("[^"]*",\s*signed', r"textContent\s*=\s*signed",
+                      r'say\("[^"]*",\s*[^)]*\.access_token\b',
+                      r'say\("[^"]*",\s*token\b'):
+        assert not re.search(rendering, source), (
+            f"a credential reaches the page: {rendering}"
+        )
+
+
+def test_a_refused_renewal_is_a_state_with_its_own_words():
+    """Not an error and not silence. A reader whose session was signed out
+    somewhere else did nothing wrong, and there is one thing to do about it, so
+    the page says what happened, drops the session and shows the button."""
+    source = PAGE.read_text()
+    assert "function staleSaid(problem)" in source
+    assert 'show("stale", true)' in source
+    said = re.search(r"function staleSaid\(problem\) \{(.*?)\n  \}", source, re.S)
+    assert said, "nothing builds the sentence"
+    assert "not a failure of anything you typed" in said.group(1)
+    # The session goes, so the next press does not fail the same way and the
+    # bar stops offering a way in that has nothing behind it.
+    assert re.search(r"forget\(\);", source), (
+        "a session the identity service refuses is kept anyway"
+    )
+    assert re.search(r"function forget\(\) \{\s*\n\s*localStorage\.removeItem\(HELD\);",
+                     source)
+
+
+def test_the_submit_path_renews_rather_than_asking_for_a_new_authorization():
+    """The press that matters most is the one most likely to land on a spent
+    access token, since the page may have been open for an hour. Renewing is a
+    request; re-authorizing is a redirect that loses the record on the page."""
+    source = PAGE.read_text()
+    assert re.search(r"const now = await usable\(\);", source), (
+        "the send path does not renew, so a spent token is a failed submission"
+    )
+    usable = re.search(r"async function usable\(\) \{(.*?)\n  \}", source, re.S)
+    assert usable, "there is no renewal before the send"
+    assert "accessSpent(signed)" in usable.group(1)
+    assert "refreshSession(" in usable.group(1)
+    # And it renews rather than starting an authorization, which would leave
+    # the page and take the typed record with it.
+    assert "begin(" not in usable.group(1), (
+        "the send path re-authorizes, which navigates away from the record"
+    )
 
 
 def test_nothing_is_editable_or_withdrawable_from_the_page():
