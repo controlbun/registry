@@ -6,13 +6,30 @@
  * endpoints of the visible range of the same curve rather than an arbitrary pair.
  *
  * Each has a fill value and a text value, because white is a harder background
- * than near-black and the brand values only clear WCAG AA on one of them:
+ * than near-black and the brand values only clear WCAG AA on one of them.
+ *
+ * **Measured against --wash, not against white.** The first version of this
+ * table tuned both text colors to 4.51:1 on #ffffff, which is the lightest
+ * surface and therefore the easiest one. `a { color: var(--accent) }` is
+ * global, and table rows, panel headers and the hover state all set
+ * `background: var(--wash)`, so link text lands on #fafafa constantly and sat
+ * at 4.32:1 there. Both moved down at the same hue until the worst surface
+ * cleared:
  *
  *     #95B1FF on #0d0d10   9.07:1   AAA      on white   2.10:1   fails
  *     #386BFE on white     4.47:1   short of AA by 0.03
- *     #356AFF on white     4.51:1   AA
+ *     #356AFF on white     4.51:1   AA       on #fafafa 4.32:1   fails
+ *     #3066FF on white     4.70:1   AA       on #fafafa 4.50:1   AA
  *     #FF3100 on #0d0d10   5.16:1   AA       on white   3.69:1   large/UI only
- *     #E42C00 on white     4.51:1   AA
+ *     #E42C00 on white     4.51:1   AA       on #fafafa 4.32:1   fails
+ *     #DC2B00 on white     4.79:1   AA       on #fafafa 4.58:1   AA
+ *
+ * `--faint` sat at 2.90:1 for months, below AA and below the large-text floor,
+ * and it is the token carrying every "not measured" and "not recorded" here.
+ * The states this project treats as load-bearing were the hardest text on the
+ * site to read, while this comment sat above them reasoning carefully about
+ * two other colors. These numbers are a record of the choice and not the
+ * check: a hand-computed table goes stale the first time a hex value moves.
  *
  * Both blues sit at hue 224 and differ only in lightness, so a reader sees one
  * color rendered for two surfaces rather than two colors.
@@ -30,8 +47,8 @@
  */
 :root {
   --ink: #16161a;
-  --dim: #6b6b72;
-  --faint: #97979e;
+  --dim: #5f5f67;
+  --faint: #70707a;
   --line: #e4e4e8;
   --wash: #fafafa;
   --warn: #8a5a00;
@@ -39,8 +56,8 @@
   --warn-line: #e6d38a;
 
   /* Words. Anything a reader reads has to clear AA. */
-  --accent: #356AFF;
-  --status: #E42C00;
+  --accent: #3066FF;
+  --status: #DC2B00;
   /* Shapes. Rules, icons, the mark, chart fills, borders. */
   --accent-fill: #386BFE;
   --status-fill: #FF3100;
@@ -56,7 +73,7 @@
   --pop-line: #b3b3be;
   --pop-shadow: 0 6px 16px -10px rgba(22, 22, 26, .5),
                 0 1px 2px rgba(22, 22, 26, .07);
-  --pop-active: #356AFF;
+  --pop-active: #3066FF;
   --pop-on-active: #fff;
 }
 
@@ -293,7 +310,7 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ink: #e8e8ea; --dim: #a0a0a8; --faint: #74747c;
+    --ink: #e8e8ea; --dim: #a0a0a8; --faint: #86868f;
     --line: #2a2a30; --wash: #16161a;
     --warn: #d8a548; --warn-bg: #2a2313; --warn-line: #4a3d1a;
     /* One value each. On near-black the brand colors clear AA as text, so
@@ -310,7 +327,7 @@ th button { font: inherit; color: inherit; background: none; border: 0; padding:
   :root:not([data-theme="light"]) body { background: #0d0d10; }
 }
 :root[data-theme="dark"] {
-  --ink: #e8e8ea; --dim: #a0a0a8; --faint: #74747c;
+  --ink: #e8e8ea; --dim: #a0a0a8; --faint: #86868f;
   --line: #2a2a30; --wash: #16161a;
   --warn: #d8a548; --warn-bg: #2a2313; --warn-line: #4a3d1a;
   --accent: #95B1FF; --accent-fill: #95B1FF;
