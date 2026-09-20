@@ -30,9 +30,13 @@ score, live in `tests/probe.py` and never reach the site.
 Python 3.13 or newer, and Node for the site.
 
 ```
-python3 -m venv .venv && .venv/bin/pip install -e .
+python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 make verify
 ```
+
+`[dev]` is what brings pytest, which `make verify` runs. The client itself is
+two pinned dependencies and nothing else, and the Hub upload path is a separate
+`[publish]` extra so a consumer reading artifacts never installs it.
 
 `make verify` is the whole gate: the invariant scans, a site build, a dependency
 license audit, the test suite, an internal link check, the falsifier, and a
