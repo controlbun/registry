@@ -41,7 +41,7 @@ Format:
 - `2026-09-13` Adoption comes from the client being easy, not from the ordering
 - `2026-09-13` The ordering control computes what its caption says it computes
 - `2026-09-13` The Jinja frontend is retired; Astro is the frontend
-- `2026-09-13` The site is published on GitHub Pages, when the repo goes public
+- `2026-09-13` The site is published on GitHub Pages, when the repo goes public  **[amended]**
 - `2026-09-13` An owner is someone who took part, not someone who published
 - `2026-09-13` Dates render in UTC
 - `2026-09-13` Upload preferred, pointer available; SAEs are pointer only
@@ -521,6 +521,13 @@ reader can check. Declining it is what keeps "build it yourself and compare" tru
    permanent.
 3. Confirm the dual-use policy exists and is published with it. It is the launch
    blocker, and the site going up is the launch.
+
+**Amended by:** 2026-09-19 "No dual-use policy is required, and what review does
+is a later question", which lifted obligation 3 rather than discharging it. The
+gate this entry put in front of publication is gone; obligations 1 and 2 stood
+and were discharged when the site went up on 2026-09-20. Nothing else here
+changes, and the reasoning about coupling the site to the repo is why the
+arrangement still looks the way it does.
 
 ## 2026-09-13 An owner is someone who took part, not someone who published
 **Decided:** Owner pages are derived from participation. Authoring an eval suite,

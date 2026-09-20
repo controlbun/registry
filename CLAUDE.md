@@ -226,9 +226,17 @@ The data model and v0 scope are agreed enough to build against. Propose the
 structure, wait for a yes, then build. Do not run a project initializer or create a
 directory tree on your own initiative.
 
-v0 accepts no uploads and serves nothing publicly. Do not build an upload route, a
-public API, or bulk fetch, regardless of how much easier it would make testing. The
-dual-use policy is a launch blocker and those features assume it exists.
+This paragraph used to say v0 accepts no uploads and serves nothing publicly, and
+both halves are now false. The site is live at `controlbun.com` and a submission
+posts to Postgres with the identity stamped there. What changed it is in
+`DECISIONS.md`: 2026-09-19 "No dual-use policy is required", which lifted the
+triggers the old sentence hung on, and 2026-09-20 "A submission is a link".
+Amended here rather than left to be discovered, because an agent reading a stale
+prohibition stops instead of asking.
+
+What survives: no public API and no bulk fetch. Those were never consequences of
+the dual-use policy. They are the misuse surface named in the Safety section
+below, and nothing has decided them.
 
 ## Working style
 
@@ -303,8 +311,13 @@ Check dependency licenses. Flag copyleft.
 
 Flag any feature that increases misuse surface, especially anything that makes
 refusal-removal or malicious-persona artifacts easier to find, fetch in bulk, or
-apply. The dual-use policy is a launch blocker. Do not build distribution features
-that assume it before it exists.
+apply. That obligation is the part that matters and it stands unchanged.
+
+The sentence that used to follow it, that the dual-use policy is a launch blocker,
+does not. `DECISIONS.md` 2026-09-19 decided no such policy is required and lifted
+the capability triggers. Nothing waits on it, which also means nothing is excused
+by it: a feature that widens misuse surface still gets flagged, and now there is
+no document to point at instead of thinking about it.
 
 Note the tension with the plurality premise and do not resolve it silently: open
 contribution and misuse gating pull against each other. Where they conflict, raise
