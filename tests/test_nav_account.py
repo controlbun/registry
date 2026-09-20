@@ -64,7 +64,9 @@ SRC = ROOT / "astro" / "src"
 NAV = SRC / "components" / "SiteNav.astro"
 HEAD = SRC / "components" / "Head.astro"
 HANDSHAKE = SRC / "lib" / "handshake.mjs"
+HELD = SRC / "lib" / "held.mjs"
 SIGNED_IN = SRC / "pages" / "signed-in.astro"
+SUBMIT = SRC / "pages" / "submit.astro"
 CSS = SRC / "styles" / "app.css"
 
 NODE = shutil.which("node")
@@ -282,34 +284,49 @@ def test_only_the_two_named_keys_may_hold_a_credential():
 
 
 def test_the_session_is_written_in_one_place_and_it_is_the_module_s_record():
-    """A page that assembled its own object beside `heldSessionFrom` would pass
-    every scan above while writing whatever it liked, which is how the email on
-    the Supabase user row would arrive in a browser."""
-    page = SIGNED_IN.read_text()
-    written = re.findall(r"localStorage\.setItem\(\s*([A-Za-z_$][\w$]*)", page)
+    """A caller that assembled its own object beside `heldSessionFrom` would
+    pass every scan above while writing whatever it liked, which is how the
+    email on the Supabase user row would arrive in a browser.
+
+    **The write is in `held.mjs` since 2026-09-20**, when `/submit/` became a
+    second page that restores, renews and drops a session. The property was
+    never "one page writes it", it was "one function writes it", and a copy per
+    page would have ended it. The function takes what the endpoint answered
+    rather than a record, so there is no call site that can hand it a literal at
+    all.
+    """
+    module = HELD.read_text()
+    written = re.findall(r"localStorage\.setItem\(\s*([A-Za-z_$][\w$]*)", module)
     assert written == ["HELD"], written
-    assert re.search(rf'HELD\s*=\s*"{re.escape(SESSION_KEY)}"', page), (
+    assert re.search(rf'HELD\s*=\s*"{re.escape(SESSION_KEY)}"', module), (
         "the key the session lives under moved, and the bar reads the old one"
     )
     assert re.search(
-        r"function keep\(held\) \{\n\s*localStorage\.setItem\(HELD, JSON\.stringify\(held\)\);",
-        page,
-    ), "the page no longer writes through one function"
-    # And every value handed to that function is the module's projection.
-    for call in re.findall(r"\bkeep\(([^\n]*)", page):
-        if call.startswith("held)"):
-            continue  # the definition itself
-        assert call.startswith("heldSessionFrom("), (
-            f"keep({call.strip()}) writes something the module did not build"
+        r"export function keep\(said, \{ provider \} = \{\}\) \{\n"
+        r"\s*const held = heldSessionFrom\(said, \{ provider \}\);\n"
+        r"\s*localStorage\.setItem\(HELD, JSON\.stringify\(held\)\);",
+        module,
+    ), "the module no longer writes its own projection through one function"
+    # And no page writes that key itself.
+    for page in (SIGNED_IN, SUBMIT):
+        assert "localStorage.setItem" not in without_comments(page.read_text()), (
+            f"{page.name} writes the session itself, so there are two rules "
+            "for one key again"
         )
 
 
 def test_the_verifier_is_still_removed_the_moment_it_is_used():
     """The one credential-shaped thing that is written, held to the reason it
     is allowed. Duplicated from `tests/test_signed_in_page.py` on purpose: the
-    exemption above is stated here, so the condition on it is checked here."""
-    source = SIGNED_IN.read_text()
-    assert "sessionStorage.removeItem(VERIFIER)" in source
+    exemption above is stated here, so the condition on it is checked here.
+
+    Both pages write one, because both start an authorization: one signs
+    somebody in and one asks for the upload permission.
+    """
+    for page in (SIGNED_IN, SUBMIT):
+        assert "sessionStorage.removeItem(VERIFIER)" in page.read_text(), (
+            f"{page.name} writes a verifier it never removes"
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -460,7 +477,7 @@ def test_both_ways_in_ship_and_they_are_named_the_two_names():
     assert re.search(r'<a href="/sign-in/">\s*Sign in\s*</a>', markup), (
         "the bar does not offer Sign in"
     )
-    assert re.search(r'<a href="/signed-in/">\s*Add artifact\s*</a>', markup), (
+    assert re.search(r'<a href="/submit/">\s*Add artifact\s*</a>', markup), (
         "the bar does not offer Add artifact"
     )
     assert re.search(r'id="signout"[^>]*>\s*Sign out', markup), (
@@ -473,9 +490,15 @@ def test_both_ways_in_ship_and_they_are_named_the_two_names():
 
 def test_add_artifact_lands_where_a_submission_is_actually_sent():
     """The button points at a surface that takes one, checked against that
-    page rather than against a path somebody believed in."""
-    assert 'href="/signed-in/"' in nav_markup()
-    page = SIGNED_IN.read_text()
+    page rather than against a path somebody believed in.
+
+    It pointed at `/signed-in/` until 2026-09-20, which was true and was a
+    papercut: that page is the return leg, so pressing this during a sign-in
+    reloaded it and discarded the exchange in progress. The pages were split
+    rather than the button being made cleverer.
+    """
+    assert 'href="/submit/"' in nav_markup()
+    page = SUBMIT.read_text()
     assert 'id="send-record"' in page, (
         "the page Add artifact points at no longer has the button that sends"
     )
@@ -512,23 +535,31 @@ def test_a_restored_session_says_what_came_back_and_what_did_not():
 def test_a_session_that_cannot_be_renewed_is_a_state_with_its_own_words():
     """Not an error and not silence. A refused renewal is what a session signed
     out elsewhere looks like, and the reader did nothing wrong, so it gets a
-    sentence and the button that fixes it rather than a failure banner."""
-    page = SIGNED_IN.read_text()
-    assert 'id="stale"' in page, "there is nowhere to say a renewal was refused"
-    said = re.search(r"function staleSaid\(problem\) \{(.*?)\n  \}", page, re.S)
+    sentence and the button that fixes it rather than a failure banner.
+
+    One sentence, in `held.mjs`, because two pages reach the state. Two copies
+    is how two pages start describing one thing differently.
+    """
+    module = HELD.read_text()
+    said = re.search(r"export function staleSaid\(problem\) \{(.*?)\n\}",
+                     module, re.S)
     assert said, "nothing builds the sentence, so the element never fills"
     text = said.group(1).lower()
     assert "could not be renewed" in text
     assert "not a failure of anything you typed" in text
     assert "signing in again" in text
     # The endpoint's own words are in it, so the reader is not told less than
-    # this page knows.
+    # the page knows.
     assert "problem.message" in said.group(1)
     # And the session is deleted rather than left to fail again on every press.
-    assert re.search(r"forget\(\);\s*\n\s*show\(\"working\", false\);", page), (
+    assert re.search(r"forget\(\);\s*\n\s*return \{ state: \"stale\"", module), (
         "a session the identity service refuses is kept, so the bar goes on "
         "offering Add artifact off a record that cannot renew"
     )
+    for page in (SIGNED_IN, SUBMIT):
+        assert 'id="stale"' in page.read_text(), (
+            f"{page.name} has nowhere to say a renewal was refused"
+        )
 
 
 def test_signing_out_deletes_the_session_and_says_what_it_did_not_do():

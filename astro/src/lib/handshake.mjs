@@ -79,6 +79,22 @@
 export const CAPTURE_SHAPE = "controlbun.registry/membership-capture@1";
 export const SUBMISSION_SHAPE = "controlbun.registry/link-submission@1";
 
+/**
+ * The other thing `/submit/` can send: one block of text, unread.
+ *
+ * `artifacts/agent_handoff.py` holds both halves of the handoff, the prompt an
+ * author copies into their coding agent and the parser that reads what comes
+ * back. **Only the prompt crosses to the browser.** The parser stays in Python
+ * and runs when the author pulls, so there is one implementation of several
+ * hundred lines of recovery rather than two that drift.
+ *
+ * What that costs is real and `/submit/` says it rather than hiding it: a
+ * mistake in a paste is not found as somebody types, the way a mistake in a
+ * field is. It is found when the author reads the row in, and what comes back
+ * then is the sentence `parse` already produces, naming what was missing.
+ */
+export const PASTE_SHAPE = "controlbun.registry/agent-paste@1";
+
 // The namespace this registry itself owns. Bytes uploaded into it would be a
 // copy this project serves rather than a thing an author published, which is
 // `served_repo` and a different column. `artifacts/publish.py` refuses it on
@@ -101,6 +117,50 @@ export const ORGS_ABSENCE =
   "about organization membership at this moment. That is not the same as " +
   "membership of none, and it is not a failure: it is what happens when the " +
   "membership scope was not granted or the provider did not return the claim.";
+
+// --------------------------------------------------------------------------
+// What each authorization asks for. Two constants, in one file, because the
+// second one has to contain the first and they are read by two pages now:
+// `/signed-in/` starts a sign-in and `/submit/` asks for the upload permission,
+// and a property that spans two files is a property that holds until somebody
+// edits one of them.
+
+/**
+ * What signing in asks for, and nothing beyond it. Read scopes only.
+ *
+ * `email` is in here because Supabase refuses the sign-in without it. Its OIDC
+ * handler builds an `auth.users` row and that row needs an address, so a
+ * provider that returns no email claim fails the exchange with "Error getting
+ * user email from external provider" after the reader has already logged in and
+ * consented. Hugging Face only returns the claim when `email` is asked for, so
+ * dropping it does not make the sign-in more private, it makes it fail. Checked
+ * against the live project on 2026-09-20 by dropping it, which is how this was
+ * found.
+ *
+ * Nothing in this project reads the address, writes it down or sends it
+ * anywhere: it exists in the identity service's own user row and in no file,
+ * page or table of this project's. `pendingRowFrom` takes `sub`,
+ * `preferred_username` and the account id, and the capture shape has no field
+ * for it.
+ */
+export const READ_SCOPES = "openid email profile read-memberships";
+
+/**
+ * What the upload offer asks for, in a second authorization, and only when
+ * somebody chooses it.
+ *
+ * Hugging Face documents `contribute-repos` as "Create repositories and access
+ * those created by this app. Cannot access any other repositories unless
+ * additional permissions are granted", which is the narrowest scope that does
+ * this job. Checked against the live scope list on 2026-09-20; an unknown scope
+ * string is refused with `invalid_scope` before anybody is asked to log in.
+ *
+ * Restates the read scopes because Supabase **replaces** the configured list
+ * rather than adding to it, so a second authorization asking only for the new
+ * scope would silently drop the others.
+ */
+export const WRITE_SCOPES =
+  "openid email profile read-memberships contribute-repos";
 
 // --------------------------------------------------------------------------
 // PKCE.
@@ -432,6 +492,83 @@ export function submissionFrom(form, { capture, submittedAt }) {
     // submission. Recorded so the author replaying it can see which offer was
     // taken.
     uploaded_by_registry: Boolean(form.uploaded_by_registry),
+  };
+}
+
+/**
+ * Which of the two routes this is, or a refusal naming both.
+ *
+ * **A paste and filled fields together is refused, and neither wins.** That is
+ * the rule this project already applies where one field carries both a value
+ * and a reason for having none: `artifacts/intake.py insert` refuses that pair
+ * rather than resolving it, because preferring either drops one of somebody's
+ * two statements silently while the record still reads correct to whoever wrote
+ * it. Two accounts of one whole submission is the same thing one object up.
+ *
+ * `absent` counts as filled in, because an absence is a positive statement
+ * about a field. `uploaded_by_registry` does not: it is a fact about how the
+ * bytes got where they are, recorded either way, and it is set by pressing a
+ * button rather than by typing.
+ */
+export function chosenRoute(form, pasted) {
+  const filled = Object.entries(form || {})
+    .filter(([name]) => name !== "absent" && name !== "uploaded_by_registry")
+    .filter(([, value]) => trimmed(value) !== "")
+    .map(([name]) => name);
+  for (const field of Object.keys((form && form.absent) || {})) {
+    filled.push(`a reason for ${field} being absent`);
+  }
+  const text = String(pasted ?? "").trim();
+  if (text && filled.length) {
+    throw new Refused(
+      `this is a paste and ${filled.sort().join(", ")} filled in as well. ` +
+        "Those are two accounts of one submission and nothing here can tell " +
+        "which was meant, so neither is sent and nothing is preferred. Clear " +
+        "the paste box, or clear the fields.",
+    );
+  }
+  if (text) return "paste";
+  if (filled.length) return "fields";
+  throw new Refused(
+    "nothing is filled in and nothing is pasted, so there is no submission " +
+      "to build. Fill the fields in, or copy the prompt, run it where the " +
+      "extraction happened, and paste back what it produces.",
+  );
+}
+
+/**
+ * One paste, wrapped in who sent it and nothing else.
+ *
+ * **Nothing here reads the text.** Not a field, not a marker, not whether it
+ * looks like the block the prompt asks for. A check here would be the first
+ * line of a second parser, and the second parser is the thing this arrangement
+ * exists to not have. The text crosses as it arrived, including the agent's
+ * prose around it, which `parse` reads past.
+ *
+ * The three identity fields are the browser's own copy, exactly as
+ * `submissionFrom` carries them, so the author's pull can say where they
+ * disagree with what Postgres stamped rather than preferring one silently.
+ */
+export function pasteFrom(pasted, { capture, submittedAt }) {
+  const handle = capture && capture.preferred_username;
+  if (!handle) {
+    throw new Refused(
+      "the capture carries no handle, so there is no namespace to submit " +
+        "under. The namespace is the handle the provider reported and there " +
+        "is no field to type one into, which is the whole of the rule.",
+    );
+  }
+  const text = String(pasted ?? "");
+  if (!text.trim()) {
+    throw new Refused("the paste box is empty, so there is nothing to send.");
+  }
+  return {
+    shape: PASTE_SHAPE,
+    submitted_at: submittedAt || nowStamp(),
+    provider: capture.provider,
+    subject: capture.sub,
+    author: handle,
+    pasted: text,
   };
 }
 
