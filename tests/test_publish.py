@@ -150,7 +150,17 @@ def hub(tree):
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     httpd = http.server.HTTPServer(("127.0.0.1", port), Handler)
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    # `poll_interval` rather than the 0.5s default, because `shutdown()`
+    # blocks until this loop notices the flag. Two servers per test at
+    # half a second each was a flat one second of teardown on every
+    # test in this file, measured as the largest single cost in the
+    # suite on 2026-09-20. It is a poll interval and not a sleep: the
+    # shutdown still waits for the loop to actually exit, so nothing
+    # here races.
+    threading.Thread(
+        target=lambda: httpd.serve_forever(poll_interval=0.01),
+        daemon=True,
+    ).start()
     yield f"http://127.0.0.1:{port}"
     httpd.shutdown()
 
