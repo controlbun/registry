@@ -193,6 +193,23 @@ design. Tests that fail the build:
   states would be a closed enum on the one field here that is prose. A spent
   runbook that does not say it is spent gets run again, and two of the steps in
   the one this came from are not reversible
+- Nothing reaches the deploy branch that the gate did not pass in the same run.
+  `hooks/pre-push` runs `make verify` and diffs the pushed tree against the
+  `astro/dist` that just passed, and that half binds only a push somebody made:
+  in a checkout where `core.hooksPath` was never set, `git push` runs no hook and
+  says nothing about it. So the one target that pushes checks the wiring before
+  it pushes, runs the gate itself so a red one commits nothing, and refuses a
+  checkout that is not on the source branch. No path anywhere passes
+  `--no-verify`, and the scans that hold that read source with its comments and
+  docstrings taken out, because the sentence stating a rule contains the rule's
+  own spelling. Since publishing is automatic the gate is the only reader a
+  submission gets, which is why it is a push-time property rather than a habit
+- The automatic publisher stages by name and never `git add -A`. It refuses
+  outright on a working tree carrying anything it did not write, and on a
+  tracked file changing outside the three paths a pull plus a build touches. The
+  owner works in this checkout, and a commit that swept up half of what he was
+  in the middle of is worse than not publishing, because not publishing is
+  visible in the log and that is not. Bound in `tests/test_autopublish.py`
 
 Add one whenever a new invariant is settled. An invariant that is only in prose
 is not an invariant.

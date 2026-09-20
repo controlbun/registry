@@ -134,7 +134,10 @@ git add -A && git commit -m "Deploy $SHA"
 git push -u origin gh-pages
 ```
 
-Every deploy after that:
+Every deploy after that was this, and **since 2026-09-20 it is `make deploy`**,
+which runs the same sequence plus the `main` push above it and refuses a dirty
+tree, the wrong branch and an unwired hook. `artifacts/AUTOPUBLISH.md` is the
+live document; what follows is the record of what was typed.
 
 ```
 make verify
