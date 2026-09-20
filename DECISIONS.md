@@ -104,6 +104,7 @@ Format:
 - `2026-09-20` A sign-in survives a page navigation and a browser restart, and only one of its two credentials does
 - `2026-09-20` A sitemap and a robots.txt, neither of which ranks anything
 - `2026-09-20` The submit page offers the agent handoff, and the parser does not cross
+- `2026-09-20` Animation is CSS, and Motion is a named option rather than a dependency
 
 <!-- end index -->
 
@@ -4161,3 +4162,41 @@ function. What made this worth writing down is that it is not a rule about
 prompts. It is the same rule as "one thing in this project reads bytes",
 applied to a document: the thing that produces a format and the thing that
 consumes it are one source, or they drift.
+
+## 2026-09-20 Animation is CSS, and Motion is a named option rather than a dependency
+**Decided:** Animation on this site is CSS. `motion` (MIT, 13.4.0 at the time of
+writing) is recorded as the thing to reach for if something genuinely needs
+more, and reaching for it is a decision somebody makes and records rather than a
+line that arrives in a design pass. No framework island and no React.
+
+The order to reach in: CSS, then the Web Animations API which is built into the
+browser and costs nothing, then vanilla `motion`, then a framework island. The
+last has no candidate on this site, because nothing here needs component state.
+
+**Why.** `astro/package.json` has no runtime dependencies at all and never has,
+across every commit on every ref. The animation the site has actually needed so
+far is four lines: a cross-document view transition and a duration. Adding a
+runtime to a static site that emits files is a real change in what a reader
+downloads, and it should happen because something needed it rather than because
+it was available.
+
+**The first reason given against Motion was wrong, and the correction is the
+point of this entry.** The argument was that it is a React library. That was
+true of older versions and is false of v13: `react` and `react-dom` are peer
+dependencies carrying `optional: true`, so the vanilla build runs framework-free
+from a plain script tag and works in Astro today. Read from the npm registry on
+2026-09-20 rather than recalled. Recorded because a wrong reason that happens to
+produce the right answer is worse than no reason: the next person re-derives it,
+finds it false, and throws out the conclusion with it.
+
+**What this makes impossible to express**, stated because a constraint that
+cannot name its cost has not been thought through: spring physics, gesture-driven
+motion, and any sequence needing interruption or reversal beyond what
+`element.animate()` gives. Those are real things CSS does not do, and the
+decision is to not have them yet rather than to claim they are unnecessary.
+
+**Already enforced, so no new invariant.**
+`tests/test_signed_in_page.py::test_the_page_adds_no_dependency` holds
+`MAY_BUILD_WITH` and fails the build on a package nobody accounted for. Adding
+`motion` later means an entry there with its reason, which is exactly the
+recorded decision this entry asks for.
