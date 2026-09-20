@@ -3111,6 +3111,28 @@ submitter almost nothing precisely because of how they arrived, and it is what
 `soham/trauma` did: the bytes are in a Hub namespace and the capture script,
 the stimulus sets and the analysis are not.
 
+*Amended the same day, and this is the path the form should offer:* **the
+registry asks permission and does that upload.** The end state is identical, a
+pin to a public artifact in the submitter's own namespace, so this does not
+reverse "a submission is a link". What changes is who carries it out, and that
+is the difference between a submitter finishing and a submitter leaving to go
+and read Hub documentation.
+
+It costs one thing that was deliberately avoided. The 2026-09-16 note records
+the app requesting no repo scopes "because `fetch.py` sends no credentials by
+design", and writing to somebody's account needs write scope on it. Two things
+keep that narrow. **The bytes go to their namespace, not this one**, so it is
+not `served_copy` in a new coat: the registry is acting as their agent to put
+their file in their own account, and the row still records `artifact_repo`
+rather than `served_repo`. And the scope is asked for **at the moment of
+upload, not at sign-in**, so a reader, a namespace claimant, and anyone
+submitting a link to an already-public file is never asked to grant it. Whether
+the provider and Supabase support requesting it incrementally has to be verified
+before this is built, not assumed.
+
+The token is used for the one request and never stored, which is the rule the
+membership capture already follows.
+
 *Make the whole repository public.* Often impossible, and not this project's
 business to ask for. Named second because for some people it is simply the
 answer.
