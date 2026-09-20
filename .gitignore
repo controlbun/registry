@@ -30,12 +30,17 @@ __pycache__/
 .venv/
 *.egg-info/
 
-# generated database, rebuild with fixtures/build.py
+# generated database, rebuild with artifacts/seed.py
 registry.db
 
 # fetched artifacts, keyed by commit so they never go stale and never
 # need clearing. Rebuilt on demand from the Hub.
 .cache/
+
+# tensors `tests/probe.py` writes at test time. Never committed: a checked-in
+# fabricated artifact is exactly what left the tree on 2026-09-19, and these
+# regenerate from an integer ramp on every run.
+tests/_probe/
 
 # astro build output and dependencies
 astro/node_modules/

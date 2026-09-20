@@ -6,6 +6,22 @@ way to know this one would is to drift it on purpose.
 
 Each case copies the tree, breaks one thing, and asserts the run goes red. The
 clean copy is checked first, so a green result below is not vacuous.
+
+**The tree is built from `tests/probe.py` rather than from the corpus.** Until
+2026-09-19 it was built from `fixtures/build.py`, which is gone: a public site
+whose corpus is half fabricated invites "is this real", so the fabricated half
+left. What the bites need is not that half specifically, it is a corpus holding
+the states a falsifier has to be able to see, and several of those states the
+real corpus has never been in. Two claimants on one label give the angle check
+something to recompute. An author who reported a trait score gives the transport
+check something to drift. An absence with a reason beside it gives the marking
+guard something to unmark. The probe supplies all of them, in a temporary
+directory, marked synthetic in every row, reachable by no page.
+
+Where a bite is stronger against the real vendored artifacts it lives in
+`tests/test_artifact_digest_bite.py` instead, which seeds from `artifacts/` and
+holds the one case that can only be made there: a digest checked against a
+second, independent record rather than against the bytes it was derived from.
 """
 
 from __future__ import annotations
@@ -40,17 +56,25 @@ def _load_falsifier(root: Path):
 
 @pytest.fixture(scope="module")
 def tree(tmp_path_factory):
-    """A copy with a database, an export and a built site."""
+    """A copy with a probe database, an export and a built site.
+
+    `tests/probe.py` is run from this repository and pointed at the copy with
+    `--root`, so the tensors land under `dest/tests/_probe/` and every row
+    records the path that resolves to them there. The falsifier module loaded
+    below has its own `ROOT` set to the copy, so nothing it reads or hashes
+    comes from the working tree.
+    """
     dest = tmp_path_factory.mktemp("falsify") / "repo"
     dest.mkdir()
-    for part in ("falsifier", "fixtures", "schema", "src"):
-        shutil.copytree(ROOT / part, dest / part)
+    for part in ("falsifier", "schema", "src"):
+        shutil.copytree(ROOT / part, dest / part,
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     (dest / "astro" / "src" / "data").mkdir(parents=True)
     (dest / "astro" / "dist").mkdir(parents=True)
 
     subprocess.run(
-        [sys.executable, str(dest / "fixtures" / "build.py"),
-         "--db", str(dest / "registry.db")],
+        [sys.executable, str(ROOT / "tests" / "probe.py"),
+         "--db", str(dest / "registry.db"), "--root", str(dest)],
         check=True, capture_output=True,
     )
     subprocess.run(
@@ -141,6 +165,17 @@ def test_an_export_that_drifted_from_the_database(tree):
 
 
 def test_a_fabricated_figure_published_without_its_marker(tree):
+    """The half of the marker rule the real corpus can no longer reach.
+
+    Every row in `registry.db` is real now, so `only_synthetic` is empty there
+    and nothing on the site can be convicted of publishing a fabricated figure
+    unmarked. Here it is not empty: every probe row is marked synthetic, so the
+    page above is carrying figures that trace to nothing else, and taking the
+    banner off it has to turn the run red. This is the end-to-end version of
+    what `falsifier.verify.check_the_marker_rule_still_bites` proves on every
+    run with two strings, through the real export, the real page reader and the
+    real number scan.
+    """
     page = tree / "astro" / "dist" / "probe" / "index.html"
     original = page.read_text()
     page.write_text(original.replace("Synthetic corpus. ", ""))
@@ -159,15 +194,15 @@ def test_a_reason_beside_an_absence_that_renders_unmarked(tree):
     scan as a figure this registry derived, which is the reading the 2026-09-19
     decision exists to stop.
 
-    The reason here is a sentence this test wrote about a fixture, which is why
-    it says so: `fixtures/SYNTHETIC.md` covers invented prose as much as
-    invented numbers.
+    The reason here is a sentence this test wrote about a probe row, which is
+    why it says so: invented prose is invented the same way an invented number
+    is, and `tests/probe.py` covers both.
     """
     path = tree / "astro" / "src" / "data" / "controlbun.json"
     original = path.read_text()
     payload = json.loads(original)
     claimant = payload["labels"][0]["claimants"][0]
-    reason = ("Written by the test suite about a fixture. Nothing hashed a "
+    reason = ("Written by the test suite about a probe row. Nothing hashed a "
               "chat template here because nothing generated any text.")
     claimant["absences"] = {"chat_template_hash": reason}
     path.write_text(json.dumps(payload))
@@ -196,7 +231,18 @@ def test_a_reason_beside_an_absence_that_renders_unmarked(tree):
 
 
 def test_a_missing_artifact_is_not_silently_skipped(tree):
-    held = tree / "fixtures" / "alice_kindness_v1.safetensors"
+    """A row claiming bytes this checkout should hold, with no bytes there.
+
+    Held back rather than deleted, so the copy is the same afterwards. The row
+    this touches records no remote of any kind, which is what makes the absence
+    a finding: a pinned row whose bytes live at somebody else's commit is
+    skipped by design, and `_pinned` is the distinction.
+    """
+    held = tree / "tests" / "_probe" / "probe_a.safetensors"
+    assert held.exists(), (
+        "the probe tensor is not where the rows say it is, so holding it back "
+        "would prove nothing"
+    )
     moved = held.with_suffix(".held")
     held.rename(moved)
     try:
@@ -214,9 +260,8 @@ def test_claim_evidence_that_renders_unmarked(tree):
     the guard reads it off the owner index rather than off the claimants, and
     this is the proof that half of `_authored_texts` is wired to anything.
 
-    The detail below is a sentence this test wrote about a fixture account and
-    says so, because `fixtures/SYNTHETIC.md` covers invented prose as much as
-    invented numbers.
+    The detail below is a sentence this test wrote about an account that does
+    not exist and says so, for the reason the absence-reason case gives.
     """
     path = tree / "astro" / "src" / "data" / "controlbun.json"
     original = path.read_text()

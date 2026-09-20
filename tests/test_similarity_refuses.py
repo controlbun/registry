@@ -11,11 +11,16 @@
 The comparability gate originally tested model, revision, layer and hook point
 and never the shape, so the first LoRA anyone published would have been handed a
 cosine as if it meant something. These check that it refuses, and says why.
+
+**Run against `tests/probe.py` rather than against the corpus.** Every one of
+these needs two artifacts in one label that differ in exactly one respect, and
+the real corpus holds five submissions by one author, none of them a LoRA and
+none of them a probe weight vector. The probe carries the kinds and the shapes;
+the rows it writes reach no page and no database the site reads.
 """
 
 from __future__ import annotations
 
-import subprocess
 import sys
 from pathlib import Path
 
@@ -23,24 +28,25 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
 
-from controlbun import db  # noqa: E402
+import probe  # noqa: E402
 from controlbun.comparison import similarity_matrix  # noqa: E402
+
+# The probe's two labels, named here so a rename in `probe.py` fails loudly
+# rather than turning every lookup below into a silent miss.
+TRAIT = probe.LABEL_A
+OTHER = probe.LABEL_B
 
 
 @pytest.fixture
 def conn(tmp_path):
-    path = tmp_path / "fixture.db"
-    subprocess.run(
-        [sys.executable, str(ROOT / "fixtures" / "build.py"), "--db", str(path)],
-        check=True, capture_output=True,
-    )
-    return db.connect(path)
+    return probe.build(tmp_path / "probe.db")
 
 
 def _add(conn, author, label, kind, shape, *, layer=12, hook="resid_pre",
          model="placeholder/other-architecture-7b", revision="1" * 40,
-         path="fixtures/dana_refusal_v1.safetensors"):
+         path="tests/_probe/probe_c.safetensors"):
     conn.execute(
         "INSERT INTO submission (author,model_id,label,version,definition,"
         "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
@@ -74,36 +80,37 @@ def cell(conn, label, a, b):
 
 def test_a_matrix_shaped_artifact_gets_no_angle(conn):
     """The case that would have shipped a number from a LoRA."""
-    _add(conn, "lyn", "refusal", "lora", "[8, 4]")
-    result = cell(conn, "refusal", "dana", "lyn")
+    _add(conn, "probe-lora", OTHER, "lora", "[8, 4]")
+    result = cell(conn, OTHER, "probe-c", "probe-lora")
     assert result["v"] is None
     assert result["why"] == "not a vector"
 
 
 def test_vectors_of_different_dimension_get_no_angle(conn):
-    _add(conn, "mo", "refusal", "direction", "[16]")
-    result = cell(conn, "refusal", "dana", "mo")
+    _add(conn, "probe-wide", OTHER, "direction", "[16]")
+    result = cell(conn, OTHER, "probe-c", "probe-wide")
     assert result["v"] is None
     assert result["why"] == "different dimensions"
 
 
 def test_different_layers_get_no_angle(conn):
-    _add(conn, "nia", "refusal", "direction", "[8]", layer=3)
-    result = cell(conn, "refusal", "dana", "nia")
+    _add(conn, "probe-shallow", OTHER, "direction", "[8]", layer=3)
+    result = cell(conn, OTHER, "probe-c", "probe-shallow")
     assert result["v"] is None
     assert result["why"] == "different layer or hook point"
 
 
 def test_different_models_get_no_angle(conn):
-    _add(conn, "ola", "refusal", "direction", "[8]", model="somewhere/else-3b")
-    result = cell(conn, "refusal", "dana", "ola")
+    _add(conn, "probe-elsewhere", OTHER, "direction", "[8]",
+         model="somewhere/else-3b")
+    result = cell(conn, OTHER, "probe-c", "probe-elsewhere")
     assert result["v"] is None
     assert result["why"] == "different model or revision"
 
 
 def test_two_vectors_in_the_same_space_do_get_an_angle(conn):
     """The refusals must not be so broad that nothing compares."""
-    result = cell(conn, "kindness", "alice", "bob")
+    result = cell(conn, TRAIT, "probe-a", "probe-b")
     assert result["v"] is not None
     assert -1.0 <= result["v"] <= 1.0
     assert result["why"] is None
@@ -113,11 +120,11 @@ def test_comparing_across_kinds_says_what_it_is_comparing(conn):
     """An SAE decoder column and a probe weight vector share a space, so the
     arithmetic holds, but they are not the same kind of object. The number ships
     with a note saying what is actually being compared."""
-    result = cell(conn, "refusal", "dana", "erik")
+    result = cell(conn, OTHER, "probe-c", "probe-d")
     assert result["v"] is not None
     assert result["note"] and "steer with" in result["note"]
     assert "sae-latent" in result["note"] and "probe" in result["note"]
 
 
 def test_same_kind_carries_no_note(conn):
-    assert cell(conn, "kindness", "alice", "bob")["note"] is None
+    assert cell(conn, TRAIT, "probe-a", "probe-b")["note"] is None

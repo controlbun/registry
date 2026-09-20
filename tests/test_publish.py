@@ -18,6 +18,7 @@ import http.server
 import json
 import shutil
 import socket
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -32,6 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # function instead, so the module is imported too.
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "artifacts"))
+import probe  # noqa: E402
 import publish  # noqa: E402
 
 # Forty hex characters, so it passes `fetch.commit_sha`. Not a commit anything
@@ -41,25 +43,68 @@ REPO = "author/directions"
 WRONG = "author/somethingelse"
 
 
+def add_a_synthetic_row(tree: Path) -> str:
+    """One row marked synthetic, with bytes on disk. Returns its path.
+
+    `publish.select` filters on `is_synthetic`, and until 2026-09-19 that
+    filter had the whole fabricated half of the corpus to work on. Nothing in
+    the corpus is marked synthetic now, so the filter selects everything and
+    the check that it filters anything at all would pass while reading nothing.
+
+    The column did not go anywhere: a submitter can mark a submission synthetic
+    and this is what reads it. So one such row is written here, against a
+    tensor `tests/probe.py` produced, and the tests below assert it reaches
+    neither the plan nor a pin. Rewritten after every rebuild, because the
+    seeder drops the database.
+    """
+    rel = probe.build_vectors(tree)["probe-a"]
+    facts = probe.confirmed_facts(tree, rel)
+    conn = sqlite3.connect(tree / "registry.db")
+    conn.execute(
+        "INSERT INTO submission (author,model_id,label,version,definition,"
+        "created_at,is_synthetic) VALUES ('probe-a',?,?,'v1',"
+        "'written by the test suite','2026-09-12T00:00:00Z',1)",
+        (probe.MODEL_A[0], probe.LABEL_A),
+    )
+    conn.execute(
+        "INSERT INTO intervention (id,author,model_id,label,version,kind,"
+        "model_revision,layer,layer_convention,hook_point,shape,dtype,l2_norm,"
+        "artifact_path,artifact_sha256,is_synthetic)"
+        " VALUES ('iv_probe-a','probe-a',?,?,'v1','direction',?,?,"
+        "'block-0indexed',?,?,?,?,?,?,1)",
+        (probe.MODEL_A[0], probe.LABEL_A, probe.MODEL_A[1], probe.MODEL_A[2],
+         probe.MODEL_A[3], facts.shape, facts.dtype, facts.l2_norm, rel,
+         facts.sha256),
+    )
+    conn.commit()
+    conn.close()
+    return rel
+
+
 @pytest.fixture(scope="module")
 def tree(tmp_path_factory) -> Path:
     """A copy of the writable parts of the repo, with a corpus built in it.
 
-    Copied rather than used in place, because `fixtures/build.py` writes into
-    `fixtures/` and `publish.py record` writes into `artifacts/`. A test that
+    Copied rather than used in place, because `publish.py record` writes into
+    `artifacts/` and `tests/probe.py` writes into `tests/_probe/`. A test that
     edits tracked files is a test that leaves the working tree dirty.
+
+    One seeder rather than two since 2026-09-19: `artifacts/seed.py` drops the
+    database and writes the real rows, and the fixture builder that used to run
+    in front of it is gone.
     """
     dest = tmp_path_factory.mktemp("publish") / "repo"
     dest.mkdir()
-    for part in ("artifacts", "falsifier", "fixtures", "schema", "src"):
+    for part in ("artifacts", "falsifier", "schema", "src"):
         shutil.copytree(ROOT / part, dest / part,
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-    for script in (dest / "fixtures" / "build.py", dest / "artifacts" / "seed.py"):
-        done = subprocess.run(
-            [sys.executable, str(script), "--db", str(dest / "registry.db")],
-            capture_output=True, text=True,
-        )
-        assert done.returncode == 0, done.stderr
+    done = subprocess.run(
+        [sys.executable, str(dest / "artifacts" / "seed.py"),
+         "--db", str(dest / "registry.db")],
+        capture_output=True, text=True,
+    )
+    assert done.returncode == 0, done.stderr
+    add_a_synthetic_row(dest)
     return dest
 
 
@@ -71,8 +116,10 @@ def hub(tree):
         for p in sorted((tree / "artifacts" / "soham").glob("*.safetensors"))
     }
     # Different bytes under the same path, which is the substitution case. A
-    # committed synthetic fixture, so nothing here is fabricated.
-    other = (tree / "fixtures" / "alice_kindness_v1.safetensors").read_bytes()
+    # probe tensor, which is an integer ramp that says so in its own metadata,
+    # so nothing here is a measurement and nothing is fabricated at the point
+    # of use.
+    other = (tree / probe.build_vectors(tree)["probe-b"]).read_bytes()
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def _send(self, blob: bytes) -> None:
@@ -124,24 +171,26 @@ def run(tree: Path, *args: str, hub: str | None = None) -> subprocess.CompletedP
 def rebuild(tree: Path) -> subprocess.CompletedProcess:
     """What `make site` does: drop the corpus and write it again.
 
-    `artifacts/seed.py` inserts, so it cannot run twice against one database.
-    The pin has to survive this, which is the reason it is not only a column.
+    One command since 2026-09-19. `artifacts/seed.py` drops the database
+    itself, which is the line the fixture builder used to hold, and it inserts
+    rather than upserts, so it cannot run twice against one database. The pin
+    has to survive this, which is the reason it is not only a column.
+
+    The synthetic row is put back afterwards, because the drop takes it with
+    everything else and the checks below need something for the filter to
+    exclude.
     """
     done = subprocess.run(
-        [sys.executable, str(tree / "fixtures" / "build.py"),
-         "--db", str(tree / "registry.db")],
-        capture_output=True, text=True,
-    )
-    assert done.returncode == 0, done.stderr
-    return subprocess.run(
         [sys.executable, str(tree / "artifacts" / "seed.py"),
          "--db", str(tree / "registry.db")],
         capture_output=True, text=True,
     )
+    if done.returncode == 0:
+        add_a_synthetic_row(tree)
+    return done
 
 
 def rows(tree: Path) -> dict[str, tuple]:
-    import sqlite3
     conn = sqlite3.connect(tree / "registry.db")
     return {
         path: (repo, commit)
@@ -194,10 +243,38 @@ def test_the_plan_puts_the_file_at_the_path_the_row_carries(tree):
         )
 
 
-def test_synthetic_fixtures_are_never_in_the_plan(tree):
-    """Nothing in `fixtures/` is a measurement, and it does not get published."""
+def test_a_synthetic_row_is_never_in_the_plan(tree):
+    """A fabricated direction uploaded under the author's name is the worst case.
+
+    The file would be published, pinned and fetchable, under somebody's real
+    account, and its whole point is that it is not a measurement. So
+    `publish.select` filters on `is_synthetic`, and this is the check that the
+    filter reaches anything: the row exists, its bytes are on disk, and it is
+    the only row the plan leaves out.
+
+    Both halves are asserted. Checking only that the synthetic path is absent
+    would pass on a plan that is empty, which is how this check went vacuous in
+    the first place once the fabricated corpus was removed.
+    """
+    marked = [
+        r[0] for r in sqlite3.connect(tree / "registry.db").execute(
+            "SELECT artifact_path FROM intervention WHERE is_synthetic=1"
+        )
+    ]
+    assert marked, "no synthetic row is in the database, so this proves nothing"
+    for rel in marked:
+        assert (tree / rel).exists(), (
+            f"{rel} has no bytes here, so `select` would skip it for the wrong "
+            "reason and the filter is still untested"
+        )
+
     done = run(tree, "plan")
-    assert "fixtures/" not in done.stdout
+    assert done.returncode == 0, done.stderr
+    for rel in marked:
+        assert rel not in done.stdout, "a row marked synthetic reached the plan"
+    assert "artifacts/soham/" in done.stdout, (
+        "the plan is empty, so the absence above is not the filter working"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -232,8 +309,17 @@ def test_record_writes_the_file_and_the_rows(tree, hub):
 
     written = rows(tree)
     assert all(written[p] == (REPO, SHA) for p in recorded["files"])
-    assert all(written[p] == (None, None) for p in written
-               if p.startswith("fixtures/")), (
+    # The synthetic row is the one `select` left out, so nothing was uploaded
+    # for it and nothing may be pinned to it. Read off the database rather than
+    # off a path prefix, because the prefix is a convention and the column is
+    # the rule.
+    synthetic = [
+        r[0] for r in sqlite3.connect(tree / "registry.db").execute(
+            "SELECT artifact_path FROM intervention WHERE is_synthetic=1"
+        )
+    ]
+    assert synthetic, "nothing is marked synthetic, so this proves nothing"
+    assert all(written[p] == (None, None) for p in synthetic), (
         "a pin reached a synthetic row"
     )
 

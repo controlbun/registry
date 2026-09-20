@@ -377,8 +377,8 @@ def resolve(
     Order: our served copy, then the author's repo, then a local file. Our copy
     first because it is the one whose availability we control; the author's repo
     next because it is where the bytes actually came from; the local path last
-    because it is how the synthetic fixtures work and how anyone runs this from a
-    clean checkout with no network.
+    because it is how the vendored artifacts work and how anyone runs this from
+    a clean checkout with no network.
 
     Both remote branches take a host and a template, and neither knows a host by
     name. `schema/migrations/004` keeps the two pairs apart because one pair of

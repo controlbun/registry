@@ -3,15 +3,23 @@
 These check the properties that make the placeholder honest, not the particular
 numbers it produces. The function is meant to be replaced; what must survive the
 replacement is that it never reads an eval result and never invents a signal.
+
+**Run against the probe corpus rather than the real one.** Engagement is scrutiny
+by somebody other than the author, and the real corpus contains none: five
+submissions by one person, nobody else's eval pointed at any of them, no attacks.
+A zero on both sides of a comparison proves nothing about whether engagement is
+counted, so the states that have to differ are built by `tests/probe.py` and
+thrown away. The corpus-size checks would work against either and are kept here
+beside the rest.
 """
 
 from __future__ import annotations
 
-import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import probe
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,19 +30,14 @@ from controlbun import db, order  # noqa: E402
 NOW = datetime(2026, 9, 12, 12, 0, tzinfo=timezone.utc)
 
 
-# The model the fixtures put `kindness` on. Part of the identity since
+# The model the probe puts its first label on. Part of the identity since
 # `schema/migrations/010`, so a lookup by three columns no longer names a row.
-MODEL_A = "placeholder/does-not-resolve-1b"
+MODEL_A = probe.MODEL_A[0]
 
 
 @pytest.fixture
 def conn(tmp_path):
-    path = tmp_path / "fixture.db"
-    subprocess.run(
-        [sys.executable, str(ROOT / "fixtures" / "build.py"), "--db", str(path)],
-        check=True, capture_output=True,
-    )
-    return db.connect(path)
+    return probe.build(tmp_path / "probe.db")
 
 
 def test_small_corpus_defaults_to_recency(conn):
@@ -47,8 +50,8 @@ def test_threshold_switches_to_trending(conn):
         conn.execute(
             "INSERT INTO submission (author,model_id,label,version,definition,"
             "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
-            (f"filler{i}", "placeholder/does-not-resolve-1b", "kindness",
-             "v1", "filler", "2026-09-12T00:00:00Z"),
+            (f"filler{i}", MODEL_A, probe.LABEL_A, "v1", "filler",
+             "2026-09-12T00:00:00Z"),
         )
     conn.commit()
     assert order.corpus_size(conn) >= order.CORPUS_THRESHOLD
@@ -61,6 +64,10 @@ def test_trending_collapses_to_recency_with_no_engagement():
     With engagement zero everywhere the numerator is constant, so the ordering is
     decided entirely by age. A newer item outranks an older one and nothing else
     is being claimed.
+
+    This is not hypothetical any more. Every submission in the real corpus has
+    engagement zero, because nobody other than the author has evaluated or
+    attacked one, so this is the branch the site is actually running.
     """
     newer = order.trending_score(0, hours=1.0)
     older = order.trending_score(0, hours=100.0)
@@ -70,9 +77,9 @@ def test_trending_collapses_to_recency_with_no_engagement():
 def test_engagement_outweighs_age_only_up_to_a_point():
     """Scrutiny lifts an item, and age eventually pulls it back down. Neither term
     is allowed to dominate outright, or the ordering stops being a trade-off."""
-    scrutinised_but_old = order.trending_score(10, hours=500.0)
+    scrutinized_but_old = order.trending_score(10, hours=500.0)
     untouched_but_new = order.trending_score(0, hours=1.0)
-    assert untouched_but_new > scrutinised_but_old
+    assert untouched_but_new > scrutinized_but_old
 
     same_age_more_scrutiny = order.trending_score(10, hours=10.0)
     same_age_none = order.trending_score(0, hours=10.0)
@@ -81,32 +88,37 @@ def test_engagement_outweighs_age_only_up_to_a_point():
 
 def test_engagement_counts_only_other_peoples_work(conn):
     """An author cannot lift their own submission by evaluating it again."""
-    before = order.engagement(conn, "alice", MODEL_A, "kindness", "v1")
+    before = order.engagement(conn, "probe-a", MODEL_A, probe.LABEL_A, "v1")
 
     conn.execute(
         "INSERT INTO eval_suite (id,author,name,version) VALUES (?,?,?,?)",
-        ("es_alice_2", "alice", "second-look", "v1"),
+        ("es_probe_a_2", "probe-a", "second-look", "v1"),
     )
     conn.execute(
         "INSERT INTO eval_report (id,eval_suite_id,intervention_id,reported_at,"
         "is_synthetic) VALUES (?,?,?,?,1)",
-        ("er_alice_2", "es_alice_2", "iv_alice", "2026-09-12T00:00:00Z"),
+        ("er_probe_a_2", "es_probe_a_2", "iv_probe-a", "2026-09-12T00:00:00Z"),
     )
     conn.commit()
 
-    assert order.engagement(conn, "alice", MODEL_A, "kindness", "v1") == before, (
+    assert order.engagement(conn, "probe-a", MODEL_A, probe.LABEL_A, "v1") == before, (
         "self-evaluation must not register as scrutiny"
     )
 
 
 def test_attack_registers_as_engagement(conn):
-    """Alice carries an attack in the fixtures; bob carries none."""
-    assert order.engagement(conn, "alice", MODEL_A, "kindness", "v1") > 0
-    assert order.engagement(conn, "bob", MODEL_A, "kindness", "v1") == 0
+    """probe-a carries an attack and somebody else's eval; probe-b carries neither.
+
+    The real corpus cannot make this distinction: nobody has attacked or
+    independently evaluated anything in it, so both sides would read zero and a
+    function that always returned zero would pass.
+    """
+    assert order.engagement(conn, "probe-a", MODEL_A, probe.LABEL_A, "v1") > 0
+    assert order.engagement(conn, "probe-b", MODEL_A, probe.LABEL_A, "v1") == 0
 
 
 def test_caller_can_always_override_the_default(conn):
-    rows = db.claimants(conn, "kindness")
+    rows = db.claimants(conn, probe.LABEL_A)
     recent = order.apply_order(conn, rows, key=order.ORDER_RECENT, now=NOW)
     trending = order.apply_order(conn, rows, key=order.ORDER_TRENDING, now=NOW)
     assert {r["author"] for r in recent} == {r["author"] for r in trending}
@@ -114,7 +126,7 @@ def test_caller_can_always_override_the_default(conn):
 
 
 def test_unknown_ordering_leaves_rows_alone_rather_than_raising(conn):
-    rows = db.claimants(conn, "kindness")
+    rows = db.claimants(conn, probe.LABEL_A)
     out = order.apply_order(conn, rows, key="by-vibes", now=NOW)
     assert [r["author"] for r in out] == [r["author"] for r in rows]
 
@@ -136,7 +148,7 @@ def test_ordering_reads_no_eval_result():
 
 
 def test_recency_uses_real_timestamps_not_invented_ones(conn):
-    rows = db.claimants(conn, "kindness")
+    rows = db.claimants(conn, probe.LABEL_A)
     ordered = order.apply_order(conn, rows, key=order.ORDER_RECENT, now=NOW)
     for r in ordered:
         assert r["created_at"], "every row orders on a timestamp that exists"

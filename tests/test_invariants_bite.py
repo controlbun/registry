@@ -145,8 +145,15 @@ VIOLATIONS = {
         "value = row.transfer_score or 0\n",
         "test_absent_eval_is_not_an_error",
     ),
-    "label resolved to one artifact in the fixture builder": (
-        "fixtures/probe.py",
+    # This probe lived at `fixtures/probe.py` until the synthetic corpus was
+    # removed on 2026-09-19 and there was no such directory. What it is for is
+    # the invariant, not the directory: it is the one case proving that
+    # label-resolution is scanned outside `src/` and `astro/src/` as well. The
+    # falsifier is where it belongs now on the merits, because that file loops
+    # over `entry["claimants"]` on every run and an index into one of those
+    # lists is a mistake somebody would make there for a good local reason.
+    "label resolved to one artifact in the falsifier": (
+        "falsifier/probe2.py",
         "def only(conn, label):\n    return _submissions(conn, label)[0]\n",
         "test_nothing_resolves_a_label_to_one_artifact",
     ),
@@ -243,9 +250,13 @@ def _load_invariants(root: Path):
 def tree(tmp_path_factory):
     dest = tmp_path_factory.mktemp("probe") / "repo"
     dest.mkdir()
-    for part in ("schema", "src", "tests", "fixtures", "artifacts", "falsifier"):
+    # `fixtures` was in this list and is not a directory any more. The copy is
+    # every place code lives, so the scanner under test reads the same tree
+    # shape here that it reads in the repository.
+    for part in ("schema", "src", "tests", "artifacts", "falsifier"):
         shutil.copytree(ROOT / part, dest / part,
-                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+                        ignore=shutil.ignore_patterns(
+                            "__pycache__", "*.pyc", "_probe"))
     (dest / "astro").mkdir()
     shutil.copytree(ROOT / "astro" / "src", dest / "astro" / "src")
     return dest

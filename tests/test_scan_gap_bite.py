@@ -1,9 +1,9 @@
 """Proof that widening the scan is what closed the gap, not a coincidence.
 
 `tests/test_invariants_bite.py` gained four probes that write violations into
-`artifacts/`, `fixtures/` and `falsifier/`. Those probes pass now. The question
-this file answers is whether they pass *because* the scan was widened, or whether
-they would have passed anyway, which is the failure mode that has already produced
+`artifacts/` and `falsifier/`. Those probes pass now. The question this file
+answers is whether they pass *because* the scan was widened, or whether they
+would have passed anyway, which is the failure mode that has already produced
 three inert checks in this repository and, on three separate occasions, a bite test
 that mutated nothing and proved nothing.
 
@@ -27,7 +27,14 @@ ROOT = Path(__file__).resolve().parents[1]
 # submission and intervention rows.
 OLD_SCOPE = ("src", "astro/src")
 
-# The four probes added alongside the fix, and the invariant each one should trip.
+# The four probes added alongside the fix, and the invariant each one should
+# trip. Four invariants, so a scan that widened for one reason and stayed narrow
+# for the others is caught. The fourth sat at `fixtures/probe.py` until the
+# synthetic corpus was removed on 2026-09-19; it moved to `falsifier/` and the
+# subject is unchanged, because what it probes is the invariant rather than the
+# directory. The two directories here are the ones outside OLD_SCOPE that hold
+# code: `artifacts/` writes every row in the corpus and `falsifier/` re-derives
+# every number on the site.
 PROBES = {
     "artifacts/probe.py":
         ('rows = ex("SELECT * FROM submission ORDER BY necessity_score DESC")\n',
@@ -38,7 +45,7 @@ PROBES = {
     "falsifier/probe.py":
         ("value = row.transfer_score or 0\n",
          "test_absent_eval_is_not_an_error"),
-    "fixtures/probe.py":
+    "falsifier/probe2.py":
         ("def only(conn, label):\n    return _submissions(conn, label)[0]\n",
          "test_nothing_resolves_a_label_to_one_artifact"),
 }
@@ -48,9 +55,11 @@ PROBES = {
 def tree(tmp_path_factory):
     dest = tmp_path_factory.mktemp("scangap") / "repo"
     dest.mkdir()
-    for part in ("schema", "src", "tests", "fixtures", "artifacts", "falsifier"):
+    # `fixtures` was in this list and is not a directory any more.
+    for part in ("schema", "src", "tests", "artifacts", "falsifier"):
         shutil.copytree(ROOT / part, dest / part,
-                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+                        ignore=shutil.ignore_patterns(
+                            "__pycache__", "*.pyc", "_probe"))
     (dest / "astro").mkdir()
     shutil.copytree(ROOT / "astro" / "src", dest / "astro" / "src")
     return dest

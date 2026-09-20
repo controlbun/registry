@@ -56,11 +56,19 @@ const released = (iso) =>
         <option value={`one:${r.ref}`}>{r.author}@{r.version}</option>
       ))}
     </optgroup>
+    {/* "by attacks received" is offered only when somebody has been attacked.
+        Nothing in this corpus has been, so every row scores zero, the sort is
+        decided by storage order, and the reader is handed a control whose
+        label names a quantity that is the same everywhere. That is the dead
+        control in a quieter costume: it does something, and what it does is
+        not what it says. Recency is always real, so it is always offered. */}
     <optgroup label="Averaged across the top few">
       {[2, 3, 5, 10].filter((k) => k <= rows.length).map((k) => (
         <>
           <option value={`trending:${k}`}>top {k} by recency</option>
-          <option value={`attacks:${k}`}>top {k} by attacks received</option>
+          {rows.some((r) => r.attacks > 0) && (
+            <option value={`attacks:${k}`}>top {k} by attacks received</option>
+          )}
         </>
       ))}
     </optgroup>

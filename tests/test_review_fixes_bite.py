@@ -27,19 +27,30 @@ from safetensors.numpy import save_file
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from controlbun import client, comparison, db, export  # noqa: E402
+import probe  # noqa: E402
+from controlbun import client, comparison, export  # noqa: E402
 from controlbun.artifact import UnsafeArtifactPath, local_path  # noqa: E402
+
+# The model and label the probe corpus puts two claimants on. Named here
+# because every reconstruction below needs a row that has a sibling under the
+# same word, and the real corpus has never had one: it is five submissions by
+# one author. See `tests/probe.py`.
+MODEL_A = probe.MODEL_A[0]
+LABEL_A = probe.LABEL_A
+LABEL_B = probe.LABEL_B
 
 
 @pytest.fixture
 def conn(tmp_path):
-    """A synthetic-only database, built the way every other test builds one."""
-    path = tmp_path / "bite.db"
-    subprocess.run(
-        [sys.executable, str(ROOT / "fixtures" / "build.py"), "--db", str(path)],
-        check=True, capture_output=True,
-    )
-    return db.connect(path)
+    """A probe database, built the way every other test builds one.
+
+    This was `fixtures/build.py` until 2026-09-19. The states these
+    reconstructions need are a mixed revision set on one model, several current
+    versions under one author and label, and a non-vector artifact sitting
+    beside a vector. None of them is in the real corpus, so they are built here
+    and thrown away.
+    """
+    return probe.build(tmp_path / "bite.db")
 
 
 # --------------------------------------------------------------------------- #
@@ -49,25 +60,25 @@ def conn(tmp_path):
 def test_a_model_with_mixed_revisions_exports(conn):
     """`sorted({None, "abc"})` raises. Migration 005 made that state reachable.
 
-    Nothing caught it because every Olmo row is NULL and every placeholder row is
+    Nothing caught it because every Olmo row is NULL and every probe row is
     not, on different models, so the set was never mixed. One row is enough.
     """
     conn.execute(
-        "UPDATE intervention SET model_revision = NULL WHERE id = 'iv_alice'"
+        "UPDATE intervention SET model_revision = NULL WHERE id = 'iv_probe-a'"
     )
     conn.commit()
 
     mixed = conn.execute(
         "SELECT DISTINCT model_revision FROM intervention"
-        " WHERE model_id = (SELECT model_id FROM intervention WHERE id='iv_alice')"
+        " WHERE model_id = (SELECT model_id FROM intervention WHERE id='iv_probe-a')"
     ).fetchall()
     assert len(mixed) > 1 and any(r[0] is None for r in mixed), (
-        "the fixture no longer produces a mixed revision set, so this proves nothing"
+        "the probe no longer produces a mixed revision set, so this proves nothing"
     )
 
     payload = export.build(conn)
     entry = next(m for m in payload["model_index"] if any(
-        s["author"] == "alice" for s in m["submissions"]
+        s["author"] == "probe-a" for s in m["submissions"]
     ))
     # Recorded first, unrecorded last, and the None survives so the page can say
     # "not recorded" beside a sibling that did record one.
@@ -81,13 +92,13 @@ def test_a_model_with_mixed_revisions_exports(conn):
 def test_the_old_sort_would_have_raised(conn):
     """The reconstruction, so the test above is not passing for another reason."""
     conn.execute(
-        "UPDATE intervention SET model_revision = NULL WHERE id = 'iv_alice'"
+        "UPDATE intervention SET model_revision = NULL WHERE id = 'iv_probe-a'"
     )
     conn.commit()
     revisions = {
         r[0] for r in conn.execute(
             "SELECT model_revision FROM intervention"
-            " WHERE model_id = (SELECT model_id FROM intervention WHERE id='iv_alice')"
+            " WHERE model_id = (SELECT model_id FROM intervention WHERE id='iv_probe-a')"
         )
     }
     with pytest.raises(TypeError):
@@ -103,27 +114,26 @@ def test_several_current_versions_refuse_to_resolve(conn, tmp_path):
     for version in ("alpha", "beta"):
         conn.execute(
             "INSERT INTO submission (author,model_id,label,version,definition,"
-            "created_at,is_synthetic)"
-            " VALUES ('alice','placeholder/does-not-resolve-1b','kindness',?,'another take',"
+            "created_at,is_synthetic) VALUES ('probe-a',?,?,?,'another take',"
             "'2026-09-14',1)",
-            (version,),
+            (MODEL_A, LABEL_A, version),
         )
     conn.commit()
 
     heads = conn.execute(
-        "SELECT count(*) FROM submission WHERE author='alice' AND label='kindness'"
-        " AND superseded_by IS NULL"
+        "SELECT count(*) FROM submission WHERE author='probe-a' AND label=?"
+        " AND superseded_by IS NULL",
+        (LABEL_A,),
     ).fetchone()[0]
     assert heads == 3, f"expected three heads to disambiguate between, got {heads}"
 
     with pytest.raises(client.Ambiguous) as caught:
-        client.load("alice/kindness", database=conn_path(conn))
+        client.load(f"probe-a/{LABEL_A}", database=conn_path(conn))
     # The alternatives are named in full, or the error is a dead end: a
     # reference the reader has to add the model back into is not one they can
     # paste.
     for version in ("v1", "alpha", "beta"):
-        assert (f"alice/placeholder/does-not-resolve-1b/kindness@{version}"
-                in str(caught.value))
+        assert f"probe-a/{MODEL_A}/{LABEL_A}@{version}" in str(caught.value)
 
 
 def test_a_revision_chain_still_resolves_to_its_head(conn):
@@ -131,18 +141,22 @@ def test_a_revision_chain_still_resolves_to_its_head(conn):
     conn.execute(
         "INSERT INTO submission (author,model_id,label,version,definition,"
         "created_at,is_synthetic)"
-        " VALUES ('alice','placeholder/does-not-resolve-1b','kindness','v2','revised','2026-09-14',1)"
+        " VALUES ('probe-a',?,?,'v2','revised','2026-09-14',1)",
+        (MODEL_A, LABEL_A),
     )
     conn.execute(
         "UPDATE submission SET superseded_by='v2'"
-        " WHERE author='alice' AND label='kindness' AND version='v1'"
+        " WHERE author='probe-a' AND label=? AND version='v1'",
+        (LABEL_A,),
     )
     conn.commit()
 
-    got = client.load("alice/kindness", database=conn_path(conn))
+    got = client.load(f"probe-a/{LABEL_A}", database=conn_path(conn))
     assert got.version == "v2"
     # And the superseded version stays fetchable forever, because pins target it.
-    assert client.load("alice/kindness@v1", database=conn_path(conn)).version == "v1"
+    assert client.load(
+        f"probe-a/{LABEL_A}@v1", database=conn_path(conn)
+    ).version == "v1"
 
 
 def test_lexicographic_max_would_have_picked_the_wrong_one():
@@ -176,22 +190,23 @@ def inside_repo():
 
 
 def _add_lora(conn, shape: str, path: Path, array: np.ndarray):
-    """A LoRA beside dana, same model, revision, layer and hook point."""
+    """A LoRA beside `probe-c`, same model, revision, layer and hook point."""
     save_file({"w": array}, str(path))
-    iv = conn.execute("SELECT * FROM intervention WHERE id='iv_dana'").fetchone()
+    iv = conn.execute("SELECT * FROM intervention WHERE id='iv_probe-c'").fetchone()
     conn.execute(
         "INSERT INTO submission (author,model_id,label,version,definition,"
         "created_at,is_synthetic)"
-        " VALUES ('mira',?,'refusal','v1','a low-rank edit','2026-09-14',1)",
-        (iv["model_id"],)
+        " VALUES ('probe-lora',?,?,'v1','a low-rank edit','2026-09-14',1)",
+        (iv["model_id"], LABEL_B),
     )
     conn.execute(
         "INSERT INTO intervention (id,author,model_id,label,version,kind,"
         "model_revision,layer,layer_convention,hook_point,shape,dtype,"
-        "artifact_path,is_synthetic) VALUES ('iv_mira','mira',?,'refusal',"
+        "artifact_path,is_synthetic) VALUES ('iv_probe-lora','probe-lora',?,?,"
         "'v1','lora',?,?,?,?,?,'float32',?,1)",
-        (iv["model_id"], iv["model_revision"], iv["layer"], iv["layer_convention"],
-         iv["hook_point"], shape, str(path.relative_to(ROOT))),
+        (iv["model_id"], LABEL_B, iv["model_revision"], iv["layer"],
+         iv["layer_convention"], iv["hook_point"], shape,
+         str(path.relative_to(ROOT))),
     )
     conn.commit()
 
@@ -207,10 +222,11 @@ def test_pairwise_refuses_a_non_vector(conn, inside_repo, shape, array):
     _add_lora(conn, shape, inside_repo / "lora.safetensors", array)
     comparison.load_vector.cache_clear()
 
-    pairs = comparison.pairwise(conn, "refusal")
-    mira = [p for p in pairs if "mira/" in p["a"] or "mira/" in p["b"]]
-    assert mira, "the LoRA did not reach pairwise, so nothing here is tested"
-    for pair in mira:
+    pairs = comparison.pairwise(conn, LABEL_B)
+    lora = [p for p in pairs
+            if "probe-lora/" in p["a"] or "probe-lora/" in p["b"]]
+    assert lora, "the LoRA did not reach pairwise, so nothing here is tested"
+    for pair in lora:
         assert pair["angle_similarity"] is None, (
             f"a number shipped for a LoRA of shape {shape}"
         )
@@ -224,8 +240,8 @@ def test_pairwise_and_the_matrix_now_agree(conn, inside_repo):
               np.arange(32, dtype=np.float32).reshape(8, 4))
     comparison.load_vector.cache_clear()
 
-    matrix = comparison.similarity_matrix(conn, "refusal")
-    for pair in comparison.pairwise(conn, "refusal"):
+    matrix = comparison.similarity_matrix(conn, LABEL_B)
+    for pair in comparison.pairwise(conn, LABEL_B):
         cell = matrix[pair["a"]][pair["b"]]
         assert cell["v"] == pair["angle_similarity"], (
             f"{pair['a']} vs {pair['b']}: matrix says {cell['v']}, "
@@ -241,7 +257,7 @@ def test_pairwise_and_the_matrix_now_agree(conn, inside_repo):
 @pytest.mark.parametrize("hostile", [
     "/etc/passwd",
     "../../../../etc/passwd",
-    "fixtures/../../outside.safetensors",
+    "tests/../../outside.safetensors",
 ])
 def test_an_escaping_artifact_path_is_refused(hostile):
     with pytest.raises(UnsafeArtifactPath):
@@ -255,7 +271,14 @@ def test_the_old_join_would_have_escaped():
 
 
 def test_an_ordinary_path_still_resolves():
-    got = local_path("fixtures/alice_kindness_v1.safetensors")
+    """The positive control, against bytes that are on disk rather than a name.
+
+    Pointed at a probe tensor since 2026-09-19, because the committed artifact
+    it used to name was a fixture and those are gone. `build_vectors` writes the
+    file, so this asserts against something that exists rather than against a
+    path that happens to parse.
+    """
+    got = local_path(probe.build_vectors(ROOT)["probe-a"])
     assert got.is_relative_to(ROOT) and got.exists()
 
 

@@ -28,12 +28,11 @@ links:
 # Rebuild the corpus, export it, and build the static site with its search index.
 # npm ci rather than npm install: the lockfile is the pinned truth.
 #
-# Two seeds, two files, because `fixtures/build.py` says at the top that nothing
-# it produces is a measurement and that has to stay true of every line in it. The
-# real rows live in `artifacts/seed.py` and the `--check` beside it verifies the
+# One seed, because there is one corpus. This was two, and the first of them
+# wrote a fabricated half that `DECISIONS.md` 2026-09-19 removed; `seed.py` took
+# over the drop-and-rebuild that file owned. The `--check` beside it verifies the
 # vendored tensors against the sha256 the ingest recorded, offline.
 site:
-	$(PY) fixtures/build.py
 	$(PY) artifacts/seed.py
 	$(PY) artifacts/ingest_arena.py --check
 # After the two seeders and before the export, because a row that arrived

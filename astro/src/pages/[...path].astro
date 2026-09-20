@@ -106,6 +106,16 @@ const pinsHere = claimant
              && p.label === claimant.label && p.version === claimant.version)
   : [];
 
+// Distinct authors on this label-and-model, which is not the same number as
+// claimants and was being read as though it were. Four takes by one person on
+// one word rendered as "4 claimants", which is the plurality claim this site
+// makes with nothing behind it: since 2026-09-19 every row in the corpus is by
+// one author, so the label view has to say how many people are in it rather
+// than let a reader infer four.
+const authorsHere = block
+  ? [...new Set(block.claimants.map((c) => c.author))]
+  : [];
+
 const released = (iso) =>
   new Date(iso).toLocaleDateString("en-US", {
     year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
@@ -189,7 +199,12 @@ const released = (iso) =>
       Everyone claiming <strong>{block.label}</strong> against
       {" "}<a class="mono" href={`/models/${model.model_id}/`}>{model.model_id}</a>.
       Computed on demand and owned by nobody: this does not resolve to an artifact.
-      {" "}{block.claimants.length} claimant{block.claimants.length === 1 ? "" : "s"}.
+      {" "}{block.claimants.length} submission{block.claimants.length === 1 ? "" : "s"}
+      {" "}by {authorsHere.length} author{authorsHere.length === 1 ? "" : "s"}.
+      {authorsHere.length === 1 && (
+        <>{" "}Nobody else has claimed this word against this model. The page is
+        the same one either way; what it holds is what people have published.</>
+      )}
     </p>
 
     <div data-pagefind-body>
@@ -203,6 +218,7 @@ const released = (iso) =>
       <Relations
         relations={data.relations.filter((r) => r.from_label === block.label)}
         label={block.label}
+        authors={authorsHere.length}
       />
 
       <h2>Who has pinned one of these</h2>
@@ -234,8 +250,11 @@ const released = (iso) =>
       One owner's complete take on <strong>{block.label}</strong>, against
       {" "}<a class="mono" href={`/models/${model.model_id}/`}>{model.model_id}</a>.
       Self-contained and internally consistent. It does not have to agree with
-      {" "}<a href={`/models/${model.model_id}/${block.label}/`}>anyone else claiming the
-      same word</a>, and the registry does not ask it to.
+      {" "}<a href={`/models/${model.model_id}/${block.label}/`}>everyone else
+      claiming the same word</a>, and the registry does not ask it to.
+      {authorsHere.length === 1 && (
+        <>{" "}Nobody else has, yet. The disposition is the same either way.</>
+      )}
     </p>
 
     <Tabs tabs={[

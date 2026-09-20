@@ -647,8 +647,8 @@ def cmd_adopt(args, conn) -> int:
     So this derives the record from the file that holds the rows, which is still
     a script reading a file rather than a person reading a screen, and marks
     every entry `derived_from: database-row` so the record says which of the two
-    it was. Synthetic rows are left alone: `fixtures/build.py` owns those and a
-    fixture in the real record would be a fixture that survives a rebuild.
+    it was. Synthetic rows are left alone: a fabricated claim in the real
+    record would be one that survives a rebuild and reads as somebody's account.
     """
     conn.row_factory = sqlite3.Row
     already = read_record(args.record)
@@ -798,8 +798,8 @@ def opened(path: Path) -> sqlite3.Connection:
     if not got:
         raise Refused(
             f"{path} has no `namespace_claim` table, so there is nowhere to "
-            "write. Build the corpus first with `fixtures/build.py` and "
-            "`artifacts/seed.py`, or point --db at the one you meant. Nothing "
+            "write. Build the corpus first with `artifacts/seed.py`, "
+            "or point --db at the one you meant. Nothing "
             "was written, here or to the record."
         )
     return conn

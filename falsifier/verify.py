@@ -217,12 +217,12 @@ def check_artifact_digests_match_the_record(conn: sqlite3.Connection) -> None:
     no digest was rechecked at all, because a check that looked at nothing is the
     failure mode this repository has shipped six times.
 
-    **The synthetic rows are the weak half and say so.** `fixtures/build.py`
-    writes those files and hashes what it just wrote, in one run, so the two
-    cannot disagree by the time this reads them. The vendored rows are the real
-    test: `artifacts/soham/` is committed rather than regenerated, and its digest
-    reaches the database only by matching what `artifacts/source.py` recorded at
-    ingest.
+    **What this reads is now the strong half only.** Half the rows used to be
+    files a fixture builder wrote and hashed in the same run, so the two could
+    not disagree by the time this read them and nothing was established. Those
+    rows are gone. What is left is `artifacts/soham/`, committed rather than
+    regenerated, whose digest reaches the database only by matching what
+    `artifacts/source.py` recorded at ingest.
     """
     rows = conn.execute(
         "SELECT id, artifact_path, artifact_sha256,"
@@ -509,16 +509,28 @@ def _numbers_under(value, into: set[str]) -> None:
             _numbers_under(v, into)
 
 
-def check_synthetic_marker_matches_the_page(payload: dict) -> None:
-    """The marker has to describe the page, in both directions.
+# The phrase a page carries when a figure on it is fabricated. One spelling,
+# here, because the rule below matches it, the layout prints it and the probe
+# has to use the same string or it proves a rule nothing runs.
+MARKER = "Synthetic corpus"
 
-    This used to be one question: is anything in the corpus fabricated, and if so
-    does every page say so. That was right while everything was a fixture and
-    became wrong the moment one submission was not, because it demanded the
-    sentence "every figure here is fabricated" on a page showing a real
-    measurement. A marker that is sometimes false is not a marker.
 
-    So it is two questions now, and the second is the one that was missing:
+def marker_findings(pages, only_synthetic: set[str],
+                    only_real: set[str]) -> list[str]:
+    """The marker rule itself: what is wrong with these pages, given these numbers.
+
+    A pure function of three things and a function of nothing else, which is the
+    whole reason it is not inlined into the check below. It takes pages as
+    `(where, numbers shown, does it carry the marker)` triples, so it can be run
+    against the built site and equally against two triples a probe made up. See
+    `check_the_marker_rule_still_bites`, which is what keeps this from going
+    quietly inert now that no row in the corpus is fabricated.
+
+    Two questions, and the second is the one that used to be missing. The rule
+    was a single corpus-wide flag while everything was a fixture, and became
+    wrong the moment one submission was not, because it demanded the sentence
+    "every figure here is fabricated" on a page showing a real measurement. A
+    marker that is sometimes false is not a marker.
 
       * A page showing a figure that traces only to a synthetic row must carry
         the marker.
@@ -526,9 +538,80 @@ def check_synthetic_marker_matches_the_page(payload: dict) -> None:
 
     Numbers are attributed rather than pages, so nothing here needs to know how
     routes are built. A value that appears under both a synthetic and a real
-    claimant is attributed to neither, which is the conservative reading: 1.0000
-    is a fixture's L2 norm and also a real one's, and it cannot convict a page.
+    claimant is attributed to neither, which is the conservative reading: a
+    fabricated L2 norm of 1.0000 and a real one are the same string and cannot
+    convict a page.
     """
+    out: list[str] = []
+    for where, shown, marked in pages:
+        if shown & only_synthetic and not marked:
+            out.append(f"{where} publishes fabricated figures "
+                       f"({', '.join(sorted(shown & only_synthetic))}) "
+                       "with no marker on the page")
+        if marked and not (shown & only_synthetic) and (shown & only_real):
+            out.append(f"{where} carries the synthetic marker but every "
+                       "figure on it traces to a real submission")
+    return out
+
+
+def _pages_as_read() -> list[tuple[str, set[str], bool]]:
+    """Every built page, reduced to the three things the rule asks about."""
+    out = []
+    for page in sorted(DIST.rglob("index.html")):
+        body = text_of(page)
+        out.append((
+            f"/{page.relative_to(DIST).parent}/",
+            set(PUBLISHED_NUMBER.findall(body)),
+            MARKER in body,
+        ))
+    return out
+
+
+def check_the_marker_rule_still_bites() -> None:
+    """Run the marker rule against a probe, every run, and require both findings.
+
+    **This exists because the corpus stopped containing anything fabricated.**
+    Five of the ten rows were fixtures until 2026-09-19 and the check below was
+    proved by them: a fixture's trait score was a number no real row published,
+    so removing the banner from the page that showed it turned the run red. With
+    no synthetic row anywhere, `only_synthetic` is empty, the first half of the
+    rule can never fire, and the check degrades into a pass that looked at
+    nothing. That is the failure mode this file exists to make impossible, and
+    "it passes now" is not an answer to it.
+
+    The three options were deleting the apparatus, keeping it and letting it
+    report inert, or keeping it proved by a probe the site never sees. Deleting
+    it leaves `is_synthetic` in the schema with nothing reading it, and a
+    submitter can send a synthetic submission, so the column is not hypothetical.
+    Reporting inert is the defect. So: a probe, here rather than only in
+    `tests/`, because the falsifier is the thing that must not go quiet and a
+    check proved somewhere else is a check that can be separated from its proof.
+
+    **Neither string below is a measurement.** They are two runs of digits in
+    the shape `PUBLISHED_NUMBER` matches, chosen so they cannot be mistaken for
+    one, and they reach no database, no export and no page. The rule does string
+    containment and nothing else, so that is all it needs.
+    """
+    fabricated, measured = "9.9999", "8.8888"
+    probe = [
+        # A page showing a figure that traces only to a synthetic row, with no
+        # marker on it. Must be caught.
+        ("/probe/fabricated-and-unmarked/", {fabricated}, False),
+        # A page showing only real figures, carrying the marker anyway. Must
+        # also be caught: a marker that is sometimes false is not a marker.
+        ("/probe/real-and-marked/", {measured}, True),
+    ]
+    found = marker_findings(probe, {fabricated}, {measured})
+    missed = [where for where, _, _ in probe
+              if not any(line.startswith(where) for line in found)]
+    if missed:
+        fail("synthetic", "the marker rule no longer catches "
+                          f"{', '.join(missed)}, so nothing would stop a "
+                          "fabricated figure publishing without its marker")
+
+
+def check_synthetic_marker_matches_the_page(payload: dict) -> None:
+    """The marker rule, run against the corpus and the pages it produced."""
     synthetic: set[str] = set()
     real: set[str] = set()
     for entry in payload["labels"]:
@@ -536,25 +619,18 @@ def check_synthetic_marker_matches_the_page(payload: dict) -> None:
             _numbers_under(claimant, synthetic if claimant["is_synthetic"] else real)
 
     only_synthetic = synthetic - real
-    only_real = real - synthetic
+    # Still a finding, and still reachable: a corpus that holds a synthetic row
+    # whose every figure is also published by a real one cannot convict a page,
+    # and that is worth saying out loud. It is not reachable today because
+    # nothing in the corpus is synthetic, which is a state rather than a defect,
+    # and `main` says so instead.
     if not only_synthetic and payload.get("any_synthetic"):
-        fail("synthetic", "no figure is uniquely traceable to a fixture, so this "
-                          "check cannot catch an unmarked page; it is inert")
+        fail("synthetic", "no figure is uniquely traceable to a synthetic row, so "
+                          "this check cannot catch an unmarked page; it is inert")
 
-    for page in sorted(DIST.rglob("index.html")):
-        where = f"/{page.relative_to(DIST).parent}/"
-        body = text_of(page)
-        shown = set(PUBLISHED_NUMBER.findall(body))
-        marked = "Synthetic corpus" in body
-
-        if shown & only_synthetic and not marked:
-            fail("synthetic", f"{where} publishes fabricated figures "
-                              f"({', '.join(sorted(shown & only_synthetic))}) "
-                              "with no marker on the page")
-        if marked and not (shown & only_synthetic):
-            if shown & only_real:
-                fail("synthetic", f"{where} carries the synthetic marker but every "
-                                  "figure on it traces to a real submission")
+    for line in marker_findings(_pages_as_read(), only_synthetic,
+                                real - synthetic):
+        fail("synthetic", line)
 
 
 # --------------------------------------------------------------------------- #
@@ -562,7 +638,7 @@ def check_synthetic_marker_matches_the_page(payload: dict) -> None:
 
 def main() -> int:
     if not DB.exists():
-        print("no registry.db; run fixtures/build.py first", file=sys.stderr)
+        print("no registry.db; run artifacts/seed.py first", file=sys.stderr)
         return 1
     if not EXPORT.exists():
         print("no export; run controlbun.export first", file=sys.stderr)
@@ -577,6 +653,7 @@ def main() -> int:
     check_angles_recompute(payload)
     check_export_matches_the_database(conn, payload)
     check_published_numbers_are_accounted_for(payload)
+    check_the_marker_rule_still_bites()
     check_synthetic_marker_matches_the_page(payload)
     check_authored_regions_are_marked(payload)
 
@@ -602,6 +679,17 @@ def main() -> int:
         print(f"falsifier: {elsewhere} row(s) pinned to bytes outside this "
               "checkout, recorded rather than rechecked; `controlbun.fetch` "
               "verifies those against their digest when anybody loads one")
+
+    # The same argument as the line above, one check over. A corpus with
+    # nothing fabricated in it gives the marker check no page to convict, which
+    # is a state and not a defect, and saying nothing about it is how a reader
+    # comes to believe the check ran. It did: `check_the_marker_rule_still_bites`
+    # runs the rule against a probe every run, so the rule is proved green
+    # whether or not the corpus exercises it.
+    if not payload.get("any_synthetic"):
+        print("falsifier: no row in the corpus is marked synthetic, so the "
+              "marker check read no page; the rule itself is proved each run "
+              "against a probe that reaches no page")
     return 0
 
 

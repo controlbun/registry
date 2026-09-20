@@ -1,10 +1,17 @@
 """Proof that write-time validation bites, and that it is one comparison.
 
 The defect: two scripts put tensor facts into the `intervention` table by typing
-them, `artifacts/seed.py:189-190` and `fixtures/build.py:175-176`. The values
-were right. The mechanism was that somebody had been careful, sitting in the
-same `INSERT` as one field that was derived from the bytes, and nothing compared
-the other three against anything at all.
+them, `artifacts/seed.py` and the fixture builder that used to sit beside it.
+The values were right. The mechanism was that somebody had been careful, sitting
+in the same `INSERT` as one field that was derived from the bytes, and nothing
+compared the other three against anything at all.
+
+The fixture builder went on 2026-09-19 with the rest of the fabricated corpus.
+The rule it was one instance of did not, so the two writers under test now are
+`artifacts/seed.py`, which writes the real rows, and `tests/probe.py`, which
+writes the throwaway corpus these tests need. The probe claims and then confirms
+for exactly this reason: a probe exercising a weaker rule than the one that
+ships is a probe that proves the wrong thing.
 
 Every test below is written the way `tests/test_scan_gap_bite.py` and
 `tests/test_artifact_digest_bite.py` are, because "the new check passes" proves
@@ -25,12 +32,13 @@ The two halves that matter, and they are different arguments:
     own artifact and name their bytes as the substitution. That one is in
     `test_a_pointer_only_row_...` and is the case this exists for.
 
-Tensors here are obviously synthetic ramps and one negation of a committed
-fixture. Nothing in this file is a measurement and nothing reads one.
+Tensors here are obviously synthetic ramps and one negation of a probe tensor.
+Nothing in this file is a measurement and nothing reads one.
 """
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import importlib.util
 import re
@@ -48,36 +56,44 @@ from safetensors.numpy import save
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from controlbun import artifact, client, db, fetch  # noqa: E402
+import probe  # noqa: E402
+from controlbun import artifact, client, fetch  # noqa: E402
 
-ALICE = ROOT / "fixtures" / "alice_kindness_v1.safetensors"
+MODEL_A = probe.MODEL_A[0]
+LABEL_A = probe.LABEL_A
 
-# Eight float32 elements that are not alice's eight, and sixteen that are not
-# any of them. Both are integer ramps, the same shape of stand-in the rest of
-# the fixture corpus uses so that one leaking anywhere real is obvious on sight.
+# Eight float32 elements that are not the probe's eight, and sixteen that are
+# not any of them. Both are integer ramps, the same shape of stand-in
+# `tests/probe.py` uses so that one leaking anywhere real is obvious on sight.
 SUBSTITUTE = save({"direction": np.arange(8, 0, -1, dtype=np.float32)})
 WRONG_LENGTH = save({"direction": np.arange(16, dtype=np.float32)})
 
 
 @pytest.fixture
 def conn(tmp_path):
-    path = tmp_path / "claims.db"
-    subprocess.run(
-        [sys.executable, str(ROOT / "fixtures" / "build.py"), "--db", str(path)],
-        check=True, capture_output=True,
-    )
-    return db.connect(path)
+    return probe.build(tmp_path / "claims.db")
+
+
+@functools.lru_cache(maxsize=1)
+def _vectors() -> dict[str, str]:
+    """The probe tensors, written into the repository once per process.
+
+    Gitignored, regenerated from an integer ramp, and written atomically, so
+    two test processes doing this at once cannot hand each other half a file.
+    """
+    return probe.build_vectors(ROOT)
 
 
 def _blob() -> bytes:
-    """alice's committed artifact, read rather than reconstructed.
+    """A probe artifact, read off disk rather than reconstructed.
 
     `DECISIONS.md` 2026-09-16 records the incidental finding that a positive
     control in `tests/test_artifact_check.py` was built from a reconstructed
     `np.arange(8)` and was therefore testing bytes that were never the artifact.
-    Same trap, avoided the same way.
+    Same trap, avoided the same way: this reads the file the probe wrote rather
+    than rebuilding what it thinks the probe writes.
     """
-    return ALICE.read_bytes()
+    return (ROOT / _vectors()["probe-a"]).read_bytes()
 
 
 def _tensor(blob: bytes):
@@ -90,7 +106,7 @@ def _tensor(blob: bytes):
 
 def test_a_wrong_shape_claim_is_refused():
     blob = _blob()
-    assert str(list(_tensor(blob).shape)) == "[8]", "the fixture is not [8]"
+    assert str(list(_tensor(blob).shape)) == "[8]", "the probe tensor is not [8]"
 
     with pytest.raises(artifact.MismatchedArtifact) as caught:
         artifact.confirmed(blob, artifact.Claim(shape="[16]"), subject="probe")
@@ -206,16 +222,16 @@ def test_the_tolerance_is_the_one_the_falsifier_applies(conn):
     for offset, expected in ((artifact.L2_TOLERANCE / 2, False),
                              (artifact.L2_TOLERANCE * 10, True)):
         stored = derived + offset
-        conn.execute("UPDATE intervention SET l2_norm=? WHERE id='iv_alice'",
+        conn.execute("UPDATE intervention SET l2_norm=? WHERE id='iv_probe-a'",
                      (stored,))
         conn.commit()
         assert conn.execute(
-            "SELECT l2_norm FROM intervention WHERE id='iv_alice'"
+            "SELECT l2_norm FROM intervention WHERE id='iv_probe-a'"
         ).fetchone()[0] == stored, "the mutation did not land"
 
         module = _falsifier()
         module.check_artifacts_match_their_metadata(conn)
-        named = any("iv_alice" in line for line in module.failures)
+        named = any("iv_probe-a" in line for line in module.failures)
         assert named is expected, (
             f"a stored norm {offset} from the tensor was "
             f"{'ignored' if expected else 'reported'}: {module.failures}"
@@ -279,20 +295,24 @@ def test_a_claim_that_survives_the_check_is_what_gets_recorded():
 
 
 def test_the_writers_record_the_cited_values_rather_than_recomputed_ones(conn):
-    """Same property, end to end through `fixtures/build.py`.
+    """Same property, end to end through a writer.
 
-    erik's and fern's fixtures norm to slightly under 1.0 in float32 because
-    unit-normalizing in float64 and casting down does not land on exactly one.
-    The rows say 1.0, which is what `write_vector` claims to produce.
+    `probe-d` norms to slightly under 1.0 in float32, because unit-normalizing
+    in float64 and casting down does not land on exactly one. The row says 1.0,
+    which is what `write_vector` claims to produce, and the gap between the two
+    is the whole of what this asserts: a writer that recomputed over its claim
+    would store the float32 value and the agreement would mean nothing.
     """
     stored = dict(conn.execute("SELECT id, l2_norm FROM intervention").fetchall())
     assert stored, "no rows, so this proves nothing"
 
-    erik = float(np.linalg.norm(
-        _tensor((ROOT / "fixtures" / "erik_refusal_v1.safetensors").read_bytes())
+    derived = float(np.linalg.norm(
+        _tensor((ROOT / _vectors()["probe-d"]).read_bytes())
     ))
-    assert erik != 1.0, "the fixture norms to exactly 1.0; the probe is vacuous"
-    assert stored["iv_erik"] == 1.0, (
+    assert derived != 1.0, (
+        "the probe tensor norms to exactly 1.0; the check is vacuous"
+    )
+    assert stored["iv_probe-d"] == 1.0, (
         "the build recorded the recomputed norm instead of the claim it checked"
     )
 
@@ -315,7 +335,8 @@ def _falsifier(root: Path = ROOT):
 def _submission(conn, monkeypatch, blob: bytes):
     monkeypatch.setattr(fetch, "resolve", lambda **k: blob)
     row = conn.execute(
-        "SELECT * FROM submission WHERE author='alice' AND label='kindness'"
+        "SELECT * FROM submission WHERE author='probe-a' AND label=?",
+        (LABEL_A,),
     ).fetchone()
     return client._build(conn, row)
 
@@ -359,10 +380,10 @@ def test_the_read_path_the_write_path_and_the_falsifier_share_one_comparison(
 
     # And the falsifier, blind, against a stored shape that contradicts the file.
     module = _falsifier()
-    conn.execute("UPDATE intervention SET shape='[4096]' WHERE id='iv_alice'")
+    conn.execute("UPDATE intervention SET shape='[4096]' WHERE id='iv_probe-a'")
     conn.commit()
     assert conn.execute(
-        "SELECT shape FROM intervention WHERE id='iv_alice'"
+        "SELECT shape FROM intervention WHERE id='iv_probe-a'"
     ).fetchone()[0] == "[4096]", "the mutation did not land"
     module.check_artifacts_match_their_metadata(conn)
     assert module.failures == [], (
@@ -372,15 +393,15 @@ def test_the_read_path_the_write_path_and_the_falsifier_share_one_comparison(
 
 def test_the_falsifier_still_catches_that_shape_unpatched(conn):
     """The control for the test above: unpatched, the same mutation is named."""
-    conn.execute("UPDATE intervention SET shape='[4096]' WHERE id='iv_alice'")
+    conn.execute("UPDATE intervention SET shape='[4096]' WHERE id='iv_probe-a'")
     conn.commit()
     assert conn.execute(
-        "SELECT shape FROM intervention WHERE id='iv_alice'"
+        "SELECT shape FROM intervention WHERE id='iv_probe-a'"
     ).fetchone()[0] == "[4096]", "the mutation did not land"
 
     module = _falsifier()
     module.check_artifacts_match_their_metadata(conn)
-    assert any("iv_alice" in line for line in module.failures), (
+    assert any("iv_probe-a" in line for line in module.failures), (
         f"a stored shape contradicting the tensor went unreported: {module.failures}"
     )
 
@@ -411,20 +432,21 @@ def test_a_pointer_only_row_with_a_wrong_shape_is_caught_by_nothing_downstream(
     # into the INSERT, with one digit wrong.
     conn.execute(
         "INSERT INTO submission (author,model_id,label,version,definition,"
-        "created_at,is_synthetic) VALUES ('nadia','placeholder/does-not-resolve-1b',"
-        "'kindness','v1','pointed at, not held','2026-09-17',1)"
+        "created_at,is_synthetic) VALUES ('probe-pointer',?,?,"
+        "'v1','pointed at, not held','2026-09-17',1)",
+        (MODEL_A, LABEL_A),
     )
     conn.execute(
         "INSERT INTO intervention (id,author,label,version,kind,model_id,layer,"
         "layer_convention,hook_point,shape,dtype,l2_norm,artifact_repo,"
-        "artifact_commit,is_synthetic) VALUES ('iv_nadia','nadia','kindness',"
-        "'v1','direction','placeholder/does-not-resolve-1b',4,'block-0indexed',"
+        "artifact_commit,is_synthetic) VALUES ('iv_probe-pointer',"
+        "'probe-pointer',?,'v1','direction',?,4,'block-0indexed',"
         "'resid_post','[16]','float32',1.0,'someone/else',?,1)",
-        ("c" * 40,),
+        (LABEL_A, MODEL_A, "c" * 40),
     )
     conn.commit()
     assert conn.execute(
-        "SELECT shape FROM intervention WHERE id='iv_nadia'"
+        "SELECT shape FROM intervention WHERE id='iv_probe-pointer'"
     ).fetchone()[0] == "[16]", "the wrong row did not land"
 
     # The falsifier: silent about it, and not silent in general. Both checks,
@@ -432,7 +454,7 @@ def test_a_pointer_only_row_with_a_wrong_shape_is_caught_by_nothing_downstream(
     module = _falsifier()
     module.check_artifacts_match_their_metadata(conn)
     module.check_artifact_digests_match_the_record(conn)
-    assert not any("iv_nadia" in line for line in module.failures), (
+    assert not any("iv_probe-pointer" in line for line in module.failures), (
         f"the falsifier reached a pointer-only row after all: {module.failures}"
     )
     assert module.failures == [], (
@@ -445,7 +467,7 @@ def test_a_pointer_only_row_with_a_wrong_shape_is_caught_by_nothing_downstream(
     monkeypatch.setattr(fetch, "resolve", lambda **k: good)
     path = conn.execute("PRAGMA database_list").fetchone()[2]
     with pytest.raises(client.MismatchedArtifact) as caught:
-        client.load("nadia/kindness@v1", database=path).vector()
+        client.load(f"probe-pointer/{LABEL_A}@v1", database=path).vector()
     assert "[16]" in str(caught.value) and "[8]" in str(caught.value), (
         "the refusal does not name both sides"
     )
@@ -454,16 +476,21 @@ def test_a_pointer_only_row_with_a_wrong_shape_is_caught_by_nothing_downstream(
     with pytest.raises(artifact.MismatchedArtifact):
         artifact.confirmed(good, artifact.Claim(shape="[16]", dtype="float32",
                                                 l2_norm=1.0),
-                           subject="nadia/kindness@v1")
+                           subject=f"probe-pointer/{LABEL_A}@v1")
 
 
 # --------------------------------------------------------------------------- #
 # 7. Both writers go through it, and the old mechanism is reproduced beside them.
 
 
+# Every file in the tree that writes an `intervention` row. Both are under the
+# rule, and the second one being a test file is deliberate rather than
+# incidental: `tests/probe.py` builds the corpus most of these tests read, so a
+# probe allowed to type its tensor facts would be proving the rule against a
+# writer that does not follow it.
 WRITERS = {
-    "fixtures/build.py": ROOT / "fixtures" / "build.py",
     "artifacts/seed.py": ROOT / "artifacts" / "seed.py",
+    "tests/probe.py": ROOT / "tests" / "probe.py",
 }
 
 
@@ -518,11 +545,19 @@ def test_no_writer_types_a_tensor_fact_into_the_intervention_insert():
 
 
 def _copy(tmp_path: Path) -> Path:
+    """The writable parts of the tree, plus the tests that hold a writer.
+
+    `tests` is copied whole rather than one file, because `tests/probe.py`
+    resolves its own root from its location and writes its tensors under it. A
+    lone file moved somewhere else would write them into the real repository
+    while the patched code ran against the copy.
+    """
     dest = tmp_path / "repo"
     dest.mkdir()
-    for part in ("artifacts", "falsifier", "fixtures", "schema", "src"):
+    for part in ("artifacts", "falsifier", "schema", "src", "tests"):
         shutil.copytree(ROOT / part, dest / part,
-                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc",
+                                                      "_probe"))
     return dest
 
 
@@ -540,17 +575,29 @@ def _patch(path: Path, old: str, new: str) -> None:
     assert new in path.read_text(), "the mutation did not land"
 
 
-def test_the_fixture_build_refuses_a_claim_its_own_bytes_contradict(tmp_path):
+def test_the_probe_build_refuses_a_claim_its_own_bytes_contradict(tmp_path):
+    """A writer that claims what it is about to write, moved under a wrong claim.
+
+    Patched against `tests/probe.py` rather than `artifacts/seed.py`, because
+    this is the case where the writer produces the bytes itself a few lines
+    earlier. The claim is a promise about what `write_vector` just did, and the
+    bite is that breaking the promise stops the build rather than recording it.
+    The seeder's version of this is the test below, and it is a different
+    argument: there the claim is a citation and the bytes are somebody else's.
+
+    This was `fixtures/build.py` until 2026-09-19.
+    """
     dest = _copy(tmp_path)
-    assert _run(dest / "fixtures" / "build.py", dest).returncode == 0, (
+    probe_py = dest / "tests" / "probe.py"
+    assert _run(probe_py, dest).returncode == 0, (
         "the untouched copy already fails to build"
     )
 
-    _patch(dest / "fixtures" / "build.py",
+    _patch(probe_py,
            'artifact.Claim(shape=f"[{DIM}]", dtype="float32", l2_norm=1.0)',
            'artifact.Claim(shape="[16]", dtype="float32", l2_norm=1.0)')
 
-    refused = _run(dest / "fixtures" / "build.py", dest)
+    refused = _run(probe_py, dest)
     assert refused.returncode != 0, (
         "the build wrote a shape its own vectors contradict"
     )
@@ -574,11 +621,12 @@ def test_the_same_wrong_shape_entered_the_database_under_the_old_mechanism(
     without anything comparing it to the artifact.
     """
     dest = _copy(tmp_path)
-    _patch(dest / "fixtures" / "build.py",
+    probe_py = dest / "tests" / "probe.py"
+    _patch(probe_py,
            '"block-0indexed", hook, facts.shape, facts.dtype,',
            '"block-0indexed", hook, "[16]", facts.dtype,')
 
-    built = _run(dest / "fixtures" / "build.py", dest)
+    built = _run(probe_py, dest)
     assert built.returncode == 0, (
         f"the old mechanism failed, so it was never the silent one: {built.stderr}"
     )
@@ -598,9 +646,11 @@ def test_the_seed_refuses_a_cited_claim_the_vendored_bytes_contradict(tmp_path):
     `tests/test_artifact_digest_bite.py` already moves the bytes under a fixed
     claim. This moves the claim under fixed bytes, which is the other direction
     and the one that was unchecked for shape, dtype and norm.
+
+    One run rather than two since 2026-09-19: the seeder drops and rebuilds the
+    database itself now, so there is no fixture build to run in front of it.
     """
     dest = _copy(tmp_path)
-    assert _run(dest / "fixtures" / "build.py", dest).returncode == 0
     assert _run(dest / "artifacts" / "seed.py", dest).returncode == 0, (
         "the untouched copy already fails to seed"
     )
@@ -609,7 +659,6 @@ def test_the_seed_refuses_a_cited_claim_the_vendored_bytes_contradict(tmp_path):
            'CITED = artifact.Claim(shape="[5120]", dtype="float32", l2_norm=1.0)',
            'CITED = artifact.Claim(shape="[4096]", dtype="float32", l2_norm=1.0)')
 
-    assert _run(dest / "fixtures" / "build.py", dest).returncode == 0
     refused = _run(dest / "artifacts" / "seed.py", dest)
     assert refused.returncode != 0, (
         "the seeder published a shape the vendored tensor contradicts"

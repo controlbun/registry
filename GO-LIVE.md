@@ -299,7 +299,8 @@ distribution name has to be `controlbun` while `pyproject.toml` still says
 does nothing else: distribution `controlbun`, version `0.0.0`, a one-line summary
 along the lines of "Name held for controlbun.com. No functionality yet." and a
 module whose only import-time behavior is to point at the site. No scores, no
-fixtures, no vendored artifacts, nothing that could be mistaken for the client.
+sample data, no vendored artifacts, nothing that could be mistaken for the
+client.
 The rule against fabricated numbers applies to a placeholder exactly as it applies
 to a README.
 

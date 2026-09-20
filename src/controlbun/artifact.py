@@ -8,9 +8,10 @@ re-derive from raw artifacts, a file that does not reproduce itself is not
 acceptable: the sha256 in the ingest record would be a number that means nothing.
 
 Every writer needs the same guarantee, which is why `sort_header` is here rather
-than in any of them. `fixtures/build.py` writes the synthetic corpus and
-`controlbun.ingest` writes whatever arrives from anywhere else, including the real
-directions `artifacts/ingest_arena.py` converts.
+than in any of them. `controlbun.ingest` writes whatever arrives from anywhere
+else, including the real directions `artifacts/ingest_arena.py` converts, and
+the probe corpus `tests/probe.py` builds writes through it too so a test cannot
+be checking a weaker rule than the one that ships.
 
 `local_path` is here for the mirror-image reason: four callers turn a database
 value into a filesystem path, and all four have to refuse the same things.
@@ -347,8 +348,9 @@ def _keep_the_claim(claim: Claim, facts: Facts) -> Facts:
     anything but a 1-D float32 array, and `artifacts/REAL.md` states the shipped
     directions are unit-norm. What that row is worth is that the citation and
     the bytes agree. Overwrite it with a recomputation and the column holds a
-    number that agrees with the bytes by construction, which is the same nothing
-    `fixtures/build.py` already says its own digest is worth.
+    number that agrees with the bytes by construction, which establishes
+    nothing: it is the same nothing a script gets by hashing a file it wrote
+    four lines earlier.
 
     So the value recorded stays the value somebody stood behind, and what this
     function has established by the time it runs is that standing behind it was

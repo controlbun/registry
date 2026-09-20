@@ -31,7 +31,11 @@ MIGRATIONS = sorted((ROOT / "schema" / "migrations").glob("*.sql"))
 # loud, rather than an inert scanner, which is silent and has now bitten three
 # times.
 NOT_SCANNED = {
-    # Tests write the forbidden spellings on purpose, to prove the scanners bite.
+    # Tests write the forbidden spellings on purpose, to prove the scanners
+    # bite. `tests/probe.py` is here for a second reason that arrived with it:
+    # it builds a fabricated corpus for the checks that need states the real
+    # one does not have, so it writes repeated-digit decimals and
+    # `is_synthetic = 1` deliberately. Nothing it writes reaches the registry.
     "tests",
     # Not authored here: dependencies, build output, caches, local tooling.
     ".venv", "node_modules", "dist", ".astro", ".git", ".claude", ".cache",
@@ -101,11 +105,17 @@ def scan(pattern: str) -> list[str]:
 # reaching one. This is the opposite of the old SOURCE_DIRS list: that one decided
 # what got scanned, so forgetting an entry made a scanner inert. This one only
 # asserts, so forgetting an entry costs an assertion and never coverage.
+#
+# `fixtures` was here, reading "writes the synthetic corpus", until that corpus
+# was removed on 2026-09-19. It came out rather than being left to rot, because
+# the entry below is guarded by an existence check: a name in here that no
+# longer exists asserts nothing and says nothing about asserting nothing, which
+# is the silent-inertness failure this whole file is about, arriving in the
+# guard rather than in a scan.
 MUST_REACH = {
     "src/controlbun":  "the library",
     "astro/src":     "the view layer, where a default sort would appear",
-    "fixtures":      "writes the synthetic corpus",
-    "artifacts":     "writes the real corpus",
+    "artifacts":     "writes the corpus",
     "falsifier":     "re-derives every published number",
 }
 
@@ -385,11 +395,11 @@ def _orders_a_distinct_value_list(hit: str, col: str) -> bool:
 def test_no_ordering_is_derived_from_whether_an_artifact_is_published():
     """Fetchable is not a rank.
 
-    Nine of the ten rows in this corpus record no repo, and four of those nine
-    are real directions rather than fixtures. Sorting a pinned row up, or an
-    unpinned row down, would turn "the author put these bytes somewhere with a
-    URL" into a quality score, and the step after a quality score is a default
-    that reads as the registry's own judgment.
+    Four of the five rows in this corpus record no repo, and every one of the
+    five is a real direction. Sorting a pinned row up, or an unpinned row down,
+    would turn "the author put these bytes somewhere with a URL" into a quality
+    score, and the step after a quality score is a default that reads as the
+    registry's own judgment.
 
     The plurality this protects is specific: an author who publishes a vector
     from a paper, a cluster or a lab share, with no public URL anywhere, can be
@@ -600,10 +610,12 @@ CLAIM_STATUS = r"(is_claimed|claim_status|has_claim|unclaimed|claimed|claims)"
 def test_no_ordering_is_derived_from_a_namespace_claim():
     """Nothing puts a claimed namespace above an unclaimed one.
 
-    Every author in this corpus is unclaimed, including all five real rows, so
-    claimed and unclaimed are not two tiers with most things in the upper one:
-    they are one exception and the normal case. Sort by it and the normal case
-    goes to the bottom of every list with nothing on screen saying why.
+    Claimed and unclaimed are not two tiers with most things in the upper one.
+    They are one exception and the normal case, and which of the two is the
+    exception depends on nothing but who has happened to sign in: this corpus
+    holds one namespace and it is claimed, and the next author to publish here
+    will not be. Sort by it and one of those two goes to the bottom of every
+    list with nothing on screen saying why.
 
     The same argument the eval-result ordering rule makes, one object over. An
     order derived from something other than what somebody did to the work is the

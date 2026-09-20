@@ -119,10 +119,20 @@ design. Tests that fail the build:
   a sort key. Behaviorally indistinguishable vectors can sit far apart in angle
   (arXiv:2602.06801)
 - A namespace claim is never an ordering, a filter, or a condition on publishing.
-  Unclaimed is a state with its own words and is what every namespace here is. A
+  Unclaimed is a state with its own words, and it is the ordinary one. A
   claim binds the provider's `sub` and never a renameable handle, a namespace
   takes more than one claimant, and an org membership renders as an observation
   with its date beside it rather than as a standing fact
+- No page asserts a plurality the corpus does not hold. A label view counts
+  people separately from submissions, so one author's four versions never render
+  as four claimants, and any sentence about other claimants is computed from the
+  data rather than written down. Absent plurality is a state with its own words,
+  the same as an absent eval. Bound in `tests/test_pages.py`, because it is a
+  rule about rendered output rather than about a construct in a template
+- A check the corpus gives no instance of is proved by a probe, never left to
+  pass quietly. `falsifier/verify.py` runs the synthetic-marker rule against two
+  strings on every run, so the rule cannot go inert now that nothing in the
+  corpus is fabricated
 
 Add one whenever a new invariant is settled. An invariant that is only in prose
 is not an invariant.
@@ -179,8 +189,21 @@ reading explicitly, as a role rather than as a disclaimer.
   rather than a pass.
 
 v0 is schema, storage on the HF Hub, SQLite metadata, Python client, Comparison,
-views, and the ported falsifier. Build against fixtures labeled synthetic. Seed
-with competing claimants on one label, not coverage across ten labels.
+views, and the ported falsifier.
+
+**The corpus is real and there is no seed set.** This read "build against
+fixtures labeled synthetic, seed with competing claimants on one label", which
+was right while the site was private and became the wrong instruction the moment
+it was about to be published: a corpus that is half fabricated invites "is this
+real" from exactly the readers it is for. `DECISIONS.md` 2026-09-19 removed it.
+What the corpus holds is five real submissions by one author, so **no label has
+more than one claimant and the plurality premise is demonstrated zero times.**
+That is a fact about a new registry, and the pages say it rather than implying
+otherwise. Do not fabricate a second claimant to make a view look populated.
+
+The states the checks still need, two people disagreeing on one label, an attack,
+an uninterpretable score, live in `tests/probe.py`, which the tests build and the
+site never sees. Put a new one there, never in the corpus.
 
 ## Before writing any code
 

@@ -8,6 +8,15 @@ as a state rather than as a blank.
 Everything here builds its own database from the migrations, except where it
 reads the built site, which is what `make verify` has already produced by the
 time this runs.
+
+**What the built-site half can see changed on 2026-09-19.** The corpus used to
+hold eight namespaces, one of them claimed by a fabricated account, so both
+renderings were on the site and both were read off it. The fabricated rows are
+gone and one namespace is left, `soham`, which carries a real claim. So the
+claimed rendering is still read off a page and the unclaimed one is read off
+the component that would render it. Which of the two is the exception has
+inverted in the corpus and not in the design: an author here is still a free
+string somebody wrote down, and almost nobody will ever claim one.
 """
 
 from __future__ import annotations
@@ -16,6 +25,7 @@ import json
 import re
 import sqlite3
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -311,6 +321,35 @@ def visible(html_text: str) -> str:
     return " ".join(re.sub(r"<[^>]+>", " ", raw).split())
 
 
+# The two phrases the unclaimed branch of `NamespaceClaim.astro` puts on a
+# page. Held here so the check below can ask the view for them when the corpus
+# has no instance to ask for them on.
+UNCLAIMED_COPY = ("is unclaimed", "Nobody has bound an account to it")
+VIEW = ROOT / "astro" / "src" / "components" / "NamespaceClaim.astro"
+
+
+def displayed(iso: str) -> str:
+    """The date as the page writes it.
+
+    `NamespaceClaim.astro` calls `toLocaleDateString("en-US", ...)` with a short
+    month, a bare day and a four-digit year, in UTC. Reproduced rather than
+    hardcoded, because a test that spells one date out is a test that fails the
+    next time the corpus moves, which is what happened to the check below.
+    """
+    at = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(timezone.utc)
+    return f"{at:%b} {at.day}, {at.year}"
+
+
+def claimed_namespaces() -> list[dict]:
+    payload = json.loads(EXPORT.read_text())
+    return [o for o in payload["owner_index"] if o["claims"]]
+
+
+def unclaimed_namespaces() -> list[dict]:
+    payload = json.loads(EXPORT.read_text())
+    return [o for o in payload["owner_index"] if not o["claims"]]
+
+
 def test_an_unclaimed_namespace_says_so_on_its_own_page():
     """In words, the way every other absence here renders.
 
@@ -320,36 +359,78 @@ def test_an_unclaimed_namespace_says_so_on_its_own_page():
     and the test then failed for the one reason that is not a defect, which is
     that the corpus moved on. A fixture list that names a row is a list that
     goes stale, which is the failure this repository keeps rediscovering.
+
+    **Then the corpus moved on again and took the last instance with it.**
+    Removing the fabricated rows on 2026-09-19 left one namespace in the
+    corpus, `soham`, and it is claimed. So the loop over unclaimed namespaces
+    runs zero times, and a check that iterates over nothing and passes is the
+    inert check this repository has shipped six times.
+
+    What holds the property instead is the first half: the copy has to still be
+    in the view that would render it. That half cannot go inert, it fails if
+    somebody deletes the unclaimed branch on the reasoning that nothing reaches
+    it, and it is checked on every run whatever the corpus holds. The second
+    half comes back on its own the day a second namespace appears.
     """
-    payload = json.loads(EXPORT.read_text())
-    unclaimed = sorted(
-        o["owner"] for o in payload["owner_index"] if not o.get("claims")
-    )
-    assert unclaimed, (
-        "every namespace in the corpus is claimed, so this check cannot see "
-        "the unclaimed rendering and is inert"
-    )
-    text = visible(built(unclaimed[0]))
-    assert "is unclaimed" in text
-    assert "Nobody has bound an account to it" in text
+    # Whitespace collapsed, because the copy wraps in the source the way it
+    # wraps on the page and a literal match would be a match on the line
+    # breaks rather than on the sentence.
+    source = " ".join(VIEW.read_text().split())
+    for phrase in UNCLAIMED_COPY:
+        assert phrase in source, (
+            f"{VIEW.relative_to(ROOT)} no longer renders {phrase!r}, so an "
+            "unclaimed namespace would render as a blank where a badge goes"
+        )
+
+    for owner in unclaimed_namespaces():
+        text = visible(built(owner["owner"]))
+        for phrase in UNCLAIMED_COPY:
+            assert phrase in text, f"/{owner['owner']}/ does not say {phrase!r}"
 
 
 def test_a_claimed_namespace_shows_the_account_and_the_date():
-    text = visible(built("alice"))
-    assert "Claimed on Sep 12, 2026" in text
-    assert "SYNTHETIC-SUBJECT-NOT-ISSUED-BY-ANY-PROVIDER-alice" in text
-    # The handle is shown as what it was called that day, and said to be that.
-    assert "which called itself" in text
+    """Found rather than named, for the reason the check above gives.
+
+    This pointed at `alice`, who was a fixture and is gone. What it asks of the
+    page is the same: the account the claim binds to, the date it was made, and
+    what the provider called it that day.
+    """
+    claimed = claimed_namespaces()
+    assert claimed, (
+        "no namespace in the corpus is claimed, so this check reads nothing"
+    )
+    for owner in claimed:
+        text = visible(built(owner["owner"]))
+        for c in owner["claims"]:
+            assert f"Claimed on {displayed(c['claimed_at'])}" in text
+            assert c["subject"] in text, (
+                "the claim is bound to the provider's subject id and the page "
+                "has to show which one"
+            )
+            # The handle is shown as what it was called that day, and said to
+            # be that. A claim that carries none says so rather than going
+            # quiet, which is the other half of the same rule.
+            assert ("which called itself" if c["handle"]
+                    else "which gave no handle") in text
 
 
 def test_a_membership_never_renders_without_its_date():
-    text = visible(built("alice"))
-    assert "Membership of" in text
-    for match in re.finditer(r"Membership of .{0,200}", text):
-        assert "confirmed on" in match.group(0), (
-            "a membership rendered with no date is the badge this design "
-            "exists to not be"
-        )
+    observed = [
+        (o["owner"], c) for o in claimed_namespaces()
+        for c in o["claims"] if c["memberships"]
+    ]
+    assert observed, (
+        "no claim in the corpus carries a membership observation, so this "
+        "check reads nothing"
+    )
+    for owner, _claim in observed:
+        text = visible(built(owner))
+        assert "Membership of" in text
+        for match in re.finditer(r"Membership of .{0,200}", text):
+            assert "confirmed on" in match.group(0), (
+                "a membership rendered with no date is the badge this design "
+                "exists to not be"
+            )
 
 
 def test_no_page_offers_to_sort_or_filter_by_a_claim():
@@ -409,13 +490,23 @@ def test_the_owners_table_carries_no_claim_column():
 
 
 def test_the_export_on_disk_agrees_with_the_page():
-    """Transport, the same question the falsifier asks about numbers."""
+    """Transport, the same question the falsifier asks about numbers.
+
+    This used to assert the corpus still held an unclaimed namespace as well,
+    which was vestigial even then: the loop below reads the claimed ones, and
+    the unclaimed rendering is checked by name further up. It went when the
+    fabricated rows did, because after 2026-09-19 the corpus holds one
+    namespace and it is claimed. What is asserted instead is the thing this
+    loop actually needs, which is that there is something in it.
+    """
     if not EXPORT.exists():
         pytest.skip("export not built; run `make site`")
     payload = json.loads(EXPORT.read_text())
     claimed = [o for o in payload["owner_index"] if o["claims"]]
-    unclaimed = [o for o in payload["owner_index"] if not o["claims"]]
-    assert unclaimed, "every namespace is claimed, which the fixtures do not do"
+    assert claimed, (
+        "no namespace in the corpus is claimed, so this reads nothing and "
+        "proves nothing about transport"
+    )
     for owner in claimed:
         text = visible(built(owner["owner"]))
         for c in owner["claims"]:

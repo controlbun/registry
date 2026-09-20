@@ -6,10 +6,16 @@ new code refuses it, because a widened key that nothing exercises is a widened
 key until the next person writes a three-column lookup.
 
 The case that makes all of this necessary is one author holding one label on two
-models. It does not occur in the real corpus and it is the whole reason for the
-change, so it is built here as a labeled synthetic row: the model ids are
-`fixtures/build.py`'s placeholders, which resolve to nothing and say so in their
-own names, and no number below is a measurement of anything.
+models. It still does not occur in the real corpus and it is the whole reason
+for the change, so it is built here as a labeled synthetic row on top of
+`tests/probe.py`: the model ids are the probe's placeholders, which resolve to
+nothing and say so in their own names, and no number below is a measurement of
+anything.
+
+The real corpus looks like it would do, and does not. `soham` holds `pro-human`
+on one model and `trauma` on another, which are two labels and never collided
+under the old three-column key. One author, one label, two models is the state
+that did, and nobody has published it.
 
 Four things the old key did, each asserted to be gone:
 
@@ -27,7 +33,6 @@ carry-across cannot answer for.
 from __future__ import annotations
 
 import sqlite3
-import subprocess
 import sys
 from pathlib import Path
 
@@ -35,23 +40,24 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
 
+import probe  # noqa: E402
 from controlbun import client, comparison, db, order, ref, views  # noqa: E402
 
-# The two placeholder models `fixtures/build.py` writes. Neither resolves to
+# The two placeholder models `tests/probe.py` writes. Neither resolves to
 # anything and both say so in their own name.
-MODEL_A = "placeholder/does-not-resolve-1b"
-MODEL_B = "placeholder/other-architecture-7b"
+MODEL_A = probe.MODEL_A[0]
+MODEL_B = probe.MODEL_B[0]
+
+# The label two of the probe's claimants share on `MODEL_A`, which is the one
+# `second_model` extends onto `MODEL_B`.
+LABEL = probe.LABEL_A
 
 
 @pytest.fixture
 def conn(tmp_path):
-    path = tmp_path / "bite.db"
-    subprocess.run(
-        [sys.executable, str(ROOT / "fixtures" / "build.py"), "--db", str(path)],
-        check=True, capture_output=True,
-    )
-    return db.connect(path)
+    return probe.build(tmp_path / "bite.db")
 
 
 def database_of(conn: sqlite3.Connection) -> str:
@@ -59,17 +65,17 @@ def database_of(conn: sqlite3.Connection) -> str:
 
 
 def second_model(conn: sqlite3.Connection) -> None:
-    """Alice's same take on the same word, against the other model.
+    """probe-a's same take on the same word, against the other model.
 
-    SYNTHETIC. Alice's `kindness@v1` exists in the fixtures on `MODEL_A`; this
-    adds the row that was previously unwritable, pointing at bob's fixture
-    tensor so the two rows are distinguishable by their bytes as well as by
-    their key. Nothing here is a measurement.
+    SYNTHETIC. probe-a's `probe-trait@v1` exists in the probe corpus on
+    `MODEL_A`; this adds the row that was previously unwritable, pointing at
+    probe-b's tensor so the two rows are distinguishable by their bytes as well
+    as by their key. Nothing here is a measurement.
     """
     conn.execute(
         "INSERT INTO submission (author,model_id,label,version,definition,"
         "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
-        ("alice", MODEL_B, "kindness", "v1",
+        ("probe-a", MODEL_B, LABEL, "v1",
          "SYNTHETIC. The same author's take on the same word against a second "
          "model. Neither supersedes the other.", "2026-09-12T00:00:00Z"),
     )
@@ -77,9 +83,9 @@ def second_model(conn: sqlite3.Connection) -> None:
         "INSERT INTO intervention (id,author,model_id,label,version,kind,"
         "model_revision,layer,layer_convention,hook_point,shape,dtype,"
         "artifact_path,is_synthetic) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
-        ("iv_alice_b", "alice", MODEL_B, "kindness", "v1", "direction",
+        ("iv_probe-a_b", "probe-a", MODEL_B, LABEL, "v1", "direction",
          "1" * 40, 12, "block-0indexed", "resid_pre", "[8]", "float32",
-         "fixtures/bob_kindness_v1.safetensors"),
+         "tests/_probe/probe_b.safetensors"),
     )
     conn.commit()
 
@@ -96,12 +102,12 @@ def second_model(conn: sqlite3.Connection) -> None:
     # No distributor. One segment is a model id and always was: the model is the
     # middle rather than a fixed segment count, which is the whole reason this
     # parses at all.
-    ("alice/gpt2/kindness@v1", "alice", "gpt2", "kindness", "v1"),
+    ("probe-a/gpt2/kindness@v1", "probe-a", "gpt2", "kindness", "v1"),
     # Four segments in the middle. Nothing counts them.
-    ("alice/a/b/c/d/kindness@v1", "alice", "a/b/c/d", "kindness", "v1"),
+    ("probe-a/a/b/c/d/kindness@v1", "probe-a", "a/b/c/d", "kindness", "v1"),
     # The short form, which carries no model and is answered from the corpus.
-    ("alice/kindness@v1", "alice", None, "kindness", "v1"),
-    ("alice/kindness", "alice", None, "kindness", None),
+    ("probe-a/kindness@v1", "probe-a", None, "kindness", "v1"),
+    ("probe-a/kindness", "probe-a", None, "kindness", None),
     # A version with an `@` in it. First `@` ends the label, which is 001's rule
     # kept rather than a new one.
     ("a/m/l@v@2", "a", "m", "l", "v@2"),
@@ -138,7 +144,8 @@ def test_the_old_key_collided_and_this_one_does_not(conn):
     """
     second_model(conn)
     rows = conn.execute(
-        "SELECT model_id FROM submission WHERE author='alice' AND label='kindness'"
+        "SELECT model_id FROM submission WHERE author='probe-a' AND label=?",
+        (LABEL,),
     ).fetchall()
     assert sorted(r["model_id"] for r in rows) == sorted([MODEL_A, MODEL_B])
 
@@ -153,7 +160,7 @@ def test_the_same_key_on_one_model_still_collides(conn):
         conn.execute(
             "INSERT INTO submission (author,model_id,label,version,definition,"
             "created_at,is_synthetic) VALUES (?,?,?,?,?,?,1)",
-            ("alice", MODEL_A, "kindness", "v1", "a second take on one model",
+            ("probe-a", MODEL_A, LABEL, "v1", "a second take on one model",
              "2026-09-12T00:00:00Z"),
         )
 
@@ -168,11 +175,11 @@ def test_a_short_reference_refuses_rather_than_picking(conn):
     """
     second_model(conn)
     with pytest.raises(client.Ambiguous) as caught:
-        client.load("alice/kindness", database=database_of(conn))
+        client.load(f"probe-a/{LABEL}", database=database_of(conn))
 
     said = str(caught.value)
     for model in (MODEL_A, MODEL_B):
-        assert f"alice/{model}/kindness" in said, (
+        assert f"probe-a/{model}/{LABEL}" in said, (
             f"{model} is not named, so the reader cannot write the reference "
             "that would resolve"
         )
@@ -182,25 +189,25 @@ def test_a_short_reference_with_a_version_still_refuses_on_the_model(conn):
     """The version does not disambiguate a model, and must not appear to."""
     second_model(conn)
     with pytest.raises(client.Ambiguous):
-        client.load("alice/kindness@v1", database=database_of(conn))
+        client.load(f"probe-a/{LABEL}@v1", database=database_of(conn))
 
 
 def test_the_short_form_still_resolves_while_it_names_one(conn):
     """Because the convenience is the reason anybody tolerates the long form."""
-    got = client.load("alice/kindness", database=database_of(conn))
-    assert got.ref == f"alice/{MODEL_A}/kindness@v1"
+    got = client.load(f"probe-a/{LABEL}", database=database_of(conn))
+    assert got.ref == f"probe-a/{MODEL_A}/{LABEL}@v1"
     # And the full reference it hands back resolves to the same row.
     assert client.load(got.ref, database=database_of(conn)).ref == got.ref
 
 
 def test_naming_the_model_resolves_each_one_separately(conn):
     second_model(conn)
-    a = client.load(f"alice/{MODEL_A}/kindness@v1", database=database_of(conn))
-    b = client.load(f"alice/{MODEL_B}/kindness@v1", database=database_of(conn))
+    a = client.load(f"probe-a/{MODEL_A}/{LABEL}@v1", database=database_of(conn))
+    b = client.load(f"probe-a/{MODEL_B}/{LABEL}@v1", database=database_of(conn))
     assert a.model_id == MODEL_A and b.model_id == MODEL_B
     assert a.ref != b.ref
     # Different artifacts, not one artifact seen twice. The layer differs because
-    # the two fixture models are hooked at different layers.
+    # the two probe models are hooked at different layers.
     assert a.contract.layer != b.contract.layer
 
 
@@ -219,13 +226,14 @@ def test_the_claimant_view_does_not_reach_the_other_models_artifact(conn):
     second_model(conn)
     rows = {
         r["model_id"]: r for r in conn.execute(
-            "SELECT * FROM submission WHERE author='alice' AND label='kindness'"
+            "SELECT * FROM submission WHERE author='probe-a' AND label=?",
+            (LABEL,),
         )
     }
     for model, row in rows.items():
         view = views.claimant_view(conn, row)
         assert view["model_id"] == model
-        assert view["ref"] == f"alice/{model}/kindness@v1"
+        assert view["ref"] == f"probe-a/{model}/{LABEL}@v1"
 
     # And the two views are about different artifacts, which is the thing the
     # three-column lookup could not guarantee.
@@ -237,15 +245,15 @@ def test_the_claimant_view_does_not_reach_the_other_models_artifact(conn):
 def test_engagement_is_counted_against_the_right_artifact(conn):
     """`order.engagement` looked an intervention up by three columns too.
 
-    alice's fixture row carries an attack; the second model's row carries none.
-    On three columns both queries hit the same first row and the second model's
+    probe-a's row carries an attack; the second model's row carries none. On
+    three columns both queries hit the same first row and the second model's
     submission inherits scrutiny nobody performed on it, which is an ordering
     key derived from the wrong artifact.
     """
     second_model(conn)
-    on_a = order.engagement(conn, "alice", MODEL_A, "kindness", "v1")
-    on_b = order.engagement(conn, "alice", MODEL_B, "kindness", "v1")
-    assert on_a > 0, "the fixture attack is gone, so this test checks nothing"
+    on_a = order.engagement(conn, "probe-a", MODEL_A, LABEL, "v1")
+    on_b = order.engagement(conn, "probe-a", MODEL_B, LABEL, "v1")
+    assert on_a > 0, "the probe attack is gone, so this test checks nothing"
     assert on_b == 0, (
         "the second model's submission was credited with scrutiny of the first "
         "model's artifact"
@@ -259,13 +267,14 @@ def test_the_similarity_matrix_keys_both_rows_apart(conn):
     one row where there are two and the second silently overwrites the first.
     """
     second_model(conn)
-    matrix = comparison.similarity_matrix(conn, "kindness")
-    alices = sorted(k for k in matrix if k.startswith("alice/"))
-    assert alices == [f"alice/{MODEL_A}/kindness@v1", f"alice/{MODEL_B}/kindness@v1"]
+    matrix = comparison.similarity_matrix(conn, LABEL)
+    theirs = sorted(k for k in matrix if k.startswith("probe-a/"))
+    assert theirs == [f"probe-a/{MODEL_A}/{LABEL}@v1",
+                      f"probe-a/{MODEL_B}/{LABEL}@v1"]
 
     # And the angle between them is refused rather than computed, because they
     # are not in the same residual basis.
-    cell = matrix[alices[0]][alices[1]]
+    cell = matrix[theirs[0]][theirs[1]]
     assert cell["v"] is None
     assert cell["why"] == "different model or revision"
 
@@ -292,7 +301,7 @@ def old_submission(conn: sqlite3.Connection, author: str, version: str = "v1") -
     conn.execute(
         "INSERT INTO submission (author,label,version,definition,created_at,"
         "is_synthetic) VALUES (?,?,?,?,?,1)",
-        (author, "kindness", version, "SYNTHETIC. A row written before 010.",
+        (author, LABEL, version, "SYNTHETIC. A row written before 010.",
          "2026-09-12T00:00:00Z"),
     )
 
@@ -303,7 +312,7 @@ def old_intervention(conn: sqlite3.Connection, iv_id: str, author: str,
         "INSERT INTO intervention (id,author,label,version,kind,model_id,layer,"
         "layer_convention,hook_point,shape,dtype,is_synthetic)"
         " VALUES (?,?,?,?,?,?,?,?,?,?,?,1)",
-        (iv_id, author, "kindness", version, "direction", model, 4,
+        (iv_id, author, LABEL, version, "direction", model, 4,
          "block-0indexed", "resid_post", "[8]", "float32"),
     )
 
@@ -311,8 +320,8 @@ def old_intervention(conn: sqlite3.Connection, iv_id: str, author: str,
 def test_the_migration_carries_the_model_across(tmp_path):
     """The premise the migration relies on, exercised rather than trusted."""
     conn = pre_010(tmp_path / "old.db")
-    old_submission(conn, "alice")
-    old_intervention(conn, "iv_alice", "alice", MODEL_A)
+    old_submission(conn, "probe-a")
+    old_intervention(conn, "iv_probe-a", "probe-a", MODEL_A)
     conn.commit()
 
     assert "010_model_in_identity.sql" in db.migrate(conn)
@@ -327,11 +336,11 @@ def test_the_migration_refuses_a_submission_with_no_artifact(tmp_path):
     on a database that has quietly lost somebody's submission.
     """
     conn = pre_010(tmp_path / "orphan.db")
-    old_submission(conn, "alice")
-    old_intervention(conn, "iv_alice", "alice", MODEL_A)
+    old_submission(conn, "probe-a")
+    old_intervention(conn, "iv_probe-a", "probe-a", MODEL_A)
     # The one with no intervention attached, which the schema has always allowed
     # and which 010 cannot answer for.
-    old_submission(conn, "bob")
+    old_submission(conn, "probe-b")
     conn.commit()
 
     with pytest.raises(sqlite3.IntegrityError):
@@ -347,9 +356,9 @@ def test_the_migration_refuses_one_submission_on_two_models(tmp_path):
     submissions, which is a judgment and not a translation.
     """
     conn = pre_010(tmp_path / "forked.db")
-    old_submission(conn, "alice")
-    old_intervention(conn, "iv_a", "alice", MODEL_A)
-    old_intervention(conn, "iv_b", "alice", MODEL_B)
+    old_submission(conn, "probe-a")
+    old_intervention(conn, "iv_a", "probe-a", MODEL_A)
+    old_intervention(conn, "iv_b", "probe-a", MODEL_B)
     conn.commit()
 
     with pytest.raises(sqlite3.IntegrityError):
@@ -365,19 +374,20 @@ def test_the_dependent_tables_follow_the_key(tmp_path):
     attached to the submission they were about.
     """
     conn = pre_010(tmp_path / "deps.db")
-    old_submission(conn, "alice")
-    old_intervention(conn, "iv_alice", "alice", MODEL_A)
+    old_submission(conn, "probe-a")
+    old_intervention(conn, "iv_probe-a", "probe-a", MODEL_A)
     conn.execute(
         "INSERT INTO recipe (id,author,label,version,profile,payload_json)"
-        " VALUES ('rc','alice','kindness','v1','someone/profile-v1','{}')")
+        " VALUES ('rc','probe-a',?,'v1','someone/profile-v1','{}')", (LABEL,))
     conn.execute(
         "INSERT INTO pin (id,pinned_by,pinned_at,purpose,author,label,version,"
         "alternatives_json) VALUES ('pn','someone','2026-09-12T00:00:00Z',"
-        "'a purpose','alice','kindness','v1','[]')")
+        "'a purpose','probe-a',?,'v1','[]')", (LABEL,))
     conn.execute(
         "INSERT INTO support_card (id,author,label,version,reporter,reported_at,"
-        "purpose,expected,is_synthetic) VALUES ('sc','alice','kindness','v1',"
-        "'someone','2026-09-12T00:00:00Z','a purpose','what the contract said',1)")
+        "purpose,expected,is_synthetic) VALUES ('sc','probe-a',?,'v1',"
+        "'someone','2026-09-12T00:00:00Z','a purpose','what the contract said',1)",
+        (LABEL,))
     conn.commit()
 
     db.migrate(conn)
@@ -402,16 +412,16 @@ def test_the_model_is_not_an_ordering_key(conn):
     second_model(conn)
     conn.execute(
         "UPDATE submission SET created_at='2026-09-13T00:00:00Z'"
-        " WHERE author='alice' AND model_id=?", (MODEL_B,))
+        " WHERE author='probe-a' AND model_id=?", (MODEL_B,))
     conn.commit()
 
-    rows = order.apply_order(conn, db.claimants(conn, "kindness"),
+    rows = order.apply_order(conn, db.claimants(conn, LABEL),
                              key=order.ORDER_RECENT)
-    alices = [r["model_id"] for r in rows if r["author"] == "alice"]
-    assert alices == [MODEL_B, MODEL_A], (
+    theirs = [r["model_id"] for r in rows if r["author"] == "probe-a"]
+    assert theirs == [MODEL_B, MODEL_A], (
         "recency no longer decides the order between two takes by one author"
     )
-    assert MODEL_B > MODEL_A, "the fixture names no longer make this test mean anything"
+    assert MODEL_B > MODEL_A, "the probe names no longer make this test mean anything"
 
 
 def test_a_bare_label_still_views_across_models(conn):
@@ -421,6 +431,6 @@ def test_a_bare_label_still_views_across_models(conn):
     belongs to, which is the designation this registry does not make.
     """
     second_model(conn)
-    models = {s.model_id for s in client.claimants("kindness",
+    models = {s.model_id for s in client.claimants(LABEL,
                                                    database=database_of(conn))}
     assert models == {MODEL_A, MODEL_B}

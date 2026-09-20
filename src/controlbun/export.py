@@ -389,12 +389,12 @@ def build(conn: sqlite3.Connection) -> dict:
             # Scrutiny received, which is a property of having published
             # something. Nobody is ordered up the page for attacking a lot.
             "engagement": sum(s["engagement"] for s in o["submissions"]),
-            # Their own rows plus the rows their work points at. Somebody who has
-            # published nothing and only attacked fixtures still has a page full
-            # of fabricated subjects, and it has to say so.
+            # Their own rows plus the rows their work points at. Somebody who
+            # has published nothing and only attacked synthetic submissions
+            # still has a page full of fabricated subjects, and it has to say so.
             #
-            # Claims are in the tally because a fixture claim names a fixture
-            # account, and a namespace whose only record here is one would
+            # Claims are in the tally because a synthetic claim names an account
+            # nobody holds, and a namespace whose only record here is one would
             # otherwise render an invented identity with no marker on the page.
             "synthetic": marker(
                 [s["is_synthetic"] for s in o["submissions"]]
@@ -428,6 +428,15 @@ def build(conn: sqlite3.Connection) -> dict:
             # count would have made that sentence false.
             "gravity": order.GRAVITY,
             "age_offset_hours": order.AGE_OFFSET_HOURS,
+            # The marker for a page that shows the whole corpus, which is what
+            # `/owners/` and `/models/` are. Those two computed it themselves
+            # out of `real_authors`, as "mixed if anybody real has published",
+            # which said "mixed" for a corpus with nothing fabricated in it and
+            # was only invisible because the layout also gates on
+            # `any_synthetic`. Two conditions agreeing by luck is not a rule.
+            "synthetic": marker(
+                c["is_synthetic"] for l in labels for c in l["claimants"]
+            ),
         },
         "any_synthetic": any(
             c["is_synthetic"] for l in labels for c in l["claimants"]

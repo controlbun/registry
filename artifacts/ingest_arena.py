@@ -1,7 +1,8 @@
 """Convert three real directions from steering-arena into safetensors.
 
-These are the first real artifacts in this repository. Everything in `fixtures/`
-is fabricated and says so; nothing here is. Read `artifacts/REAL.md`.
+These were the first real artifacts in this repository, back when half the
+corpus was fabricated. That half is gone and every row is real now. Read
+`artifacts/REAL.md`.
 
 **Why a conversion step exists at all.** The author published `.npz`. Loading one
 means `numpy.load`, whose `allow_pickle` argument turns a data file into arbitrary

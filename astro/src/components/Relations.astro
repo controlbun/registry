@@ -8,19 +8,33 @@ import Prose from "./Prose.astro";
 // it rather than asking for it.
 //
 // This is how disagreement becomes legible instead of merely present. Two people
-// claiming `kindness` is a fact you can read off a label page. One of them saying
+// claiming one word is a fact you can read off a label page. One of them saying
 // "this is not what I mean, and here is why" is the content.
+//
+// `authors` is how many distinct people claim this label on this model, and the
+// empty state needs it because the two zeroes are different facts. Nobody has
+// written a relation is one thing; there being nobody to write one about is
+// another, and after 2026-09-19 every label in this corpus is in the second
+// state. Saying the first where the second is true reads as a gap somebody
+// should have filled.
 interface Props {
   relations: any[];
   label: string;
+  authors?: number;
 }
-const { relations, label } = Astro.props;
+const { relations, label, authors = 0 } = Astro.props;
 ---
 
 {relations.length === 0 ? (
   <p class="note absent-block">
-    Nobody claiming <strong>{label}</strong> has said how their reading relates to
-    anyone else's.
+    {authors <= 1 ? (
+      <>One person claims <strong>{label}</strong> here, so there is nobody for
+      them to read. A relation is one author saying how their reading stands to
+      another's, and it needs two.</>
+    ) : (
+      <>Nobody claiming <strong>{label}</strong> has said how their reading
+      relates to anyone else's.</>
+    )}
   </p>
 ) : (
   relations.map((r) => (

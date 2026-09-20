@@ -1,5 +1,14 @@
 ---
 import Base from "../layouts/Base.astro";
+import data from "../data/controlbun.json";
+
+// Whether any label here is claimed by more than one person. Same computation
+// as on the home page and for the same reason: this page argues at length that
+// plurality is the product, and as of 2026-09-19 the corpus shows it zero
+// times. Read off the data so the admission below disappears on its own when a
+// second claimant arrives rather than when somebody remembers this file.
+const contested = data.model_index.some((m) =>
+  m.labels.some((b) => new Set(b.claimants.map((c) => c.author)).size > 1));
 
 // The long argument, moved off the home page.
 //
@@ -58,7 +67,7 @@ import Base from "../layouts/Base.astro";
 
   <p class="note">
     That audit is of a direction in the arena this registry came out of, and
-    not of anything in the corpus here. The four real directions on this site
+    not of anything in the corpus here. The four pro-human directions on this site
     are a layer-32 set and a layer-24 one, and their own steering bake-off was
     inconclusive: of twenty-four generations each, 13, 13 and 9 came back
     byte-identical to the unsteered baseline. Which is the point rather than an
@@ -82,6 +91,16 @@ import Base from "../layouts/Base.astro";
     side and makes the disagreement legible. It does not pick a winner,
     mandate a definition, or impose a single evaluation.
   </p>
+
+  {!contested && (
+    <p class="note">
+      Nobody has done it here yet. Every submission in this corpus is by one
+      author, so what the site currently demonstrates is the mechanism rather
+      than the disagreement. That is a fact about how new this is, and it is
+      also why the pages are built to render a label with one claimant the same
+      way they render a label with ten.
+    </p>
+  )}
 
   <p class="pull">
     The primary object is a submission: one author's complete take,

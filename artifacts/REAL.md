@@ -1,9 +1,9 @@
 # Everything in this directory is real
 
-The counterpart of `fixtures/SYNTHETIC.md`, and the reason that file exists. Every
-number attached to these three artifacts was produced by running a model. None is
-fabricated, none is rounded for display, and none may be treated the way fixture
-numbers are treated.
+This was the counterpart of `fixtures/SYNTHETIC.md`, which is gone: the whole
+corpus is real now, per `DECISIONS.md` 2026-09-19. Every number attached to
+these artifacts was produced by running a model. None is fabricated and none is
+rounded for display.
 
 Three directions on `soham/pro-human`, all from
 `github.com/soham-padia/steering-arena` at commit `b8b4721`, all against

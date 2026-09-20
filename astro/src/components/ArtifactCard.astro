@@ -32,9 +32,9 @@ const absences = c.absences ?? {};
 // places, and a page that composed its own URL would be a second rule that
 // nobody runs the fetch tests against.
 //
-// Null for nine of the ten rows in this corpus, which is the ordinary state and
-// not a degraded one. Five are fixtures and four are real directions their
-// author never published at a URL.
+// Null for four of the five rows in this corpus, which is the ordinary state
+// and not a degraded one: they are directions their author never published at
+// a URL.
 const p = c.published;
 // Off the payload, built by `registry/views.py`. See SubmissionRows.
 const ref = c.ref;

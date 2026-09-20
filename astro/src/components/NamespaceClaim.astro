@@ -2,12 +2,18 @@
 import Prose from "./Prose.astro";
 // Who has bound an account to this namespace, and on what dated evidence.
 //
-// **Unclaimed is the ordinary state and renders as one.** Every namespace in
-// this corpus is unclaimed, including all five real ones: the rows were written
-// down rather than signed up for, and `author` is a free string on purpose
-// because the deferred indexing lane fills it with people who never will sign
-// up. So the unclaimed branch is the normal page and says so in words, the way
-// every other absence here does, instead of leaving a blank where a badge goes.
+// **Unclaimed is the ordinary state and renders as one.** An author here is a
+// free string somebody wrote down rather than an account somebody signed up
+// for, and `author` stays free on purpose because the deferred indexing lane
+// fills it with people who never will sign up. So the unclaimed branch is the
+// normal page and says so in words, the way every other absence here does,
+// instead of leaving a blank where a badge goes.
+//
+// This comment used to add "every namespace in this corpus is unclaimed,
+// including all five real ones", which stopped being true twice over: soham
+// claimed his, and removing the fabricated corpus on 2026-09-19 left his the
+// only namespace here. The branch below no longer says it either. It was the
+// kind of sentence that reads as a rule and is only a census.
 //
 // **This renders on the namespace's own page and nowhere else, deliberately.**
 // It is not a column in the owners table, not a mark on a submission row, and
@@ -36,10 +42,10 @@ const when = (iso) =>
 {claims.length === 0 ? (
   <p class="note absent-block">
     The namespace <span class="mono">{namespace}</span> is unclaimed. Nobody has
-    bound an account to it, which is the state every namespace in this registry
-    is in. An author here is a free string that somebody wrote down, not an
-    account somebody signed up for, and nothing about the work published under a
-    namespace follows from whether anyone has claimed it.
+    bound an account to it, which is the ordinary state here rather than a gap.
+    An author is a free string that somebody wrote down, not an account somebody
+    signed up for, and nothing about the work published under a namespace
+    follows from whether anyone has claimed it.
   </p>
 ) : (
   claims.map((c) => (

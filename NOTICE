@@ -40,12 +40,10 @@ What this repository actually holds, as of 2026-09-19:
       Extracted by the author from github.com/soham-padia/steering-arena at
       commit b8b4721. See artifacts/REAL.md.
 
-  fixtures/*.safetensors
-
-      Synthetic. Integer ramps written by fixtures/build.py against model ids
-      that resolve to nothing. Not derived from any model, and every number
-      attached to them is invented and labeled as such. See
-      fixtures/SYNTHETIC.md.
+That is all of them. This repository held five synthetic .safetensors under
+fixtures/ until 2026-09-19, integer ramps against model ids that resolve to
+nothing; they were removed with the rest of the fabricated corpus. See
+DECISIONS.md.
 
 One artifact in the corpus is not in this repository:
 

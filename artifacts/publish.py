@@ -32,7 +32,7 @@ filename" read against the code that uses it. It is also why the plan prints the
 path twice: the `hf upload` argument that would get this wrong is the second one.
 
 **Why the pin is a file and not only a row.** `make site` drops the database and
-rebuilds it from `fixtures/build.py` and `artifacts/seed.py`, so a commit written
+rebuilds it from `artifacts/seed.py`, so a commit written
 only into a column is gone on the next build, and the artifact silently falls
 back to the local file on a machine that has one. `published.json` is the record
 and `apply_pins` is the only thing that writes those two columns; the rebuild and
@@ -214,9 +214,10 @@ def select(conn, only: list[str] | None = None) -> list[Item]:
     """Every real artifact this repository holds bytes for, checked as it goes.
 
     Synthetic rows are left out and that is not a quality judgment about them:
-    `fixtures/SYNTHETIC.md` says nothing in that directory is a measurement, and
     uploading a fabricated direction under the author's name would publish a
-    file whose whole point is that it is not one.
+    file whose whole point is that it is not one. Nothing in the corpus is
+    marked synthetic today, so the filter selects everything; it stays because
+    `is_synthetic` is a column a submitter can set and this is what reads it.
 
     Each row's bytes are confirmed against what the row records before anything
     plans to upload them. Publishing bytes that disagree with the row would pin

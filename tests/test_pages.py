@@ -26,19 +26,41 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
+
+import probe  # noqa: E402
+from controlbun import views  # noqa: E402
 
 DIST = ROOT / "astro" / "dist"
 
 # One of each shape, named by what it is rather than by its path.
+#
+# These pointed at fixture pages until 2026-09-19 and every one of them is a
+# real page now. That is worth more than it sounds: seven of these tests were
+# skipping, not failing, because `page()` skips a path that was never built, so
+# the module went quiet the moment the fixture corpus came out. A test file that
+# skips is a test file that says nothing, which is the same defect as an inert
+# check one level up.
+#
+# What the real corpus cannot show is here rather than hidden. Nobody has
+# reported a trait score with no coherence measure beside it, so no built page
+# carries the uninterpretable state and the test for it works two levels down.
+# See `test_a_score_with_no_coherence_beside_it_is_uninterpretable`.
 PAGES = {
-    "label": "models/placeholder/other-architecture-7b/refusal/index.html",
-    "kindness": "models/placeholder/does-not-resolve-1b/kindness/index.html",
-    # erik reported a trait score and no coherence, so this page is the one that
-    # has to refuse to print a number.
-    "unpaired": "erik/placeholder/other-architecture-7b/refusal/v1/index.html",
-    # fern reported nothing at all.
-    "unmeasured": "fern/placeholder/other-architecture-7b/refusal/v1/index.html",
+    # Four takes on one word by one author. The bare-label view, and the only
+    # page on the site with more than one claimant on it.
+    "label": "models/allenai/Olmo-3-1125-32B/pro-human/index.html",
+    # One claimant, which is the other shape a label view has to render well.
+    "single": "models/meta-llama/Llama-3.3-70B-Instruct/trauma/index.html",
+    # No confound audit and no transfer ratio: that battery was run on the three
+    # layer-32 directions and not on this one.
+    "unmeasured": "soham/allenai/Olmo-3-1125-32B/pro-human/L24/index.html",
+    "submission": "soham/allenai/Olmo-3-1125-32B/pro-human/meandiff/index.html",
 }
+
+# The four versions on the label page above, which is what "every claimant"
+# means in a corpus where every claimant is the same person.
+VERSIONS = ("meandiff", "logistic", "lda", "L24")
 
 
 def page(name: str) -> str:
@@ -78,18 +100,48 @@ def text_of(html: str, *, authored: bool = True) -> str:
 
 def test_every_claimant_appears():
     body = text_of(page("label"))
-    for author in ("dana", "erik", "fern"):
-        assert author in body, f"{author} claims this label and is not on its page"
+    for version in VERSIONS:
+        assert version in body, (
+            f"{version} claims this label and is not on its page"
+        )
 
 
 def test_a_bare_label_says_it_does_not_resolve():
     assert "does not resolve to an artifact" in text_of(page("label"))
 
 
+def test_a_label_view_counts_people_separately_from_submissions():
+    """Four versions by one person are not four claimants, and the page says so.
+
+    This is the copy the fixture removal made dishonest. The lede read "N
+    claimants" off the row count, which was the number of people while every
+    label had one submission each, and stopped being the number of people the
+    moment one author published four takes on one word. Left alone it would
+    have read as four people disagreeing on a site where the disagreement is
+    exactly what nobody has done yet.
+
+    The single-claimant page has to say the plainer thing: nobody else has
+    claimed this word here. That is a fact about a new registry and not an
+    apology, and it is computed from the export so it disappears on its own
+    when a second claimant arrives.
+    """
+    many = text_of(page("label"))
+    assert re.search(r"4 submissions\s+by\s+1 author", " ".join(many.split())), (
+        "the label view counts rows and calls them claimants, which reads as "
+        "four people on a page holding one author's four versions"
+    )
+    assert "Nobody else has claimed this word" in " ".join(many.split())
+
+    one = " ".join(text_of(page("single")).split())
+    assert "1 submission by 1 author" in one
+    assert "Nobody else has claimed this word" in one
+
+
 def test_absent_transfer_reads_as_absent_not_zero():
     body = text_of(page("unmeasured"))
     assert "not measured" in body or "no score" in body, (
-        "fern measured nothing and the page must say so"
+        "no confound audit or transfer ratio was run against this artifact and "
+        "the page must say so"
     )
     for path in every_page():
         assert "0.0000" not in text_of(path.read_text()), (
@@ -97,8 +149,41 @@ def test_absent_transfer_reads_as_absent_not_zero():
         )
 
 
-def test_synthetic_corpus_is_announced():
-    assert "Synthetic corpus" in text_of(page("label"))
+def test_no_page_claims_a_corpus_it_does_not_have():
+    """The marker is absent because nothing is fabricated, and that is checked.
+
+    This asserted the opposite until 2026-09-19: "Synthetic corpus" had to
+    appear, because everything on the page was. Inverting it rather than
+    deleting it keeps the property that matters in both directions, which is
+    that the banner describes the corpus. A banner calling a real measurement
+    invented is the expensive direction and the one `DECISIONS.md` 2026-09-14
+    was written about.
+
+    The branch that prints it is asserted to still exist, in the layout source,
+    because the phrase disappearing from every page is exactly what a deleted
+    banner looks like from here.
+    """
+    payload = json.loads(
+        (ROOT / "astro" / "src" / "data" / "controlbun.json").read_text())
+
+    marked = [p.relative_to(DIST) for p in every_page()
+              if "Synthetic corpus" in text_of(p.read_text())]
+    if payload["any_synthetic"]:
+        assert marked, (
+            "the corpus holds a fabricated row and no page says so"
+        )
+        return
+
+    assert not marked, (
+        "no row in the corpus is marked synthetic and these pages say otherwise, "
+        "which tells a reader a real measurement was invented: "
+        + ", ".join(str(m) for m in marked)
+    )
+    layout = (ROOT / "astro" / "src" / "layouts" / "Base.astro").read_text()
+    assert "Synthetic corpus" in layout, (
+        "the banner is gone from the layout, so a fabricated submission would "
+        "publish with nothing on the page saying so"
+    )
 
 
 def test_no_angle_is_shown_until_the_reader_points_the_column():
@@ -183,14 +268,52 @@ def test_ordering_explains_itself():
     )
 
 
-def test_score_without_coherence_renders_as_uninterpretable():
-    body = text_of(page("unpaired"))
-    assert "uninterpretable" in body
-    assert "0.5555" not in body, (
-        "a trait score with no coherence measure beside it must not print as a "
-        "number; judge agreement collapses on degenerate text and an unpaired "
-        "score is a broken instrument rather than a small effect"
+def test_a_score_with_no_coherence_beside_it_is_uninterpretable(tmp_path):
+    """Two levels down, because no page in this corpus is in that state.
+
+    This read a fixture page and asserted "uninterpretable" appeared on it
+    where a fabricated trait score had no coherence measure beside it. Nobody
+    real has reported that pair, so the page does not exist and the test was
+    skipping rather than failing, which is the quiet version of not running.
+
+    So it is checked where it is decided and where it is drawn. `score_state`
+    is computed in Python and the templates receive the state rather than the
+    number, which is the arrangement that makes the invariant hold without any
+    template having to remember it. The probe corpus carries the row the real
+    one does not.
+    """
+    conn = probe.build(tmp_path / "probe.db", tmp_path)
+    try:
+        row = conn.execute(
+            "SELECT * FROM submission WHERE author = 'probe-d'").fetchone()
+        view = views.claimant_view(conn, row)
+    finally:
+        conn.close()
+
+    assert view["trait_score"] is not None, (
+        "the probe row reports no trait score, so this proves nothing about "
+        "what happens when one is reported without a coherence measure"
     )
+    assert view["coherence_score"] is None
+    assert view["score_state"] == "uninterpretable", (
+        "a trait score with no coherence measure beside it has to reach the "
+        "page as a state rather than as a number; judge agreement collapses on "
+        "degenerate text and an unpaired score is a broken instrument rather "
+        "than a small effect"
+    )
+
+    # And the templates still refuse to print the number in that state. Both
+    # components that draw a trait measure gate on the state, so a page cannot
+    # reach a bare number by holding the value.
+    for name in ("ArtifactCard.astro", "Claimant.astro"):
+        source = (ROOT / "astro" / "src" / "components" / name).read_text()
+        assert re.search(
+            r'score_state\s*===\s*"reportable"\s*&&\s*fmt\(\s*c\.trait_score',
+            source,
+        ), f"{name} prints a trait score without gating on the score state"
+        assert 'score_state === "uninterpretable"' in source, (
+            f"{name} no longer renders the uninterpretable state at all"
+        )
 
 
 def test_a_rendered_date_matches_its_own_datetime_attribute():

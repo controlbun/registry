@@ -33,7 +33,7 @@ import ordering_harness as harness  # noqa: E402
 from controlbun import order  # noqa: E402
 
 # Fixed so the decay denominator is the same on both sides of the comparison. Far
-# enough ahead of the synthetic corpus that every age is positive.
+# enough ahead of every row in the corpus that every age is positive.
 NOW = datetime(2027, 1, 1, tzinfo=timezone.utc)
 NOW_MS = int(NOW.timestamp() * 1000)
 
@@ -54,8 +54,8 @@ def pages():
     for name, rel in [
         ("models", "models/index.html"),
         ("owners", "owners/index.html"),
-        ("label", "models/placeholder/other-architecture-7b/refusal/index.html"),
-        ("owner", "dana/index.html"),
+        ("label", "models/allenai/Olmo-3-1125-32B/pro-human/index.html"),
+        ("owner", "soham/index.html"),
     ]:
         path = dist / rel
         if path.exists():

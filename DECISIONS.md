@@ -555,6 +555,11 @@ Faceted browsing over kinds has to be built from what the corpus actually contai
 rather than from a declared list.
 
 ## 2026-09-14 The synthetic marker is per page, not per corpus
+**Amended by:** The synthetic corpus is removed, and plurality is now
+demonstrated zero times. The per-page marker stands as decided. What changed is
+the falsifier half: with no synthetic row in the corpus the check below had
+nothing to convict, so the rule is a pure function now and a probe proves it
+bites on every run.
 **Decided:** `any_synthetic` stops gating a corpus-wide banner. Each page states
 what is on it: `all` when every figure traces to a fixture, `mixed` when some do
 and the exception is named, `none` when no figure on the page is fabricated and
@@ -1048,6 +1053,10 @@ Building a contribution path before asking is the expensive order.
 **Supersedes:** nothing. Refines "SQLite for v0, not Postgres" as described above.
 
 ## 2026-09-15 Indexing is deferred; the lane without it comes first
+**Amended by:** The synthetic corpus is removed, and plurality is now
+demonstrated zero times. The deferral stands. One of the two consequences below
+is understated: "the plurality thesis stays demonstrated only by fixtures" was
+true while the fixtures were here, and it is now demonstrated by nothing.
 **Decided:** Do not build the indexer and do not plan around it. The corpus stays
 at what is in it, and grows only by the author adding more of his own arena
 directions or by somebody submitting.
@@ -2877,3 +2886,83 @@ refusal should say so rather than citing a layer neither of them has.
 
 **Supersedes:** nothing. Same kind of entry as 2026-09-18 "GAP: `layer` is one
 integer" and "GAP: ingest reads any host".
+
+## 2026-09-19 The synthetic corpus is removed, and plurality is now demonstrated zero times
+**Decided:** `fixtures/` goes: `build.py`, `SYNTHETIC.md` and the five
+`.safetensors`. alice, bob, dana, erik and fern leave with it, and so do the
+`kindness` and `refusal` labels, carol's attack, gus's and hana's support cards,
+the two label relations, the fabricated namespace claim and the fabricated pin.
+`artifacts/seed.py` takes over the drop-and-rebuild that `fixtures/build.py`
+owned and is the only seeder in `make site`. The corpus is five real
+submissions by one author: `soham/pro-human` four ways on Olmo-3, and
+`soham/trauma` on Llama-3.3.
+
+**Why:** the site is about to be public and a corpus that is half fabricated
+invites "is this real" from exactly the readers it is for. `V1.md` already named
+that risk in its own words, under the launch-risk heading that counted seven of
+eight submissions fabricated: the visitor who read the site cold left not
+knowing the answer, and the banner they said they trusted everything else
+because of is the same banner that raises the question.
+
+**`is_synthetic` stays.** It is schema and v0 scope is fixed. A submission that
+is synthetic is a thing a submitter could send, and the column is how it would
+be marked. What changed is that nothing in this build writes one.
+
+**What this costs, stated rather than papered over.** No label has more than one
+claimant. The bare-label view, the confound-axis asymmetry and "a bare label is
+a view across claimants owned by nobody" now render across one author's four
+takes on one word rather than across four people, which is a different object.
+This project's premise is that ten people meaning different things by one word
+is the content, and the site now demonstrates that zero times.
+
+**What the constraint makes impossible to express** is the plural state itself,
+on screen. That is the whole cost and there is no version of this that avoids
+it: the only two ways to show plurality are to fabricate it or to have it, and
+fabricating it is what just came out. So the pages say so instead. Every piece
+of copy that implied plurality was on display now reads off the data and names
+the state: the home page and `/about/` both say nobody else has claimed a label
+here yet, the label view counts submissions and authors separately rather than
+calling four versions "4 claimants", and the relations block distinguishes
+"nobody has written one" from "there is nobody to write one about". Each of
+those is computed from the export, so it disappears on its own when a second
+claimant arrives rather than when somebody remembers the sentence.
+
+**The marker apparatus is kept and proved by a probe.** With no synthetic row,
+`check_synthetic_marker_matches_the_page` had nothing to convict and would have
+passed silently, which is worse than the inert failure it was written to report:
+its own inert branch is guarded by `any_synthetic` and would not have fired
+either. Three options were on the table. Deleting the apparatus leaves
+`is_synthetic` in the schema with nothing reading it. Letting it report inert is
+the defect this repository has shipped six times. So: the rule is now a pure
+function, `falsifier/verify.py:marker_findings`, and `check_the_marker_rule_still_bites`
+runs it against a two-page probe on every run and fails if either half stops
+catching its case. The probe is in the falsifier rather than only in `tests/`,
+because the falsifier is the thing that must not go quiet and a check proved
+somewhere else can be separated from its proof. Neither of its two digit runs is
+a measurement and neither reaches a database, an export or a page. `main` also
+says out loud that the corpus exercised nothing, in the same place it already
+says how many rows are pinned outside the checkout.
+
+**The shapes the checks need moved to `tests/probe.py`,** which the tests build
+and the site never sees. Two authors disagreeing on one label, an attack
+somebody else made, a trait score with no coherence measure beside it, disjoint
+confound axes, two support cards, an evidence-only participant and an unclaimed
+namespace are all states the checks have to be able to see and the real corpus
+contains none of them. Its rows are all `is_synthetic = 1`, its tensors are
+written at test time into a gitignored directory, and it keeps the two
+conventions that were the good part of `SYNTHETIC.md`: repeated-digit decimals
+and integer ramps. What did not move is the narrative. The old fixtures were
+demo content as well as test data, because they were on the site; these are
+probes and are named like probes.
+
+**Amends `CLAUDE.md` and `BRIEF.md`.** "Seed with competing claimants on one
+label, not coverage across ten labels" was the right instruction for a fixture
+corpus and is now wrong, because there is no seeding to do. The sentence it
+becomes is about what would make the corpus worth reading rather than about what
+to fabricate.
+
+**Supersedes:** 2026-09-14 The synthetic marker is per page, not per corpus;
+2026-09-15 Indexing is deferred; the lane without it comes first. Both are
+amended rather than replaced: the per-page marker stays exactly as decided and
+only the falsifier half of it changed, and the indexing deferral stands with one
+of its two recorded consequences now understated.

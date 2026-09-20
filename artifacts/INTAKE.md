@@ -134,7 +134,7 @@ sentences without saying so.
 
 Rows go into `registry.db` and into `artifacts/intake.jsonl`, which is the copy
 that matters. `make site` deletes the database and rebuilds it from
-`fixtures/build.py` and `artifacts/seed.py`, so a row written only into a column
+`artifacts/seed.py`, so a row written only into a column
 is gone on the next build. The record is append-only and tracked, and `insert` is
 the one function that turns an entry into rows, so the live write and the replay
 cannot come apart. That is the argument `artifacts/published.json` already makes

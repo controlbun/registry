@@ -12,6 +12,19 @@ its own: what has to be shown is that the probe goes **unnoticed** under the old
 behavior and is caught under the new one. Every mutation is asserted to have
 landed before its result is believed.
 
+**Two corpora, because the two halves establish different things.** The client
+and falsifier cases run against `tests/probe.py`, which builds a fabricated
+corpus in a temporary directory: what they need is a row with a digest and a
+tensor to substitute, and which row does not matter. They used to run against
+`fixtures/build.py`, removed on 2026-09-19.
+
+The last case here runs against `artifacts/` and cannot move. A digest recorded
+by the same script that wrote the file agrees with it by construction and
+establishes nothing; the vendored directions in `artifacts/soham/` are the only
+bytes this repository did not write, so they are the only place a recorded
+digest is checked against a second, independent record. That is the case
+`test_a_vendored_artifact_that_drifted_is_refused_at_seed_time` holds.
+
 The substituted tensor below is an obviously synthetic descending ramp. It stands
 in for what a re-pointed LFS object returns; it is not a measurement and nothing
 here reads it as one.
@@ -35,37 +48,41 @@ from safetensors.numpy import load_file, save, save_file
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
 
+import probe  # noqa: E402
 from controlbun import client, db, fetch  # noqa: E402
 from controlbun.artifact import sort_header  # noqa: E402
 
-# alice's fixture is `np.arange(1, 9)` normalized, eight float32 elements. This is
-# eight float32 elements that are not those. Same shape, same dtype, different
-# bytes, which is the whole of what the old check could not see.
+# `probe-a`'s tensor is `np.arange(1, 9)` normalized, eight float32 elements.
+# This is eight float32 elements that are not those. Same shape, same dtype,
+# different bytes, which is the whole of what the old check could not see.
 SUBSTITUTE = save({"direction": np.arange(8, 0, -1, dtype=np.float32)})
+
+# The row every case below substitutes bytes for, and its author. Named once,
+# because a test that types an id in six places is a test that half-updates.
+SUBJECT = "iv_probe-a"
+SUBJECT_AUTHOR = "probe-a"
+SECOND = "iv_probe-b"
 
 
 @pytest.fixture
 def conn(tmp_path):
-    """A synthetic-only database, built the way every other test builds one."""
-    path = tmp_path / "digest.db"
-    subprocess.run(
-        [sys.executable, str(ROOT / "fixtures" / "build.py"), "--db", str(path)],
-        check=True, capture_output=True,
-    )
-    return db.connect(path)
+    """A probe database, built the way every other test builds one."""
+    return probe.build(tmp_path / "digest.db")
 
 
 def _submission(conn, monkeypatch, blob: bytes):
-    """alice's submission, with whatever bytes we hand it standing in as the file."""
+    """probe-a's submission, with the bytes we hand it standing in as the file."""
     monkeypatch.setattr(fetch, "resolve", lambda **k: blob)
     row = conn.execute(
-        "SELECT * FROM submission WHERE author='alice' AND label='kindness'"
+        "SELECT * FROM submission WHERE author=? AND label=?",
+        (SUBJECT_AUTHOR, probe.LABEL_A),
     ).fetchone()
     return client._build(conn, row)
 
 
-def _recorded(conn, iv_id: str = "iv_alice") -> str | None:
+def _recorded(conn, iv_id: str = SUBJECT) -> str | None:
     return conn.execute(
         "SELECT artifact_sha256 FROM intervention WHERE id=?", (iv_id,)
     ).fetchone()[0]
@@ -93,24 +110,27 @@ def test_the_digest_column_ships_and_is_nullable(conn):
     )
 
     # And the pointer-only case is writable end to end, not merely permitted by
-    # the column definition.
+    # the column definition. A row whose bytes are at somebody else's commit and
+    # which nobody hashed is the ordinary case this column exists to allow.
     conn.execute(
         "INSERT INTO submission (author,model_id,label,version,definition,"
-        "created_at,is_synthetic) VALUES ('nadia','placeholder/does-not-resolve-1b',"
-        "'kindness','v1','pointed at, not held','2026-09-16',1)"
+        "created_at,is_synthetic) VALUES ('probe-pointer',"
+        "'placeholder/does-not-resolve-1b','probe-pointed-at','v1',"
+        "'Written by the test suite. Pointed at, not held.','2026-09-16',1)"
     )
     conn.execute(
         "INSERT INTO intervention (id,author,label,version,kind,model_id,layer,"
         "layer_convention,hook_point,shape,dtype,artifact_repo,artifact_commit,"
-        "artifact_path,is_synthetic) VALUES ('iv_nadia','nadia','kindness','v1',"
-        "'direction','placeholder/does-not-resolve-1b',4,'block-0indexed',"
+        "artifact_path,is_synthetic) VALUES ('iv_probe-pointer','probe-pointer',"
+        "'probe-pointed-at','v1','direction',"
+        "'placeholder/does-not-resolve-1b',4,'block-0indexed',"
         "'resid_post','[8]','float32','someone/else',?,'d.safetensors',1)",
         ("c" * 40,),
     )
     conn.commit()
-    assert _recorded(conn, "iv_nadia") is None
+    assert _recorded(conn, "iv_probe-pointer") is None
 
-    sub = client.load("nadia/kindness@v1", database=_path(conn))
+    sub = client.load("probe-pointer/probe-pointed-at@v1", database=_path(conn))
     assert sub.contract.artifact_sha256 is None
 
 
@@ -122,8 +142,8 @@ def _path(conn: sqlite3.Connection) -> str:
 # S1a. The client refuses bytes whose digest disagrees with the record.
 
 
-# The positive control, that the real committed fixture still loads with its
-# digest intact, is `test_the_recorded_artifact_loads` in
+# The positive control, that an artifact this repository holds still loads with
+# its digest intact, is `test_the_recorded_artifact_loads` in
 # `tests/test_artifact_check.py`. Not repeated here.
 
 
@@ -159,7 +179,8 @@ def test_the_same_substitution_went_unnoticed_before(conn, monkeypatch):
     nobody hashed still loads, which is what keeps 006 from being a required
     field by the back door.
     """
-    conn.execute("UPDATE intervention SET artifact_sha256 = NULL WHERE id='iv_alice'")
+    conn.execute(
+        "UPDATE intervention SET artifact_sha256 = NULL WHERE id=?", (SUBJECT,))
     conn.commit()
     assert _recorded(conn) is None, "the mutation did not land"
 
@@ -206,18 +227,24 @@ def _load_falsifier(root: Path):
 
 @pytest.fixture(scope="module")
 def tree(tmp_path_factory):
-    """A copy with a database, an export and one built page."""
+    """A copy with a probe database, an export and one built page.
+
+    `tests/probe.py` is run from this repository and pointed at the copy with
+    `--root`, so the tensors land under `dest/tests/_probe/` and the rows record
+    the path that resolves to them there. The falsifier loaded below has its own
+    `ROOT` set to the copy, so the file it hashes is the one in the copy.
+    """
     dest = tmp_path_factory.mktemp("digestfalsify") / "repo"
     dest.mkdir()
-    for part in ("falsifier", "fixtures", "schema", "src"):
+    for part in ("falsifier", "schema", "src"):
         shutil.copytree(ROOT / part, dest / part,
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     (dest / "astro" / "src" / "data").mkdir(parents=True)
     (dest / "astro" / "dist").mkdir(parents=True)
 
     subprocess.run(
-        [sys.executable, str(dest / "fixtures" / "build.py"),
-         "--db", str(dest / "registry.db")],
+        [sys.executable, str(ROOT / "tests" / "probe.py"),
+         "--db", str(dest / "registry.db"), "--root", str(dest)],
         check=True, capture_output=True,
     )
     subprocess.run(
@@ -266,10 +293,14 @@ def test_the_clean_copy_passes(tree):
 
 
 def test_a_tampered_artifact_is_caught_and_would_not_have_been(tree):
-    held = tree / "fixtures" / "alice_kindness_v1.safetensors"
+    held = tree / "tests" / "_probe" / "probe_a.safetensors"
+    assert held.exists(), (
+        "the probe tensor is not where the rows say it is, so tampering with "
+        "it would prove nothing"
+    )
     original = held.read_bytes()
     recorded = _connect(tree).execute(
-        "SELECT artifact_sha256 FROM intervention WHERE id='iv_alice'"
+        "SELECT artifact_sha256 FROM intervention WHERE id=?", (SUBJECT,)
     ).fetchone()[0]
     assert recorded, "no digest was recorded in the copy, so this proves nothing"
 
@@ -295,7 +326,7 @@ def test_a_tampered_artifact_is_caught_and_would_not_have_been(tree):
         # The new check, on the same file: named.
         new = _load_falsifier(tree)
         new.check_artifact_digests_match_the_record(_connect(tree))
-        assert any("iv_alice" in line for line in new.failures), (
+        assert any(SUBJECT in line for line in new.failures), (
             f"the digest check did not name the tampered row: {new.failures}"
         )
 
@@ -347,26 +378,31 @@ def test_a_corpus_with_no_digests_reports_itself_inert(tree):
 def test_a_vendored_artifact_that_drifted_is_refused_at_seed_time(tmp_path):
     """`artifacts/seed.py` will not write a digest it has not identified.
 
-    The three real rows are the only ones whose bytes this repository did not
-    write, so they are the only place a recorded digest can be checked against a
-    second record rather than against itself. `artifacts/source.py` holds that
-    second record, put there by the ingest after it verified the `.npz` it
-    converted. Without the cross-check the seeder would hash whatever is in
-    `artifacts/soham/` and publish it as the artifact's digest, and every later
-    check would then agree with a record derived from bytes nobody checked.
+    **The one case in this file that cannot run against a probe.** Every other
+    bite here only needs a row with a digest and a tensor to substitute, and the
+    probe supplies that. This one is about where the digest came from. A digest
+    recorded by the script that wrote the file agrees with it by construction
+    and establishes nothing, which is true of the probe and was true of the
+    fixtures before it.
+
+    The vendored directions are the only bytes this repository did not write, so
+    they are the only place a recorded digest is checked against a second record
+    rather than against itself. `artifacts/source.py` holds that second record,
+    put there by the ingest after it verified the `.npz` it converted. Without
+    the cross-check the seeder would hash whatever is in `artifacts/soham/` and
+    publish it as the artifact's digest, and every later check would then agree
+    with a record derived from bytes nobody checked.
+
+    `seed.py` drops and rebuilds the database itself since 2026-09-19, so there
+    is one call here where there used to be two.
     """
     dest = tmp_path / "repo"
     dest.mkdir()
-    for part in ("artifacts", "fixtures", "schema", "src"):
+    for part in ("artifacts", "schema", "src"):
         shutil.copytree(ROOT / part, dest / part,
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
     def seed() -> subprocess.CompletedProcess:
-        subprocess.run(
-            [sys.executable, str(dest / "fixtures" / "build.py"),
-             "--db", str(dest / "registry.db")],
-            check=True, capture_output=True,
-        )
         return subprocess.run(
             [sys.executable, str(dest / "artifacts" / "seed.py"),
              "--db", str(dest / "registry.db")],
@@ -396,22 +432,23 @@ def test_a_recorded_digest_with_no_bytes_anywhere_is_named(tree):
     """A digest for a file that is not there is a record of nothing."""
     conn = _connect(tree)
     before = conn.execute(
-        "SELECT artifact_path FROM intervention WHERE id='iv_bob'"
+        "SELECT artifact_path FROM intervention WHERE id=?", (SECOND,)
     ).fetchone()[0]
-    conn.execute("UPDATE intervention SET artifact_path=NULL WHERE id='iv_bob'")
+    conn.execute(
+        "UPDATE intervention SET artifact_path=NULL WHERE id=?", (SECOND,))
     conn.commit()
     try:
         assert _connect(tree).execute(
-            "SELECT artifact_path FROM intervention WHERE id='iv_bob'"
+            "SELECT artifact_path FROM intervention WHERE id=?", (SECOND,)
         ).fetchone()[0] is None, "the mutation did not land"
 
         module = _load_falsifier(tree)
         module.check_artifact_digests_match_the_record(_connect(tree))
-        assert any("iv_bob" in line for line in module.failures), (
+        assert any(SECOND in line for line in module.failures), (
             f"a digest with nothing behind it went unreported: {module.failures}"
         )
     finally:
         restore = _connect(tree)
-        restore.execute("UPDATE intervention SET artifact_path=? WHERE id='iv_bob'",
-                        (before,))
+        restore.execute("UPDATE intervention SET artifact_path=? WHERE id=?",
+                        (before, SECOND))
         restore.commit()

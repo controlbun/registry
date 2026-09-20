@@ -13,6 +13,12 @@ tensor breaks that in the one place nobody looks.
 Shape, dtype and the one-artifact rule live here. The content hash lives in
 `tests/test_artifact_digest_bite.py`, because it is the check that fires first and
 would otherwise stand in front of every case below.
+
+**Run against the real corpus.** These used to be built on a fabricated fixture
+that was written and hashed in the same run, so the positive control could only
+ever tell you a script agreed with itself. `artifacts/soham/` is committed rather
+than regenerated and its digest reaches the database only by matching what the
+ingest recorded, which is the version of this check that can fail.
 """
 
 from __future__ import annotations
@@ -31,71 +37,95 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from controlbun import artifact, client, db, fetch  # noqa: E402
 
+# One real row, named once. The first of the author's four takes, whose bytes
+# are vendored here and whose digest the seeder confirmed against them.
+ROW = "iv_soham_meandiff"
+VENDORED = ROOT / "artifacts" / "soham" / "d_olmo3_v1.safetensors"
+# The residual width of allenai/Olmo-3-1125-32B, which is what the row claims
+# and what the bytes have to agree with. Not a measurement: a property of the
+# model, cited in `CONTEXT.md` and checked at seed time.
+WIDTH = 5120
+
 
 @pytest.fixture
 def conn(tmp_path):
-    path = tmp_path / "fixture.db"
+    """The real corpus, seeded into a temporary file.
+
+    `artifacts/seed.py` is the corpus builder since the fixtures were removed.
+    It refuses to write a row whose cited shape, dtype, norm or digest the
+    vendored bytes contradict, so reaching this fixture at all is already the
+    first half of what this file is about.
+    """
+    path = tmp_path / "registry.db"
     subprocess.run(
-        [sys.executable, str(ROOT / "fixtures" / "build.py"), "--db", str(path)],
+        [sys.executable, str(ROOT / "artifacts" / "seed.py"), "--db", str(path)],
         check=True, capture_output=True,
     )
     return db.connect(path)
 
 
+def _row(conn):
+    return conn.execute(
+        "SELECT * FROM submission"
+        " WHERE author='soham' AND label='pro-human' AND version='meandiff'"
+    ).fetchone()
+
+
 def _submission(conn, monkeypatch, blob: bytes):
-    """alice's submission, with whatever bytes we hand it standing in as the file.
+    """The author's submission, with whatever bytes we hand it standing in.
 
     **The recorded digest is cleared first, deliberately.** Every blob below is
-    crafted here rather than read off disk, so none of them is the file alice
-    published and all of them would be refused on the digest alone, which would
-    shadow the checks these cases are about. Clearing it puts each test in the
-    state it is actually describing: an artifact this registry points at and
+    crafted here rather than read off disk, so none of them is the file the
+    author published and all of them would be refused on the digest alone, which
+    would shadow the checks these cases are about. Clearing it puts each test in
+    the state it is actually describing: an artifact this registry points at and
     nobody hashed, where shape and dtype are the whole of the record and have to
     bite on their own. The digest itself is proven in
     `tests/test_artifact_digest_bite.py`.
     """
-    conn.execute("UPDATE intervention SET artifact_sha256 = NULL WHERE id='iv_alice'")
+    conn.execute(
+        "UPDATE intervention SET artifact_sha256 = NULL WHERE id=?", (ROW,)
+    )
     conn.commit()
     monkeypatch.setattr(fetch, "resolve", lambda **k: blob)
-    row = conn.execute(
-        "SELECT * FROM submission WHERE author='alice' AND label='kindness'"
-    ).fetchone()
-    return client._build(conn, row)
+    return client._build(conn, _row(conn))
 
 
 def test_the_recorded_artifact_loads(conn, monkeypatch):
-    """The check must not be so strict that the real fixture fails it.
+    """The check must not be so strict that the real artifact fails it.
 
-    The real fixture, with everything the record holds against it, including the
-    digest. This used to hand over a reconstructed `np.arange(8)`, which is not
-    the tensor alice published, and it passed because shape and dtype were the
-    only things compared. A positive control built from something other than the
-    artifact cannot tell you the artifact loads.
+    The vendored file, with everything the record holds against it, including
+    the digest. A positive control built from something other than the artifact
+    cannot tell you the artifact loads, which is what an earlier version of this
+    did: it handed over a reconstructed `np.arange`, and it passed because shape
+    and dtype were the only things compared.
     """
-    good = (ROOT / "fixtures" / "alice_kindness_v1.safetensors").read_bytes()
+    good = VENDORED.read_bytes()
     recorded = conn.execute(
-        "SELECT artifact_sha256 FROM intervention WHERE id='iv_alice'"
+        "SELECT artifact_sha256 FROM intervention WHERE id=?", (ROW,)
     ).fetchone()[0]
     assert hashlib.sha256(good).hexdigest() == recorded, (
-        "the committed fixture is not the file the database was seeded from"
+        "the committed artifact is not the file the database was seeded from"
     )
 
     monkeypatch.setattr(fetch, "resolve", lambda **k: good)
-    row = conn.execute(
-        "SELECT * FROM submission WHERE author='alice' AND label='kindness'"
-    ).fetchone()
-    assert client._build(conn, row).vector().shape == (8,)
+    assert client._build(conn, _row(conn)).vector().shape == (WIDTH,)
 
 
 def test_a_different_shape_is_refused(conn, monkeypatch):
     wrong = save({"direction": np.arange(16, dtype=np.float32)})
     sub = _submission(conn, monkeypatch, wrong)
-    with pytest.raises(client.MismatchedArtifact, match=r"\[8\].*\[16\]"):
+    with pytest.raises(client.MismatchedArtifact, match=rf"\[{WIDTH}\].*\[16\]"):
         sub.vector()
 
 
 def test_a_different_dtype_is_refused(conn, monkeypatch):
-    wrong = save({"direction": np.arange(8, dtype=np.float64)})
+    """Right shape, wrong dtype, so the dtype line is the one that has to fire.
+
+    Handing over a tensor that is wrong in two ways would let this pass on the
+    shape mismatch while the dtype check did nothing.
+    """
+    wrong = save({"direction": np.arange(WIDTH, dtype=np.float64)})
     sub = _submission(conn, monkeypatch, wrong)
     with pytest.raises(client.MismatchedArtifact, match="float32.*float64"):
         sub.vector()
@@ -108,8 +138,8 @@ def test_a_file_holding_several_tensors_is_refused(conn, monkeypatch):
     file happens to serialize in.
     """
     many = save({
-        "direction": np.arange(8, dtype=np.float32),
-        "other": np.arange(8, dtype=np.float32),
+        "direction": np.arange(WIDTH, dtype=np.float32),
+        "other": np.arange(WIDTH, dtype=np.float32),
     })
     sub = _submission(conn, monkeypatch, many)
     with pytest.raises(client.MismatchedArtifact, match="2 tensors"):
@@ -123,15 +153,12 @@ def test_the_tensor_name_does_not_have_to_match(conn, monkeypatch):
     shape and dtype are the contract, because those are what break an application
     silently; a name cannot.
     """
-    renamed = save({"whatever_they_called_it": np.arange(8, dtype=np.float32)})
-    assert _submission(conn, monkeypatch, renamed).vector().shape == (8,)
+    renamed = save({"whatever_they_called_it": np.arange(WIDTH, dtype=np.float32)})
+    assert _submission(conn, monkeypatch, renamed).vector().shape == (WIDTH,)
 
 
-def test_a_submission_with_nothing_recorded_says_so(conn, monkeypatch):
-    row = conn.execute(
-        "SELECT * FROM submission WHERE author='alice' AND label='kindness'"
-    ).fetchone()
-    sub = client._build(conn, row)
+def test_a_submission_with_nothing_recorded_says_so(conn):
+    sub = client._build(conn, _row(conn))
     object.__setattr__(sub, "_artifact_path", None)
     object.__setattr__(sub, "_artifact_repo", None)
     object.__setattr__(sub, "_served_repo", None)

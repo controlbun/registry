@@ -116,12 +116,12 @@ def namespace_view(conn: sqlite3.Connection, namespace: str) -> dict:
 def published_at(iv: sqlite3.Row | None) -> dict | None:
     """Where the author published these bytes, as something a reader can click.
 
-    **None is the ordinary answer and does not mean anything is wrong.** Nine of
-    the ten rows in this corpus record no repo: five are synthetic fixtures and
-    four are real directions whose author never published them anywhere with a
-    URL. Both are true statements about a row rather than gaps, and neither is
-    a lesser state than the tenth. Nothing here invents a URL for a row that
-    has none, and nothing orders on whether this came back None.
+    **None is the ordinary answer and does not mean anything is wrong.** Four of
+    the five rows in this corpus record no repo: they are real directions whose
+    author never published them anywhere with a URL. That is a true statement
+    about a row rather than a gap, and it is not a lesser state than the fifth.
+    Nothing here invents a URL for a row that has none, and nothing orders on
+    whether this came back None.
 
     The URL is built by `controlbun.fetch.row_url` and not here, and not in a
     template. That function owns the rule that turns host, repo, commit, path

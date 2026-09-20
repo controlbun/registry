@@ -445,15 +445,23 @@ on it would be waiting on nothing.
 
 Deliberately narrow:
 
-- **Build against hand-authored fixtures first.** Synthetic submissions, clearly
-  labeled as synthetic, exercising the shape: two claimants on one label who
-  disagree, one with a transfer result and one without, one with an attack against
-  it. That fixture set is enough to build and render every view in the product.
+- **Build against hand-authored fixtures first.** *Done, and then undone.*
+  Synthetic submissions clearly labeled as synthetic were enough to build and
+  render every view, and they came out again on 2026-09-19 because the site was
+  about to be public and a corpus that is half fabricated invites "is this real"
+  from exactly the readers it is for. The shapes they exercised, two claimants
+  on one label who disagree, one with a transfer result and one without, one
+  with an attack against it, moved to `tests/probe.py`, which the tests build
+  and the site never sees. See `DECISIONS.md`.
 - **Then seed with disagreement, not coverage.** The instinct is 5 to 10 different
   traits. Under the plurality premise the better seed is 3 or 4 *competing
   submissions for one label*, from different recipes, with the Comparison between
   them computed and rendered. One label done that way demonstrates the whole
-  product; ten labels done once each demonstrates a file bucket.
+  product; ten labels done once each demonstrates a file bucket. **This is still
+  the right shape and the corpus does not have it.** Five real submissions, one
+  author, so no label has more than one claimant and the premise is demonstrated
+  zero times. What the corpus needs is a second person, not a second label, and
+  not a fabricated stand-in for either.
 - **Model-agnostic from the start.** No reason to pick a model at the schema layer.
   Whatever the first real submissions run on is what v0 carries.
 - **Storage: build on the HF Hub as the backend.** Repos, LFS, versioning, auth

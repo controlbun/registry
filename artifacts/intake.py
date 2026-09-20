@@ -45,7 +45,7 @@ three being called.
 
 **`artifacts/intake.jsonl` is the durable record, and the reason is the reason
 `published.json` exists.** `make site` deletes `registry.db` and rebuilds it from
-`fixtures/build.py` and `artifacts/seed.py`, so a row written only into the
+`artifacts/seed.py`, so a row written only into the
 database is gone on the next build. The record is append-only and tracked; `insert`
 is the one function that turns an entry into rows, and both the live write and
 `replay` call it, so the two cannot come apart. Nothing in the `Makefile` calls

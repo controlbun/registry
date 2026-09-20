@@ -13,13 +13,13 @@ served, and the client sends no credentials at anything. `DECISIONS.md`
 
 ## What it holds
 
-Eight submissions. Three are real and are the author's own directions; five are
-fabricated fixtures that exist to exercise the interface and say so on every page
-that shows them.
+Five submissions, all real, all the author's own directions. The five fabricated
+fixtures that used to sit beside them were removed on 2026-09-19, because a
+public site whose corpus is half invented invites "is this real".
 
-Three labels: `kindness`, `refusal`, `pro-human`. Three kinds: `direction`,
-`sae-latent`, `probe`. Three model ids, two of which are placeholders that do not
-resolve to anything.
+Two labels, `pro-human` and `trauma`. One kind, `direction`. Two model ids, both
+of which resolve. **No label has more than one claimant**, so the plurality this
+registry is for is a mechanism here rather than something on display.
 
 *Check: `SELECT` against `registry.db` after `make site`.*
 

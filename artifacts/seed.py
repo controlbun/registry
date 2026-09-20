@@ -1,12 +1,15 @@
-"""Write the real submissions into the database `fixtures/build.py` created.
+"""Build the corpus: drop the database, migrate it, write the real submissions.
 
-Separate file, separate run, on purpose. `fixtures/build.py` says at the top that
-nothing it produces is a measurement, and that has to stay true of every line in
-it. Real rows in that file would make its docstring a lie the first time somebody
-skimmed it.
+**This drops `registry.db` and rebuilds it.** It used to add rows to a database
+`fixtures/build.py` had already created and filled with a fabricated corpus.
+That corpus is gone, per `DECISIONS.md` 2026-09-19, so this file is the first
+step rather than the second and owns the drop the way the fixture builder did.
 
-    .venv/bin/python fixtures/build.py       # synthetic corpus, drops the db
-    .venv/bin/python artifacts/seed.py       # real rows, added to it
+    .venv/bin/python artifacts/seed.py       # drops the db, writes the real rows
+    .venv/bin/python artifacts/intake.py replay   # rows that arrived through the form
+
+Nothing here is fabricated, which is now true of every row in the corpus rather
+than of five of ten.
 
 Every measurement below is cited to a file in steering-arena at the pinned commit.
 None is computed here and none is rounded: where a value has three decimals in the
@@ -385,10 +388,11 @@ def seed(conn) -> None:
             ),
         )
 
-    # A real pin, replacing nothing: the fixtures carry a synthetic one and this
-    # sits beside it. Season 2 of the arena froze this direction so player scores
-    # within the season stayed commensurable, which is the textbook case for
-    # pinning and the opposite of designation as long as it stays visible.
+    # The only pin in the corpus, and a real one. Season 2 of the arena froze
+    # this direction so player scores within the season stayed commensurable,
+    # which is the textbook case for pinning and the opposite of designation as
+    # long as it stays visible. It used to sit beside a fabricated pin that
+    # existed to put a second one on the page.
     ex(
         "INSERT INTO pin (id,pinned_by,pinned_at,purpose,author,model_id,label,"
         "version,alternatives_json,rationale) VALUES (?,?,?,?,?,?,?,?,?,?)",
@@ -461,15 +465,32 @@ def main() -> None:
     ap.add_argument("--db", default=str(ROOT / "registry.db"))
     args = ap.parse_args()
 
-    conn = db.connect(Path(args.db))
+    # Dropped rather than added to, because this is the first step of the build
+    # now and a second run against a live database collides on every primary
+    # key. `fixtures/build.py` held this line until 2026-09-19.
+    path = Path(args.db)
+    if path.exists():
+        path.unlink()
+
+    conn = db.connect(path)
     db.migrate(conn)
     seed(conn)
 
-    real = conn.execute(
-        "SELECT count(*) FROM submission WHERE is_synthetic = 0"
+    counts = {
+        t: conn.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
+        for t in ("submission", "intervention", "recipe", "eval_suite",
+                  "eval_report", "pin", "namespace_claim")
+    }
+    fabricated = conn.execute(
+        "SELECT count(*) FROM submission WHERE is_synthetic = 1"
     ).fetchone()[0]
     print(f"seeded {args.db}")
-    print(f"  real submissions {real}")
+    for t, n in counts.items():
+        print(f"  {t:16} {n}")
+    # Printed rather than assumed. The column stays in the schema because a
+    # submitter could send a synthetic submission and this is how it would be
+    # marked; what changed is that nothing in this build writes one.
+    print(f"  {'synthetic':16} {fabricated}")
 
 
 if __name__ == "__main__":
