@@ -76,10 +76,13 @@ const HF_CREATE = "https://huggingface.co/join";
       <p>
         <a href="/signed-in/">Sign in with Hugging Face</a>{" "}
         <span class="note">
-          That page sends you to Hugging Face and receives you back. It holds
-          the reading in the tab and nowhere else, so closing the tab ends it.
-          Signing in on its own writes no submission; that is a button further
-          down that page.
+          That page sends you to Hugging Face and receives you back. It keeps
+          the session in this browser so a visit tomorrow is not a second
+          sign-in, and Sign out in the bar above deletes it. What it never
+          keeps is the token that can write to your Hugging Face account: that
+          one is asked for again at the moment you agree to an upload, and is
+          gone when the upload is. Signing in on its own writes no submission;
+          that is a button further down that page.
         </span>
       </p>
     </li>
