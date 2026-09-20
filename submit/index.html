@@ -1,0 +1,546 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Submit a direction</title><meta name="description" content="A registry for activation-steering artifacts, in the spirit of GitHub or Hugging Face rather than a curated database."><link rel="canonical" href="https://controlbun.com/submit/"><meta property="og:type" content="website"><meta property="og:site_name" content="controlbun"><meta property="og:title" content="Submit a direction"><meta property="og:description" content="A registry for activation-steering artifacts, in the spirit of GitHub or Hugging Face rather than a curated database."><meta property="og:url" content="https://controlbun.com/submit/"><meta property="og:image" content="https://controlbun.com/icon-512.png"><meta name="twitter:card" content="summary"><script>
+  // Applied before paint, so a reader who picked a theme never sees a flash of
+  // the other one. Inline and unbundled on purpose: a deferred module would run
+  // after first paint, which is the flash this exists to prevent.
+  const saved = localStorage.getItem("theme");
+  if (saved) document.documentElement.dataset.theme = saved;
+
+  // The bar at the top ships both ways in, and which one is wrong depends on a
+  // fact no build can know. Decided here for the same reason the theme is:
+  // anything that runs after first paint shows the wrong one for a frame.
+  //
+  // One key, and what is in it is the session this registry's identity service
+  // issued to `/signed-in/` at the exchange, with the account id, the subject
+  // and the handle it was issued for. The handle is the only part read here.
+  //
+  // The service is not named in this comment on purpose. This script is inline,
+  // so it ships on every page, and `tests/test_signed_in_page.py` refuses the
+  // provider's name and its endpoint on every page but the one with business
+  // for them. A comment is not an endpoint and the guard cannot tell, which is
+  // the right way round: the cheap fix is here and the guard stays strict.
+  //
+  // **Add artifact is offered only when that record carries a refresh token**,
+  // because that is what makes it a way in rather than a name. This key
+  // replaced one that held a handle and nothing else, and the bar on top of it
+  // said Add artifact to somebody whose session had been gone since their last
+  // reload. Nothing on any page contributes to this, which is the other half of
+  // the point: a bar that read an author's name off the page it is sitting on
+  // would say a reader is somebody because they were looking at that person's
+  // submission.
+  try {
+    const held = JSON.parse(localStorage.getItem("controlbun.session") || "null");
+    const said = held && held.user && held.user.user_metadata;
+    if (held && held.refresh_token && said && said.preferred_username) {
+      document.documentElement.dataset.who = said.preferred_username;
+    }
+  } catch (unreadable) {
+    // A key this build cannot parse is one an older build wrote or one
+    // something else corrupted. Dropping it is the whole repair: what is lost
+    // is a session the reader can replace by signing in again.
+    localStorage.removeItem("controlbun.session");
+  }
+  // The key that held a handle and no session. An older build wrote it, and a
+  // browser that still carries one would otherwise keep it forever, since
+  // nothing reads it now. Removed rather than read: it is the thing this change
+  // was made to stop offering.
+  localStorage.removeItem("controlbun.who");
+</script><link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png"><link rel="stylesheet" href="/_astro/controlbun.7mbnRl8l.css"><style>.said[data-astro-cid-rhtoz4s5]{grid-template-columns:max-content 1fr;gap:.2rem 1rem;display:grid}.said[data-astro-cid-rhtoz4s5] dt[data-astro-cid-rhtoz4s5]{font-weight:600}.said[data-astro-cid-rhtoz4s5] dd[data-astro-cid-rhtoz4s5]{overflow-wrap:anywhere;margin:0}fieldset[data-astro-cid-rhtoz4s5]{border:1px solid var(--rule,#ddd);border-radius:.3rem;margin:1.2rem 0;padding:.6rem 1rem 1rem}legend[data-astro-cid-rhtoz4s5]{padding:0 .4rem;font-weight:600}.field[data-astro-cid-rhtoz4s5]{margin:.9rem 0}.field[data-astro-cid-rhtoz4s5] label[data-astro-cid-rhtoz4s5]{font-weight:600;display:block}.field[data-astro-cid-rhtoz4s5] input[data-astro-cid-rhtoz4s5],.field[data-astro-cid-rhtoz4s5] textarea[data-astro-cid-rhtoz4s5]{box-sizing:border-box;width:100%;font:inherit;padding:.35rem .5rem}.why[data-astro-cid-rhtoz4s5]{opacity:.75;margin:.25rem 0 0;font-size:.85em}pre[data-astro-cid-rhtoz4s5]{background:var(--tint,#f5f5f5);border-radius:.3rem;padding:.8rem;overflow-x:auto}#agent-prompt-text[data-astro-cid-rhtoz4s5]{white-space:pre-wrap;max-height:24rem;font-size:.85em;overflow-y:auto}details[data-astro-cid-rhtoz4s5]{margin:1.2rem 0}summary[data-astro-cid-rhtoz4s5]{cursor:pointer;font-weight:600}#handoff[data-astro-cid-rhtoz4s5]{border:1px solid var(--rule,#ddd);border-radius:.3rem;margin:1.6rem 0;padding:.2rem 1rem 1rem}
+</style></head><body><header class="sitenav"><a class="brand" href="/"><img class="mark light-only" src="/mark-light.png" alt="" width="28" height="28"><img class="mark dark-only" src="/mark-dark.png" alt="" width="28" height="28"><span class="wordmark">controlbun</span></a><nav aria-label="Sections"><a href="/models/">Models</a><a href="/owners/">Owners</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav><button class="themetoggle" type="button" id="theme">Dark theme</button><div class="account whenout"><a href="/sign-in/">Sign in</a></div><div class="account whenin"><span class="handle" id="nav-handle"></span><a href="/submit/">Add artifact</a><button type="button" id="signout">Sign out</button></div></header><p class="navsaid" id="nav-said" hidden data-pagefind-ignore>Signed out. That deleted the session and the handle from this browser, so nothing here can act as you. It told nobody: the session is not revoked at the identity service and expires there on its own, and your Hugging Face session is untouched.</p><script>
+  // Inline and unbundled, same reason as the script in the head: no waiting on a
+  // module graph for three lines of work.
+  (function () {
+    const button = document.querySelector("#theme");
+    const root = document.documentElement;
+    if (!button) return;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    const isDark = () =>
+      (root.dataset.theme || (prefersDark ? "dark" : "light")) === "dark";
+
+    // Names the theme you would switch to, not the one you are in. This is the
+    // behavior the home page already had and it is the right one for a bare text
+    // button: "Light theme" while the page is light reads as a label rather than
+    // as something to press.
+    const label = () => {
+      button.textContent = isDark() ? "Light theme" : "Dark theme";
+    };
+    label();
+
+    button.addEventListener("click", () => {
+      const next = isDark() ? "light" : "dark";
+      root.dataset.theme = next;
+      localStorage.setItem("theme", next);
+      label();
+    });
+  }());
+
+  // The handle, and the way to end the session it belongs to. Same shape as the
+  // toggle above: a few lines of work, inline and unbundled, so nothing waits
+  // on a module graph.
+  (function () {
+    // One key, and the only thing this file reads. It holds the session this
+    // registry's identity service issued to `/signed-in/` at the exchange, plus
+    // the account id, the subject and the handle it was issued for. What is
+    // deliberately not in it is the provider token, the one that could write
+    // repositories in somebody's own namespace, and `handshake.mjs` is where
+    // that is a property of a function rather than of this comment.
+    //
+    // Neither service is named in this script, for the reason the head script
+    // gives: this is inline, it ships on every page, and the guard that keeps
+    // an identity endpoint to one page cannot tell a comment from a call.
+    const HELD = "controlbun.session";
+    const root = document.documentElement;
+    const handle = document.querySelector("#nav-handle");
+    const out = document.querySelector("#signout");
+    const said = document.querySelector("#nav-said");
+
+    // A handle only counts when the record it sits in can still be renewed.
+    // Without a refresh token there is a name and no way in, which is the state
+    // this key replaced.
+    const handleIn = (held) => {
+      const fields = held && held.refresh_token && held.user
+        && held.user.user_metadata;
+      return (fields && fields.preferred_username) || null;
+    };
+
+    // The head script has already set the attribute, which is what CSS reads
+    // and what keeps the bar from flashing the wrong affordance. This fills in
+    // the one thing an attribute cannot: the text.
+    const show = () => {
+      const who = root.dataset.who;
+      if (handle) handle.textContent = who ? "@" + who : "";
+    };
+    show();
+
+    if (out) {
+      out.addEventListener("click", () => {
+        // Deleting the key is the whole of signing out here, and it is a
+        // smaller whole than it sounds now that the key holds a session. What
+        // it does: the access token and the refresh token are gone from this
+        // browser, so nothing on this origin can act as anybody. What it does
+        // not: it sends no request, so the session is not revoked at the
+        // identity service and lapses there on its own, and the account at
+        // Hugging Face is that provider's and untouched. The receipt says both.
+        //
+        // No request on purpose, and it is a trade rather than an oversight.
+        // Revoking would mean this bar, which is on every page, carrying the
+        // identity endpoint and the publishable key on every page, and
+        // `tests/test_signed_in_page.py` holds that endpoint to the one page
+        // with business for it. The cost is named in `DECISIONS.md` 2026-09-20.
+        localStorage.removeItem(HELD);
+        delete root.dataset.who;
+        show();
+        if (said) said.hidden = false;
+      });
+    }
+
+    // Three ways the key changes under a page that is already open:
+    // `/signed-in/` finishing an exchange in this tab, the same page renewing
+    // or dropping a session it restored, and another tab doing either. None is
+    // common and all of them look like a bug when the bar disagrees with what
+    // the reader just did.
+    const again = () => {
+      let held = null;
+      try {
+        held = JSON.parse(localStorage.getItem(HELD) || "null");
+      } catch (unreadable) {
+        held = null;
+      }
+      const who = handleIn(held);
+      if (who) root.dataset.who = who;
+      else delete root.dataset.who;
+      show();
+    };
+    window.addEventListener("storage", again);
+    window.addEventListener("controlbun:session", again);
+  }());
+</script><main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">controlbun</a></nav><h1 data-astro-cid-rhtoz4s5>Submit a direction</h1><div id="handshake" data-supabase-url="https://wjfymqtnyeedsztfybmi.supabase.co" data-supabase-key="sb_publishable_1mtjRTOcBZ6Ibrr2SeYc8A_bYa1qfNs" data-provider="custom:huggingface" data-astro-cid-rhtoz4s5></div><p class="lede" data-astro-cid-rhtoz4s5>A submission is one author's complete take on one label against one model, frozen at <code data-astro-cid-rhtoz4s5>author/model/label@version</code> forever. Yours does not replace anybody's and nobody's replaces yours. There are two ways to fill this in and neither is the better one: type it, or hand a prompt to the coding agent that already has your extraction scripts open.</p><p id="working" hidden class="note" data-astro-cid-rhtoz4s5>Reading the session this browser kept.</p><p id="failed" hidden class="banner" data-astro-cid-rhtoz4s5></p><p id="nosession" hidden class="banner" data-astro-cid-rhtoz4s5><strong data-astro-cid-rhtoz4s5>There is no session in this browser.</strong> A submission is sent as somebody, because the database stamps the namespace from the session rather than taking it from a field. <a href="/signed-in/" data-astro-cid-rhtoz4s5>Sign in with Hugging Face</a>, which comes back and sends you here, or read <a href="/sign-in/" data-astro-cid-rhtoz4s5>what signing in is for</a> first. Reading this site needs none of it.</p><p id="remembered" hidden class="banner" data-astro-cid-rhtoz4s5></p><p id="stale" hidden class="banner" data-astro-cid-rhtoz4s5></p><section id="submit-section" hidden data-astro-cid-rhtoz4s5><p class="banner" data-astro-cid-rhtoz4s5><strong data-astro-cid-rhtoz4s5>A submission does not appear on this site until the author rebuilds and publishes it.</strong> The corpus is a file in git and the site is built from it on one machine, which is what lets the falsifier check the thing readers actually read. Pressing send puts what you wrote in a holding table, where it waits to be read. That is not a queue and there is nothing to approve: your namespace is the handle Hugging Face reported, so there is no question for anybody to answer about it.</p><p data-astro-cid-rhtoz4s5>Your namespace is <strong id="namespace-shown" data-astro-cid-rhtoz4s5></strong>, which is the handle Hugging Face reported when you signed in. There is no field for it and no default to type over. What that makes impossible: publishing under a pseudonym, under a lab name you hold no account for, or into one namespace shared by several people who each sign in as themselves.</p><p class="note" data-astro-cid-rhtoz4s5>A submission is a pointer to bytes a stranger can fetch. If your repository is private, the section further down will publish the one file to your own account, with your permission, and then fill in the pin.</p><section id="handoff" data-astro-cid-rhtoz4s5><h2 data-astro-cid-rhtoz4s5>Hand it to your coding agent</h2><p data-astro-cid-rhtoz4s5>An agent sitting in the checkout where the extraction happened can read most of this off your own scripts, which is where the answers are. Copy the prompt, run it there, and paste back what it produces. The prompt tells it what each field is for and tells it, in the strongest terms the text can manage, never to write a value it did not read.</p><p class="banner" data-astro-cid-rhtoz4s5><strong data-astro-cid-rhtoz4s5>A paste is not checked until the author pulls it in.</strong>Nothing in this browser reads what you paste. The parser is one piece of Python and it runs on the author's machine when the row is read in, so a paste that is missing a field or carries a placeholder comes back to you then, by mail, rather than the moment you paste it. The fields below are the other way round: a mistake in one of those surfaces as you type. The reason there is only one parser is that two of them drift, and a paste that parsed in a browser and refused on the author's machine is worse than waiting.</p><p data-astro-cid-rhtoz4s5><button type="button" id="copy-prompt" class="go" data-astro-cid-rhtoz4s5>Copy the prompt</button> <span class="note" id="copy-said" data-astro-cid-rhtoz4s5></span></p><details id="prompt-shown" data-astro-cid-rhtoz4s5><summary data-astro-cid-rhtoz4s5>Read the prompt first</summary><p class="note" data-astro-cid-rhtoz4s5>This is the whole of what gets copied. It is generated from the same field list the parser reads, so what it asks for and what the parser takes cannot come apart.</p><pre id="agent-prompt-text" data-pagefind-ignore data-astro-cid-rhtoz4s5>You are helping the person you work for prepare one submission to controlbun, a
+registry of activation-steering artifacts. Read their files and answer about
+their artifact. Do not answer from memory of how registries like this usually
+work, and do not answer from what a field&#39;s name suggests it should hold.
+
+Answer by going and looking: the extraction script, its config and its logs, the
+notebook, the model card of the model the activations were read from, the commit
+history, and the artifact file itself. Where you looked is worth more than what
+you produce, so say where each answer came from if the person asks.
+
+## The rule that outranks every other instruction here
+
+**Never write a value you did not read.** Not a hash, not a revision, not a
+layer index, not a license. This registry exists so that somebody can pick up a
+stranger&#39;s steering vector and apply it correctly, and every number in it is
+load bearing in a way that fails silently: a vector applied at the wrong layer
+or under the wrong chat template does not error, it appears not to work. A
+plausible value you produced is indistinguishable from one the author measured,
+and it destroys the only thing this registry is for.
+
+If you cannot find something, say so in the block at the bottom with the
+`not-found:` line, which takes the field name and the reason. Absence is a real
+state in this schema. Nullable columns exist for exactly this and a row with a
+missing revision renders as &quot;not recorded&quot; rather than as a gap or an error.
+The real artifacts in this registry today record no revision, no chat template
+hash and no activation norm, and each absence is documented as what was never
+captured rather than filled with something that reads like a measurement.
+
+An empty field is a fact. A guessed field is a forgery.
+
+## Nothing here is chosen from a list
+
+Every field below is an open string. There is no set of permitted kinds, hook
+points, layer conventions, steering positions, methods or file formats, and
+there is no page that lists them. Where this text says a value is common, it
+means other people have used it, and nothing whatsoever follows from that.
+
+If the thing your author built does not fit a word anybody has used before, use
+their word. An artifact nobody has a name for is a submission this registry
+wants, not a problem to work around. The same goes for the file: the intake tool
+refuses bytes it cannot read without executing them, and says so in those terms,
+rather than refusing a format for not being on a list.
+
+## What the registry needs, and why each one
+
+Two objects get written from your answers. A **submission**, which is one
+author&#39;s complete take on a label against one model, frozen forever at
+`author/model_id/label@version`. An **intervention**, which is the artifact
+itself plus everything needed to apply it.
+
+The model is part of the reference because a direction is a tensor in one
+model&#39;s residual basis and does nothing for another one. So
+
+    soham/allenai/Olmo-3-1125-32B/pro-human@meandiff
+
+is one submission, and the same author&#39;s take on the same word against another
+model is a different submission with its own reference. Neither supersedes the
+other and neither is the real one.
+
+**author** Your author&#39;s own namespace. Free to claim and never assigned.
+
+**label** The trait or behavior, as your author names it. Free to claim, and
+other people claim the same one: `author/label` is theirs, and the bare label is
+a view across everybody who claims it, owned by nobody. The registry holds
+competing takes on the same word deliberately and resolves none of them.
+
+**definition** Your author&#39;s own theory of the label, in their own words. This
+is the field that matters most and the one you are least able to produce
+yourself. It is load bearing twice: it feeds contrast-pair generation, and it is
+the thing another author disagrees with when they claim the same label.
+
+Do not write the correct definition of the word. There is not one. Ten people
+meaning different things by &quot;kindness&quot; is the content of this registry, not a
+collision to be tidied up: one author&#39;s kindness is warmth in affect and
+another&#39;s is costly help and explicitly not warmth, and both submissions stand.
+So write what your author thinks the trait is, including the part that makes
+their take unlike anybody else&#39;s, and including what they think it is not. If
+you have their words for it, in a paper, a README, a docstring or the contrast
+prompts themselves, use theirs. If you do not, ask them rather than composing
+one.
+
+**version** Whatever distinguishes this take from the author&#39;s other takes on
+the same label against the same model. `author/model_id/label@version` resolves
+to one frozen submission forever, so it is never reused and never edited: a
+correction is a new version. Versions in this registry today name what changed,
+like the estimator that produced the direction or the layer it was read from,
+rather than counting.
+
+A take on a different model is not a version. It is another submission, and the
+model in the reference is what keeps the two apart.
+
+**created_at** When the work happened, which is not when it is typed into the
+form. ISO 8601, UTC. The run log, the file&#39;s own timestamp or the commit date,
+not today&#39;s date.
+
+**intervention_id** The primary key of the artifact row, and the thing an eval
+report or an attack points at later. Unique across the whole registry, stable
+forever, and your author&#39;s to choose.
+
+**kind** What this artifact is. `direction`, `sae-latent`, `probe`, `reft` and
+`lora` are values the schema&#39;s own comment calls common rather than permitted,
+and an unrecognized kind is storable and displayable and simply has no apply
+path in the client until somebody writes one.
+
+**model_id** The model the activations were read out of, and part of what the
+submission is rather than a property of it. A direction has no meaning apart
+from it. Base and instruct are different models, so give the exact repo id the
+extraction loaded, not the family name.
+
+Give the whole string the way the distributor writes it, distributor included:
+`allenai/Olmo-3-1125-32B`, `Qwen/Qwen3-8B`. A model with no distributor is one
+segment and that is fine, `gpt2` and `bert-base-uncased` among them; nothing here
+requires a slash and nothing checks the shape of what you write.
+
+**model_revision** The exact revision of those weights, if the extraction
+recorded it. A commit on the model repo. If nobody wrote it down, `not-found:`
+it and say so. Do not paste the sha the model repo has today: that is a false
+provenance claim that reads exactly like a true one, and it is worse than the
+hole it fills.
+
+**layer** An integer. Which layer the activations came from.
+
+**layer_convention** How to read that integer, stated separately because getting
+it wrong is silent. `block-0indexed` is a value this corpus already holds. Read
+it off the hook name or the indexing in the extraction code rather than assuming
+the usual one, and if the code counts from one, or counts sublayers, or indexes
+something other than transformer blocks, write down what it counts.
+
+**hook_point** Where in the block the activations were read, and where the
+artifact acts. `resid_pre`, `resid_post`, `mlp_out` and `attn_out` are common.
+Architectures have hook points those four do not name, and where your author&#39;s
+is not among them, name it their way.
+
+**chat_template_hash** The template the activations were read under, identified
+by a digest, because a vector extracted under one template may not transfer to
+another. Take the value your author&#39;s code computed. Nothing here fixes what
+hash function or what exact string, so pass through what their pipeline
+records, and if you compute one yourself, tell them in your reply what you
+hashed and with what, so they can decide whether that is the thing to record.
+If no template was applied, because activations were read from raw text against
+a base checkpoint, that is the common case for a base-model extraction:
+`not-found:` it with that sentence. Never produce a hex string for this field.
+
+**shape**, **dtype**, **l2_norm**, **sha256** Optional, and checked. The intake
+tool reads all four out of the bytes for itself. If you state one, the bytes are
+held to it and the row keeps what you said, which is worth more than a number
+derived from the bytes it is being compared against: state them when they are
+cited from your author&#39;s own record, the paper, or the extraction output. State
+nothing and the row records what the file says. Saying nothing is not a wrong
+claim, and for a first submission it is usually the better answer.
+
+`shape` is compared as the numbers in it, so `[8192]` and `(8192,)` are the
+same answer and neither is wrong.
+
+**`sha256` is the one to leave out unless you know it survives.** It is the
+digest of the whole file, header included, and the intake tool rewrites the
+header with its keys sorted before it records anything, because safetensors
+seeds its header order per process and a file that does not reproduce byte for
+byte makes every digest in this registry meaningless. So the digest the row
+ends up with is of the file the tool wrote, and the digest your author recorded
+for the file they exported will not match it unless their export was already
+sorted. That is a difference in byte order, not in the tensor, and stating a
+digest is the one way to turn it into a refusal.
+
+**activation_norm** The typical residual norm at that layer, and only if the
+author&#39;s coefficients are expressed as a fraction of activation magnitude. If
+they scaled a raw alpha against a unit vector, leave it absent even when the
+number is measured somewhere, because putting it here asserts something about
+what the coefficients mean.
+
+**coeff_low**, **coeff_high** The coefficient range the author actually swept or
+recommends. Absent if they did not sweep one.
+
+**steering_position** Where the intervention is applied during generation, in
+the author&#39;s words.
+
+**license_status** Whether a source model&#39;s license reaches a direction read out
+of it is open. This registry&#39;s own author takes the position that a direction is
+the work of whoever built it, and records the case against that position beside
+it; you are not bound by either. Read the source model&#39;s license and say what you
+read, where you read it and when. If something is unresolved, say that:
+unresolved rights mean the artifact can be pointed at but not served, which is a
+fact the registry records rather than a reason to refuse it.
+
+## Where the artifact is, and the pin
+
+**artifact_path** Where the file sits inside the published repo, and nowhere
+else. Relative, no leading slash.
+
+**This is not where the file is on your author&#39;s machine.** That is the mistake
+this field actually gets, and it gets it from people who found the file, which
+is to say from you. A scratch path, a cluster mount, a home directory or
+anything starting with `/` is refused, and refused rather than cleaned up,
+because the registry hands this exact string to the host when somebody later
+downloads the vector. A local path stored here describes a folder that exists
+on one machine, so every fetch after today looks for it and gets a 404.
+
+If the artifact is already published, give the path it has in that repo,
+character for character. If it is not published yet, this field is a decision
+rather than a lookup: choose where it will sit once it is uploaded, and say so.
+`vectors/&lt;name&gt;.safetensors` is a reasonable shape and nothing requires it.
+
+So: read where the file is now to find and verify the bytes, then answer with
+where it goes. Those are two different strings and only the second one belongs
+here.
+
+**artifact_repo** The repo the author published it in, as `owner/name`. Their
+own account, never the registry&#39;s. Any host; most steering artifacts are in
+GitHub repos and that is not a lesser answer than a Hub one.
+
+**artifact_commit** Forty hex characters. A commit, never a branch and never a
+tag: whoever owns a repo can move a tag, so pinning to one pins to whatever is
+there today, which is the opposite of what `author/model_id/label@version`
+promises. If
+you only have a branch, resolve it to the commit it points at right now and give
+that. If the artifact is not published anywhere yet, `not-found:` the repo and
+the commit and give the path anyway; the intake tool publishes the file to the
+author&#39;s own namespace and records the commit it made.
+
+**artifact_host** Which host that repo is on, as a bare authority:
+`huggingface.co`, `github.com`, anything. Droppable, and dropping it means the
+Hub.
+
+**artifact_url_template** How `{host}`, `{repo}`, `{commit}` and `{path}` become
+a URL that returns the file&#39;s bytes. Droppable, and dropping it means the Hub&#39;s
+layout.
+
+**The commit has to end up in the URL, and that is the only shape rule.** A
+template that resolves to a URL not containing the commit is refused, because
+such a URL returns whatever is at that address today, and a pin to whatever is
+there today is the thing `author/model_id/label@version` promises not to be. You can
+leave out any of the other three: hard-coding the host in the template is
+normal, and the GitHub media layout below does exactly that. Two further
+mechanical rules, so they do not surprise you: the scheme has to be http or
+https, and each placeholder has to be a bare `{name}` with no format spec and
+no attribute access.
+
+Do not guess the rest of it: fetch the URL you are about to give and check that
+what comes back is the artifact rather than a redirect page or a git-LFS pointer
+file, and say that you checked. GitHub needs two different layouts depending on
+whether the file is LFS-tracked. For one repo, one commit and one path, the
+media host returns the object and `raw` returns a small text pointer beginning
+`version http`, and neither is an error, so only fetching tells you which layout
+your author&#39;s file needs.
+
+The file itself goes in as safetensors, holding exactly one tensor. A file
+holding several is refused, because nothing can tell which one is the artifact.
+The tool converts what it can read without running it and refuses a pickle in
+those words.
+
+## What other people have typed into these fields
+
+Read out of this registry&#39;s own corpus at the moment the prompt was copied. Not
+a menu, not a set to pick from, and not an indication that a value outside it is
+wrong. It is here so that where your author&#39;s answer coincides with somebody
+else&#39;s, it is spelled the same way, and where it does not, it stays theirs.
+
+artifact_host: huggingface.co, github.com
+artifact_url_template: https://{host}/{repo}/resolve/{commit}/{path}, https://media.githubusercontent.com/media/{repo}/{commit}/{path}, https://raw.githubusercontent.com/{repo}/{commit}/{path}
+author: soham
+hook_point: resid_post
+kind: direction
+label: pro-human, trauma
+layer_convention: block-0indexed
+license_status: Redistribution of a derived artifact is permitted with attribution, under the Llama 3.3 Community License Agreement (release date December 6, 2024), which grants rights to &quot;use, reproduce, distribute, copy, create derivative works of, and make modifications to the Llama Materials&quot; and requires the notice &quot;Llama 3.3 is licensed under the Llama 3.3 Community License, Copyright (c) Meta Platforms, Inc. All Rights Reserved.&quot; plus prominent display of &quot;Built with Llama&quot;. The 700-million-monthly-active-users clause does not bind this academic use. UNRESOLVED: the clause requiring &quot;Llama&quot; at the beginning of a derivative AI model&#39;s name is scoped to a model created by training, fine-tuning or improving the materials, and whether a read-out direction vector falls under it is not settled by the text. Read at https://developer.meta.com/ai/llama3_3/license/ on 2026-09-18, because the model repo&#39;s own LICENSE returned HTTP 401 (gated) and the local snapshot on /scratch had been purged of files., allenai/Olmo-3-1125-32B is apache-2.0, confirmed from the Hub model API on 2026-09-14. Whether a direction read out of a model is a derivative work of it is unsettled and nobody has litigated it. This author&#39;s position, recorded 2026-09-19, is that a direction is his own work built against a model rather than a piece of one. For this model it is moot either way: Apache-2.0 permits redistribution with attribution on either reading. Replaces a reading recorded 2026-09-14 that stated the derivative premise as settled; the frozen header on each artifact still carries that older sentence.
+model_id: allenai/Olmo-3-1125-32B, meta-llama/Llama-3.3-70B-Instruct
+steering_position: all-positions, prefill pass only, applied once to every prompt position, NOT re-applied at each generated token
+
+## How to answer
+
+Write whatever you want to your author first. Then put the block below at the
+end of your reply, and put nothing after it. The parser finds it inside
+surrounding prose and ignores everything else, so explanation costs nothing.
+
+One field per line, `field: value`. For anything with a newline or a colon in
+it, and that means the definition, open with `&lt;&lt;&lt;` and close with `&gt;&gt;&gt;` on their
+own lines. For anything you could not find, one `not-found:` line naming the
+field and the reason. Leave nothing empty and leave no placeholder in: the
+parser refuses both rather than guessing which you meant.
+
+=== BEGIN CONTROLBUN SUBMISSION ===
+author: &lt;namespace&gt;
+label: &lt;the trait, as your author names it&gt;
+version: &lt;what distinguishes this take&gt;
+created_at: &lt;ISO 8601 UTC, when the work ran&gt;
+definition: &lt;&lt;&lt;
+&lt;your author&#39;s own theory of the label, in their words,
+over as many lines as it takes&gt;
+&gt;&gt;&gt;
+intervention_id: &lt;unique, stable, the author&#39;s to choose&gt;
+kind: &lt;what this artifact is&gt;
+model_id: &lt;the repo id the activations were read from&gt;
+model_revision: &lt;the revision of those weights&gt;
+layer: &lt;the integer&gt;
+layer_convention: &lt;how to read that integer&gt;
+hook_point: &lt;where in the block&gt;
+chat_template_hash: &lt;the digest your author&#39;s code recorded&gt;
+shape: &lt;only if cited from the author&#39;s record&gt;
+dtype: &lt;only if cited from the author&#39;s record&gt;
+l2_norm: &lt;only if cited from the author&#39;s record&gt;
+sha256: &lt;only if cited from the author&#39;s record&gt;
+activation_norm: &lt;only if coefficients are fractions of it&gt;
+coeff_low: &lt;the swept range, low end&gt;
+coeff_high: &lt;the swept range, high end&gt;
+steering_position: &lt;where it is applied during generation&gt;
+license_status: &lt;what the model license permits, where you read it, when&gt;
+artifact_path: &lt;where it sits in the published repo, relative, not a local path&gt;
+artifact_repo: &lt;owner/name&gt;
+artifact_commit: &lt;forty hex characters&gt;
+artifact_host: &lt;the host that repo is on; drop the line for the Hub&gt;
+artifact_url_template: &lt;how host, repo, commit and path become a URL&gt;
+not-found: &lt;field name&gt; &lt;why there is no value, in a sentence&gt;
+=== END CONTROLBUN SUBMISSION ===
+
+Every line is droppable except the ones the schema cannot write a row without:
+author, label, version, created_at, definition, intervention_id, kind, model_id,
+layer, layer_convention, hook_point and artifact_path. For those, a `not-found:`
+is refused too, because there is no row to write without them. That is a shape
+the database has, not a judgment about the artifact.
+</pre></details><div class="field" data-astro-cid-rhtoz4s5><label for="f-pasted" data-astro-cid-rhtoz4s5>what your agent produced</label><textarea id="f-pasted" rows="8" spellcheck="false" data-astro-cid-rhtoz4s5></textarea><p class="why" data-astro-cid-rhtoz4s5>Paste the whole reply, including anything it wrote to you around the block. The parser finds the block inside surrounding prose and reads past the rest, so explanation costs nothing.</p></div><p class="note" data-astro-cid-rhtoz4s5>Pasting and filling the fields in at once is refused, and neither is preferred. Those are two accounts of one submission and nothing here can tell which was meant, which is the same reason a field cannot carry both a value and a reason for having none.</p></section><h2 data-astro-cid-rhtoz4s5>Or fill it in yourself</h2><p class="note" data-astro-cid-rhtoz4s5>Every field is an open string. Nothing here is checked against a list of permitted values, and a value nobody has used before is the ordinary way this corpus grows.</p><div id="fields" data-astro-cid-rhtoz4s5><fieldset data-astro-cid-rhtoz4s5><legend data-astro-cid-rhtoz4s5>The submission</legend><div class="field" data-astro-cid-rhtoz4s5><label for="f-label" data-astro-cid-rhtoz4s5>label</label><input id="f-label" name="label" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>The thing other people will disagree with you about. A bare label is a view across everyone claiming it, owned by nobody.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-version" data-astro-cid-rhtoz4s5>version</label><input id="f-version" name="version" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>author/model/label@version resolves to one frozen submission forever, so there has to be a version to freeze.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-created_at" data-astro-cid-rhtoz4s5>created at</label><input id="f-created_at" name="created_at" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>When the work happened, which is not when it was typed in here.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-definition" data-astro-cid-rhtoz4s5>your definition</label><textarea id="f-definition" name="definition" rows="3" data-astro-cid-rhtoz4s5></textarea><p class="why" data-astro-cid-rhtoz4s5>Load bearing twice: it feeds contrast-pair generation and it is the thing another author disagrees with.</p></div></fieldset><fieldset data-astro-cid-rhtoz4s5><legend data-astro-cid-rhtoz4s5>The intervention</legend><div class="field" data-astro-cid-rhtoz4s5><label for="f-intervention_id" data-astro-cid-rhtoz4s5>intervention id</label><input id="f-intervention_id" name="intervention_id" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>The primary key, and the thing an eval report or an attack points at.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-kind" data-astro-cid-rhtoz4s5>kind</label><input id="f-kind" name="kind" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>An open string. Whatever you call this. Nothing checks it against a list.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-model_id" data-astro-cid-rhtoz4s5>model id</label><input id="f-model_id" name="model_id" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>A direction has no meaning apart from the model it was read out of, which is why the model is part of the identity.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-model_revision" data-astro-cid-rhtoz4s5>model revision</label><input id="f-model_revision" name="model_revision" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>Optional. Absent renders as absent rather than as an error.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-layer" data-astro-cid-rhtoz4s5>layer</label><input id="f-layer" name="layer" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>A whole number. A band across several layers cannot be stated in this column at all, which is a recorded gap.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-layer_convention" data-astro-cid-rhtoz4s5>layer convention</label><input id="f-layer_convention" name="layer_convention" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>Getting this wrong is silent. block-0indexed is a common value and not the only one.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-hook_point" data-astro-cid-rhtoz4s5>hook point</label><input id="f-hook_point" name="hook_point" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>An open string. Where in the block this acts.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-chat_template_hash" data-astro-cid-rhtoz4s5>chat template hash</label><input id="f-chat_template_hash" name="chat_template_hash" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>Optional.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-activation_norm" data-astro-cid-rhtoz4s5>activation norm</label><input id="f-activation_norm" name="activation_norm" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>Optional. A number, or nothing.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-coeff_low" data-astro-cid-rhtoz4s5>coefficient, low</label><input id="f-coeff_low" name="coeff_low" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>Optional.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-coeff_high" data-astro-cid-rhtoz4s5>coefficient, high</label><input id="f-coeff_high" name="coeff_high" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>Optional.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-steering_position" data-astro-cid-rhtoz4s5>steering position</label><input id="f-steering_position" name="steering_position" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>Optional.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-license_status" data-astro-cid-rhtoz4s5>license status</label><textarea id="f-license_status" name="license_status" rows="3" data-astro-cid-rhtoz4s5></textarea><p class="why" data-astro-cid-rhtoz4s5>What the source model&#39;s license says about an artifact derived from it, with the URL and the date you read it. Yours to assert, not ours to decide.</p></div></fieldset><fieldset data-astro-cid-rhtoz4s5><legend data-astro-cid-rhtoz4s5>The artifact, which is a link</legend><div class="field" data-astro-cid-rhtoz4s5><label for="f-repo" data-astro-cid-rhtoz4s5>repository</label><input id="f-repo" name="repo" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>owner/name. The bytes stay yours and this records where they are.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-commit" data-astro-cid-rhtoz4s5>commit</label><input id="f-commit" name="commit" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>Forty hex characters. A branch or a tag is movable by whoever owns the repository, so neither can be pinned.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-path" data-astro-cid-rhtoz4s5>path in the repository</label><input id="f-path" name="path" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>The same string the client will fetch by.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-host" data-astro-cid-rhtoz4s5>host</label><input id="f-host" name="host" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>Optional. Empty means the Hub, which is where a row recording no host has always resolved.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-url_template" data-astro-cid-rhtoz4s5>url template</label><input id="f-url_template" name="url_template" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>Optional, and how the four fields above become a URL on a host this project has never met.</p></div></fieldset></div><details id="offer" data-astro-cid-rhtoz4s5><summary data-astro-cid-rhtoz4s5>The file is not at a public URL yet</summary><p data-astro-cid-rhtoz4s5>This registry can put one file in <strong id="offer-namespace" data-astro-cid-rhtoz4s5></strong>, your own account, in a new public repository, and then fill in the repository, the commit and the path above. The bytes go to your account and never to this project's, which is a different column in the schema and a different question.</p><p data-astro-cid-rhtoz4s5>Hugging Face will ask you for one more permission at that point and not before: creating repositories for this app, which cannot reach any other repository you own. It asks every time, including on a visit where this browser already had your session, because the token that permission returns is the one credential here that is never stored, logged or written anywhere. It lives in one variable for the length of the upload.</p><p class="note" data-astro-cid-rhtoz4s5>Taking this offer fills three fields in, so it is part of filling the fields in rather than something to do beside a paste. An agent that knows where the file will be published answers those three itself.</p><div class="field" data-astro-cid-rhtoz4s5><label for="f-upload-name" data-astro-cid-rhtoz4s5>repository to create</label><input id="f-upload-name" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>A new one, under your namespace. An existing one stops the offer rather than being written into.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-upload-path" data-astro-cid-rhtoz4s5>path inside it</label><input id="f-upload-path" type="text" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>The same string the client will fetch by, so it is also the path recorded on the row.</p></div><div class="field" data-astro-cid-rhtoz4s5><label for="f-upload-file" data-astro-cid-rhtoz4s5>the file</label><input id="f-upload-file" type="file" data-astro-cid-rhtoz4s5><p class="why" data-astro-cid-rhtoz4s5>It is read in this tab and sent to Hugging Face. It does not reach this site, which has nowhere to receive it.</p></div><p data-astro-cid-rhtoz4s5><button type="button" id="do-upload" data-astro-cid-rhtoz4s5>Ask permission and publish it to my account</button></p><p id="upload-said" class="note" data-astro-cid-rhtoz4s5></p></details><details id="absences" data-astro-cid-rhtoz4s5><summary data-astro-cid-rhtoz4s5>Something is absent and you want to say why</summary><p class="note" data-astro-cid-rhtoz4s5>An absence is a positive statement with a reason, never an omission and never an error. One line per field, as <code data-astro-cid-rhtoz4s5>field: your sentence</code>. The field name is any string; it is not checked against a list. An agent writes these itself, on the <code data-astro-cid-rhtoz4s5>not-found:</code> lines the prompt asks for, so this box belongs to the fields above.</p><div class="field" data-astro-cid-rhtoz4s5><label for="f-absent" data-astro-cid-rhtoz4s5>absences</label><textarea id="f-absent" rows="3" data-astro-cid-rhtoz4s5></textarea><p class="why" data-astro-cid-rhtoz4s5>A field cannot carry both a value above and a reason for having none. That is two claims about one field, and the author's rebuild refuses it rather than picking one.</p></div></details><p data-astro-cid-rhtoz4s5><button type="button" id="build-record" class="go" data-astro-cid-rhtoz4s5>Build my submission</button></p><p id="record-said" class="banner" hidden data-astro-cid-rhtoz4s5></p><div id="record-out" hidden data-astro-cid-rhtoz4s5><h3 data-astro-cid-rhtoz4s5>Your submission</h3><p data-astro-cid-rhtoz4s5>Nothing has been sent yet. This is the record. Read it, then send it.</p><pre id="record-json" data-astro-cid-rhtoz4s5></pre><p data-astro-cid-rhtoz4s5><button type="button" id="send-record" class="go" data-astro-cid-rhtoz4s5>Send it</button> <button type="button" id="keep-record" data-astro-cid-rhtoz4s5>Download a copy</button></p><p class="note" data-astro-cid-rhtoz4s5>Sending puts this record and three columns beside it in a holding table: the account, the subject and the handle, all three taken from your signed session by the database rather than from anything above. So a submission cannot claim to be from somebody it is not. The copy is for you; it is not needed for anything and nothing here depends on your keeping it.</p><p class="note" data-astro-cid-rhtoz4s5>Reading it later fetches the bytes at the pin, checks them against what this record says, writes the row and rebuilds the site. The shape, the dtype, the norm and the digest are read off the bytes on that machine rather than computed here, because one thing in this project reads bytes and a second implementation of it is the failure this repository has hit most often. A pin nobody can fetch is refused there, with the reason. A paste is read there too, and by the same argument.</p></div><section id="sent" hidden data-astro-cid-rhtoz4s5><h3 data-astro-cid-rhtoz4s5>Received</h3><p class="banner" data-astro-cid-rhtoz4s5><strong data-astro-cid-rhtoz4s5>It is in the holding table and it is not on the site.</strong>It appears when the author reads it in, rebuilds the corpus and publishes, because the corpus is a file in git. Nothing was approved and nothing was ranked.</p><dl class="said" data-astro-cid-rhtoz4s5><dt data-astro-cid-rhtoz4s5>received at</dt><dd id="sent-when" data-astro-cid-rhtoz4s5></dd><dt data-astro-cid-rhtoz4s5>row</dt><dd id="sent-id" data-astro-cid-rhtoz4s5></dd><dt data-astro-cid-rhtoz4s5>stamped handle</dt><dd id="sent-handle" data-astro-cid-rhtoz4s5></dd><dt data-astro-cid-rhtoz4s5>stamped subject</dt><dd id="sent-sub" data-astro-cid-rhtoz4s5></dd></dl><p class="note" data-astro-cid-rhtoz4s5>Those four are what the database wrote, read back off its answer rather than off what this page sent. The handle and the subject beside them are the ones your session carries; the record above carries the browser's own copy of both, and where the two disagree the stamped ones are the ones the author reads.</p><p class="note" data-astro-cid-rhtoz4s5>There is no way to edit or withdraw this from here, on purpose: a submission is a statement somebody made at a time, and a correction is another submission. Mail the author if you need one removed.</p></section><p id="send-said" hidden class="banner" data-astro-cid-rhtoz4s5></p></section><h2 data-astro-cid-rhtoz4s5>What this page is not</h2><p class="note" data-astro-cid-rhtoz4s5>It is not a queue, and nothing here is reviewed, ranked, counted or ordered. It keeps no cookie. The one thing it writes into this browser is the session it renews before sending, under the key Sign out deletes. The Hugging Face token is the thing it never writes down anywhere, because that one reaches your account rather than this table. A namespace takes any number of claimants, and two people claiming one name render as two claims with their dates rather than as a conflict anybody here resolves.</p><p data-astro-cid-rhtoz4s5><a href="/sign-in/" data-astro-cid-rhtoz4s5>What signing in is for, and what a claim is</a>.</p></main></body></html><script>(function(){const corpus = {"active_order":"recently-added","active_order_name":"Recently added","age_offset_hours":2,"gravity":1.5,"order_choices":[{"key":"recently-added","name":"Recently added"},{"key":"trending","name":"Trending"}],"size":5,"synthetic":"none","threshold":100};
+
+  // The ordering control shipped for days with no handler: the buttons rendered,
+  // aria-pressed was set, and clicking did nothing. It looked finished, which is
+  // the worst failure mode a control has.
+  //
+  // The contract is markup-shaped rather than table-shaped, so it holds for a list
+  // that is not a table: `data-orderable` marks whatever element directly holds
+  // the items, and each child carries the two inputs order.py uses. Every such
+  // container on the page is bound, not the first one, so a page that grows a
+  // second list does not end up with a control that silently drives half of what
+  // the reader is looking at.
+  const bar = document.querySelector(".ordering");
+  const lists = [...document.querySelectorAll("[data-orderable]")];
+
+  if (bar && lists.length) {
+    const now = Date.now();
+    const finite = (v) => (Number.isFinite(v) ? v : 0);
+    const created = (el) => finite(Date.parse(el.dataset.created));
+
+    const keyOf = {
+      "recently-added": created,
+      // order.trending_score, ported. The constants ride along in the payload
+      // instead of being retyped here, because two copies of a ranking function
+      // drift and the page would then describe an ordering it does not compute.
+      // Engagement plus one, so an untouched submission still decays purely with
+      // age rather than flattening into a tie.
+      trending: (el) => {
+        const hours = Math.max((now - created(el)) / 3600000, 0);
+        return (finite(Number(el.dataset.engagement)) + 1) /
+          Math.pow(hours + corpus.age_offset_hours, corpus.gravity);
+      },
+    };
+
+    // Captured before any reorder, so an unrecognized key falls back to what the
+    // exporter emitted. Same disposition as apply_order: an ordering this build
+    // does not implement is a request it cannot serve, not an error in the data.
+    const stored = lists.map((list) => [list, [...list.children]]);
+    const buttons = [...bar.querySelectorAll("[data-order-key]")];
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const score = keyOf[button.dataset.orderKey];
+
+        stored.forEach(([list, original]) => {
+          const items = score
+            // Descending, and ties keep storage order: two things released the
+            // same day are not ranked against each other by an accident of sort
+            // implementation.
+            ? original
+                .map((el, i) => [el, i])
+                .sort((a, b) => score(b[0]) - score(a[0]) || a[1] - b[1])
+                .map(([el]) => el)
+            : [...original];
+          items.forEach((el) => list.appendChild(el));
+        });
+
+        // The sentence above the buttons names the ordering. Leaving it on the
+        // server-rendered value meant the page said one thing and showed another
+        // the moment the reader clicked, which is the same dishonesty as the dead
+        // control in a quieter form.
+        const named = bar.querySelector("strong");
+        if (named) named.textContent = button.textContent.trim();
+
+        buttons.forEach((b) =>
+          b.setAttribute("aria-pressed", String(b === button)),
+        );
+      });
+    });
+  }
+})();</script><script type="module" src="/_astro/submit.astro_astro_type_script_index_0_lang.BoxPWWIT.js"></script>

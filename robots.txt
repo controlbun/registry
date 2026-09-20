@@ -1,0 +1,22 @@
+# Everything here is readable by anyone, by design, and nothing is asked to stay
+# out. Reading this site is anonymous and metered by nothing, and a crawler is
+# just another reader.
+#
+# There was no file here until 2026-09-20, which already allowed everything: an
+# absent robots.txt is not a restriction. So this exists for the Sitemap line
+# below rather than to grant permission that was never withheld.
+#
+# No crawler is named, and that is deliberate. The vendors split their agents by
+# job and rename them, so a list here would be a closed enumeration of who counts
+# as a legitimate reader, kept up to date by nobody, quietly excluding whoever
+# arrived after it was written. Same failure as a closed enum on a field. If a
+# specific agent ever has to be refused, that is a decision somebody makes and
+# records, not a default.
+#
+# What is not here is also deliberate: no Crawl-delay, because the site is static
+# files behind a CDN and there is nothing to protect.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://controlbun.com/sitemap-index.xml
