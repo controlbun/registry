@@ -52,15 +52,15 @@ def flat(text: str) -> str:
 
 # Everything the schema cannot write a row without, and nothing else. Optional
 # fields are added per test so that what each one is about stays visible.
+#
+# `definition` is last, which is the shape the template asks for since
+# 2026-09-20 and not an arrangement for the tests. An appended line therefore
+# lands after a closed fence, which is what a real paste looks like too.
 CORE = """\
 author: probe
 label: kindness
 version: synthetic-fixture
 created_at: 2026-09-18T00:00:00Z
-definition: <<<
-A synthetic probe definition written by the test suite.
-Warmth in affect: explicitly not costly help.
->>>
 intervention_id: iv_probe_v1
 kind: direction
 model_id: placeholder/does-not-resolve-1b
@@ -68,7 +68,16 @@ layer: 3
 layer_convention: block-0indexed
 hook_point: resid_post
 artifact_path: vectors/probe.safetensors
+definition: <<<
+A synthetic probe definition written by the test suite.
+Warmth in affect: explicitly not costly help.
+>>>
 """
+
+# The same block with the closing marker taken off, which is the paste the
+# first three real submissions were. Nothing follows the fence, so nothing is
+# swallowed.
+UNCLOSED = CORE.replace(">>>\n", "")
 
 
 # --------------------------------------------------------------------------- #
@@ -210,10 +219,6 @@ Here's the block:
 - **label:** kindness
 - **version:** synthetic-fixture
 - created_at: 2026-09-18T00:00:00Z
-- definition: <<<
-A synthetic probe definition written by the test suite.
-The author’s theory, in the author’s “own words”.
->>>
 - intervention_id: iv_probe_v1
 - kind: direction
 - model_id: placeholder/does-not-resolve-1b
@@ -227,6 +232,10 @@ The author’s theory, in the author’s “own words”.
   the script never captured what it was serving
 - not-found: chat_template_hash - no template was applied; activations were read
   from raw text against a base checkpoint
+- definition: <<<
+A synthetic probe definition written by the test suite.
+The author’s theory, in the author’s “own words”.
+>>>
 **=== END CONTROLBUN SUBMISSION ===**
 ```
 
@@ -559,12 +568,18 @@ def test_the_prompt_does_not_promise_a_template_can_drop_the_commit():
                          url_template="https://{host}/{repo}/{path}")
 
 
-def test_an_unclosed_block_is_named_as_the_cause_not_the_symptom():
-    """A `<<<` with no `>>>` eats every field after it.
+def test_an_unclosed_block_with_fields_after_it_is_named_as_the_cause():
+    """A `<<<` with no `>>>` and fields below it eats every one of them.
 
     That arrived as "the schema cannot write a row without intervention_id,
     kind, model_id, ...", which is true, useless, and points at the wrong end
     of the paste: the agent wrote all seven and one missing marker ate them.
+
+    This is the non-final case and it is still a refusal. The definition is
+    written last now, so reaching here means the paste put a fence somewhere
+    else, and what runs to the end of the submission really did take fields
+    with it. Nothing about where the value ends is guessed either way: it is
+    taken whole or refused whole.
     """
     body = (
         "author: a\nlabel: l\nversion: v\n"
@@ -620,3 +635,155 @@ def test_received_hands_the_notes_on():
     out = handoff.received(block(body))
     assert out["notes"], "the parser noticed and the payload has to carry it"
     assert out["notes"] == handoff.parse(block(body)).notes
+
+
+# --------------------------------------------------------------------------- #
+# The unbounded value goes last, which is what makes the missing marker cheap.
+
+
+def test_the_template_writes_the_unbounded_value_last():
+    """The structural half of the fix, asserted on the document itself.
+
+    Three real submissions were lost because `definition` was the fifth of
+    twenty-eight lines and an unclosed `<<<` there ran over the other
+    twenty-three. Nothing about the instruction changed; the position did.
+    """
+    text = handoff.prompt()
+    template = text.split(handoff.BEGIN)[1].split(handoff.END)[0]
+    assert template.strip().endswith(handoff.CLOSE_BLOCK)
+    opener = f"definition: {handoff.OPEN_BLOCK}"
+    assert opener in template
+    # Below every other field, and below the `not-found:` lines as well, since
+    # those are what an agent writes last and what an open fence would eat.
+    for earlier in ("not-found:", "artifact_url_template:", "artifact_path:",
+                    "author:", "layer:"):
+        assert template.index(earlier) < template.index(opener), (
+            f"{earlier} is written after the definition opens"
+        )
+    # And it is the only fenced field, which is the property the rule rests on.
+    assert template.count(handoff.OPEN_BLOCK) == 1
+    assert template.count(handoff.CLOSE_BLOCK) == 1
+
+
+def test_the_prompt_says_last_is_not_least_in_its_own_words():
+    """Moving the field this project calls the one that matters most to the
+    bottom of a form reads as a demotion unless the document says otherwise,
+    so the document says otherwise where the field is explained and again
+    where the block is described."""
+    text = flat(handoff.prompt())
+    assert "last here is not least" in text
+    assert "the only one with no natural end to it" in text
+    assert "the format protecting it rather than demoting it" in text
+
+
+def test_the_prompt_shows_the_failure_beside_the_fix():
+    """A template shows the shape and does not stop the mistake, which is why
+    the same one happened three times. Every case in the section is one that
+    was observed or one the parser refuses; none is invented."""
+    text = handoff.prompt()
+    section = text.split("## What actually goes wrong")[1].split(handoff.BEGIN)[0]
+    assert "The first three submissions" in section
+    # The refusal those three actually got, quoted rather than paraphrased.
+    assert "and nothing closed it, so it ran to the" in section
+    assert f"    {handoff.CLOSE_BLOCK}" in section, "the fix has to be shown"
+    assert "artifact_path" in section and "404" in section
+    assert "artifact_commit: main" in section
+    # Immediately above the template, which is where an agent starts writing.
+    assert text.index("## What actually goes wrong") > text.index("## How to answer")
+    assert text.index("## What actually goes wrong") < text.index(handoff.BEGIN)
+
+
+def test_the_spec_list_agrees_with_the_template_about_the_last_field():
+    """One order, in one place. `SPECS` is the template's order and the panel's
+    display order, so the field cannot move in one and stay in the other."""
+    assert handoff.SPECS[-1].name == "definition"
+
+
+def test_an_unclosed_fence_on_the_last_value_is_closed_by_the_end_of_input():
+    """The defect, no longer fatal.
+
+    This is the exact paste the first three real submissions were: every field
+    written correctly, the definition opened with `<<<` and no `>>>` anywhere.
+    Nothing follows the fence now, so the end of the submission closes it, the
+    row is complete, and the submitter is told what was decided rather than
+    left to assume a marker was read.
+    """
+    out = handoff.received(block(UNCLOSED))
+    assert out["fields"]["definition"].endswith("explicitly not costly help.")
+    assert out["fields"]["definition"].startswith("A synthetic probe")
+    assert out["fields"]["hook_point"] == "resid_post"
+    assert out["fields"]["link_path"] == "vectors/probe.safetensors"
+    assert any("nothing closed it" in note and "nothing was lost" in note
+               for note in out["notes"]), out["notes"]
+
+
+def test_an_unclosed_fence_with_no_end_marker_either_still_reads():
+    """A reply that ran out without either marker. Nothing follows the fence in
+    the pasted text at all, so the same rule applies and for the same reason."""
+    text = f"{handoff.BEGIN}\n{UNCLOSED.strip()}\n"
+    got = handoff.parse(text)
+    assert got.values["definition"].endswith("explicitly not costly help.")
+    assert got.values["author"] == "probe"
+
+
+def test_an_unclosed_last_value_that_ate_a_not_found_line_still_refuses():
+    """Last in the template is not last in every paste.
+
+    A `not-found:` written below the definition is a field the fence swallowed,
+    and an absence silently turned into three words of somebody's prose is the
+    same loss as a swallowed value.
+    """
+    said = refusal(block(
+        UNCLOSED + "not-found: model_revision the run log records none\n"))
+    assert "nothing closed it" in said
+    assert "not-found" in said
+    assert handoff.CLOSE_BLOCK in said
+
+
+def test_a_definition_that_repeats_a_field_already_answered_is_read_as_prose():
+    """What the reordering bought, beyond the missing marker being cheap.
+
+    Every other field is written above the definition now, so a line inside an
+    unterminated definition spelled like one of them is the author's prose by
+    construction rather than a field that went missing. Without that
+    narrowing, an author whose theory of a trait contains a line reading
+    `model: ...` would be refused for writing it.
+    """
+    out = handoff.received(block(
+        UNCLOSED + "model: whatever this author takes the word to mean\n"))
+    assert "whatever this author takes the word to mean" in (
+        out["fields"]["definition"])
+    assert out["fields"]["model_id"] == "placeholder/does-not-resolve-1b"
+
+
+def test_an_unclosed_last_value_naming_a_field_nobody_answered_is_refused():
+    """The cost of the rule, written down rather than left to be found.
+
+    An unterminated definition whose own prose carries a line spelled exactly
+    like a field this form takes and nobody filled in is refused. Nothing can
+    read that text and tell it from the field it would have eaten, and the
+    parser will not cut the value short to find out: it takes the whole thing
+    or refuses the whole thing. Refusing never writes a wrong row, and one
+    `>>>` ends it.
+    """
+    said = refusal(block(
+        UNCLOSED + "steering_position: is not what this author means by it\n"))
+    assert "nothing closed it" in said
+    assert "steering_position" in said
+
+
+def test_nothing_truncates_a_fenced_value_at_a_line_that_looks_like_a_key():
+    """The rule the refusals exist instead of.
+
+    Closing a fence at the next line matching the key pattern would rescue
+    every case above, and it would also cut an author's definition off at
+    whatever sentence happened to start with a word and a colon. A value here
+    is taken whole or refused whole, and that is why a paste ever gets
+    refused at all.
+    """
+    prose = ("Estimator: difference in means, which is worth saying here.\n"
+             "On verdicts: every one of them is suspended.\n")
+    out = handoff.received(block(UNCLOSED + prose))
+    got = out["fields"]["definition"]
+    assert "Estimator: difference in means" in got
+    assert "On verdicts: every one of them is suspended." in got
