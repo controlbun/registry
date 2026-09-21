@@ -1042,8 +1042,17 @@ MAY_SEND_TO = {
         "`tests/test_pending_submission.py`; the table is not the corpus and "
         "nothing in it reaches a reader until the author pulls it into a "
         "tracked file and publishes a rebuild, which is `intake.pull`; and "
-        "reading stays anonymous, because no read anywhere on this site goes "
-        "through it."
+        "reading the corpus stays anonymous, because no page that renders the "
+        "corpus goes through it. **That last clause read 'no read anywhere on "
+        "this site goes through it' until 2026-09-20**, when `/submit/` "
+        "started playing a submitter's own rows back to them: "
+        "`GET /rest/v1/pending_submission` over the submitter's own session, "
+        "which the select policy scopes to `account = auth.uid()` and which "
+        "returns an empty list to an anonymous caller. The sentence was "
+        "narrowed rather than deleted, because the property it was protecting "
+        "is the one that matters and still holds: nobody has to sign in to "
+        "read this site, and signing in shows somebody their own unpublished "
+        "text and nobody else's."
     ),
 }
 
@@ -1293,6 +1302,13 @@ NAMES_THE_TOOL = {
     "pages/submit.astro": "says in a comment where the prompt on the page "
                           "comes from, so the next person to read it does not "
                           "conclude somebody typed it in.",
+    "lib/hub.mjs": "the read that plays a submitter's own rows back to them "
+                   "cites the function on the author's machine that reads the "
+                   "same table in the same order, added 2026-09-20. Written "
+                   "down because an order stated in two places with two "
+                   "reasons is an order that drifts, and the citation is the "
+                   "thing that stops it. A comment naming a local tool is not "
+                   "a route to one.",
 }
 
 

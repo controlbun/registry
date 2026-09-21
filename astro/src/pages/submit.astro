@@ -104,6 +104,37 @@ import agentPrompt from "../data/agent-prompt.json";
 // under every one of twenty-two fields is a wall with nothing to scan; in a
 // second column the left edge is label, box, label, box, and the prose is
 // still there for whoever stops.
+//
+// ---
+//
+// **2026-09-20, reading back what this account has sent.** The receipt was a
+// row id and a timestamp, and then nothing until the author published a
+// rebuild. `What you have sent` is the records themselves, fetched in the
+// browser over the reader's own session, the one just sent included.
+//
+// **Nothing was widened to do it.** The select policy on
+// `schema/supabase/001_pending_submission.sql` has always been
+// `account = auth.uid()`: a signed-in person reads their own rows and nobody
+// else's, and an anonymous caller gets an empty list. There is no view, no
+// public read and no schema change.
+//
+// **The whole risk here is that a played-back record reads as a corpus page**,
+// and one step further, that a list of them reads as a queue somebody is
+// working through. So: the region says in its first sentence, and every record
+// says again, that it is not in the corpus, that nothing has checked it and
+// that nobody else can read it. Every value is quoted and sits in a
+// `data-authored` region, which is the mark the falsifier reads on a published
+// page to tell an author's number from one this registry derived, and a number
+// in a record is exactly that. `author/model/label@version` is never printed,
+// because it resolves to a frozen submission and this resolves to nothing.
+// `taken_at` renders as read in, in the words `artifacts/intake.py` uses, and
+// never as accepted. The one sequence is the clock, named on screen and
+// reversible on a press, which is the cheapest demonstration that it carries
+// nothing: `inArrivalOrder` reads no field of any record.
+//
+// **The rows are wiped on Sign out rather than hidden.** The next person to
+// sign in on this browser is a different person, and a hidden element is still
+// an element.
 
 const { url: supabaseUrl, key: supabaseKey, configured } = identityConfig();
 
@@ -229,6 +260,13 @@ const CONTRACT = [
       this site that receives one instead. Everything else here reads with
       scripting off, including{" "}
       <a href="/sign-in/">what signing in is for</a>.
+    </p>
+    <p class="state">
+      <strong>Reading back what you have already sent needs it too.</strong>{" "}
+      Those records are fetched from the holding table in the browser, with your
+      own session, because the published pages are files a build wrote and none
+      of them holds anybody's unpublished record. With scripting off there is
+      nothing here to show you and no other page on this site that has it.
     </p>
   </noscript>
 
@@ -550,13 +588,95 @@ const CONTRACT = [
       </p>
     </section>
     <p id="send-said" hidden class="banner" role="status"></p>
+
+    {/* What this account has already sent, read back out of the holding table
+        over the reader's own session.
+
+        **The access this needs was already there.** The select policy is
+        `account = auth.uid()`: one signed-in person reads their own rows and
+        nobody else's, and an anonymous caller gets an empty list. Nothing in
+        the schema moved for this.
+
+        **A record here is not a corpus page and the whole design is about not
+        letting it read as one.** It says in the region, in the first sentence
+        and again on every record, that it is not in the corpus, that nothing
+        has checked it and that nobody else can see it. Every value is the
+        string somebody typed, rendered inside a `data-authored` region, which
+        is the same marking the falsifier reads on a published page to know an
+        author's number from one this registry derived. Nothing here is
+        counted, and `author/model/label@version` is never printed, because
+        that string resolves to a frozen submission and this does not resolve
+        to anything.
+
+        **It is not a queue and there is nothing to approve.** The only
+        sequence is the clock it arrived on, named on screen and reversible on
+        a press, which is the cheapest way to show the order carries nothing.
+        `taken_at` renders as read in, never as accepted, in the words
+        `artifacts/intake.py` and the schema comment both use. */}
+    <section id="played" data-pagefind-ignore>
+      <h2>What you have sent</h2>
+
+      <p class="banner">
+        <strong>None of this is in the corpus, nothing has checked it, and
+        nobody else can read it.</strong>{" "}
+        These are the records sent from this account, played back to you out of
+        the holding table. No bytes were fetched, no paste was parsed and no
+        number was re-derived, because all of that happens on the author's
+        machine when a row is read in. The table lets a signed-in person read
+        their own rows and nobody else's, so this list is yours and is not a
+        page anybody else can reach. Nothing here counts toward a claimant, a
+        label, a model or anything the search on this site can find.
+      </p>
+
+      <p class="note">
+        Every value below is shown in quotation marks because that is what it
+        is: the string you typed, rendered as your own words with the rule down
+        the side this site draws beside anything it is quoting rather than
+        asserting. A number here is a number you typed. The falsifier has never
+        seen it and cannot re-derive it, since re-deriving one means reading the
+        bytes at the pin, which is the step that has not happened yet.
+      </p>
+
+      <p id="played-said" class="state" role="status" hidden></p>
+
+      <p id="played-none" class="state" hidden>
+        <strong>This account has sent nothing yet.</strong> That is a state and
+        not a failure: an account that has not sent a record has none, and the
+        form above is where the first one starts. Nothing is missing and nothing
+        went wrong.
+      </p>
+
+      <p id="played-order" class="note" hidden>
+        Ordered by the time each one arrived here,{" "}
+        <strong id="played-order-now">oldest first</strong>. That is the clock
+        and nothing else: it is not a rank, not a place in a line and not a
+        position anybody is working through, and reversing it changes nothing
+        about any record.{" "}
+        <button type="button" class="reorder" data-newest="false"
+                aria-pressed="true">Oldest first</button>{" "}
+        <button type="button" class="reorder" data-newest="true"
+                aria-pressed="false">Newest first</button>
+      </p>
+
+      <div id="played-list"></div>
+    </section>
   </section>
 
   <h2>What this page is not</h2>
+  {/* This read "nothing here is reviewed, ranked, counted or ordered" until
+      the page started reading records back. Two of those four stopped being
+      true in a narrow way and the sentence says which rather than being left
+      to be caught: the list says how many records this account has sent, and
+      it has an order. Both are about one person's own unpublished text and
+      neither touches the corpus, which is the distinction the rest of the
+      paragraph is about. */}
   <p class="note">
-    It is not a queue, and nothing here is reviewed, ranked, counted or ordered.
-    It keeps no cookie. The one thing it writes into this browser is the session
-    it renews before sending, under the key Sign out deletes. The Hugging Face
+    It is not a queue, and nothing here is reviewed or ranked. What you have
+    sent is counted for you and ordered by the clock it arrived on, which is
+    yours, reversible, and says nothing about anybody else's work or about
+    where yours sits. It keeps no cookie. The one thing it writes into this
+    browser is the session it renews before sending, under the key Sign out
+    deletes. The Hugging Face
     token is the thing it never writes down anywhere, because that one reaches
     your account rather than this table. A namespace takes any number of
     claimants, and two people claiming one name render as two claims with their
@@ -737,6 +857,64 @@ const CONTRACT = [
     margin-top: 1.8rem;
   }
   .outcome h3 { margin-top: 0; }
+
+  /* ------------------------------------------------------- what was sent */
+
+  #played { margin-top: 2.6rem; border-top: 1px solid var(--line); }
+  #played > p { max-width: 46rem; }
+
+  .played-row {
+    border: 1px solid var(--line); border-radius: 6px;
+    padding: .9rem 1.1rem 1.1rem; margin: 1.1rem 0;
+  }
+  .played-when { margin: 0; font-size: .95rem; font-weight: 600; }
+  .played-when time { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .played-row > .note { margin: .3rem 0 0; }
+
+  /* Said on every record rather than once above the list. A statement that has
+     to survive skimming does not go at the top of something scrollable.
+
+     The warning ink and not the warning surface, which is the distinction this
+     page settled on 2026-09-20: a record nobody has read is not a failure and
+     does not get a failure's background. It is the one sentence in a record
+     that has to be read, so it does not take the quiet color either. */
+  .unchecked {
+    margin: .5rem 0 0; font-size: .82rem; color: var(--warn);
+  }
+
+  /* One marked region per record. The rule down the side is this site's
+     existing mark for somebody's own words, quoted rather than asserted, and
+     `data-authored` in `app.css` is what draws it. Everything in a record is
+     that: typed by the person reading it and checked by nothing. */
+  .played-body { margin-top: .9rem; }
+  .played-body h4 {
+    margin: 1.1rem 0 .35rem; font-size: .78rem; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--faint);
+  }
+
+  .played-fields {
+    display: grid; grid-template-columns: max-content minmax(0, 1fr);
+    gap: .25rem 1rem; margin: 0; font-size: .85rem;
+  }
+  .played-fields dt { color: var(--dim); }
+  .played-fields dd { margin: 0; overflow-wrap: anywhere; }
+
+  /* The quotation marks are the point and they are drawn rather than written
+     into the value, so copying a commit sha out of this list copies the sha. */
+  .typed { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .typed::before, .typed::after { content: "\0022"; color: var(--faint); }
+
+  .played-paste {
+    white-space: pre-wrap; max-height: 22rem; overflow-y: auto;
+    font-size: .8rem; margin: .5rem 0 0;
+  }
+
+  .reorder {
+    font: inherit; font-size: .8rem; color: var(--dim);
+    background: none; border: 1px solid var(--line); border-radius: 4px;
+    padding: .2rem .55rem; cursor: pointer;
+  }
+  .reorder[aria-pressed="true"] { color: var(--ink); border-color: var(--dim); }
 </style>
 
 <script>
@@ -744,10 +922,12 @@ const CONTRACT = [
     authorizeUrl,
     chosenRoute,
     downloadName,
+    inArrivalOrder,
     nowStamp,
     pasteFrom,
     pendingRowFrom,
     pkcePair,
+    playback,
     refuseOurNamespace,
     signerFrom,
     submissionFrom,
@@ -762,6 +942,7 @@ const CONTRACT = [
     HubError,
     inlineFile,
     putLfs,
+    readPending,
     sendPending,
     uploadMode,
   } from "../lib/hub.mjs";
@@ -855,6 +1036,9 @@ const CONTRACT = [
         "deletes it from this browser, tells nobody, and does not end your " +
         "Hugging Face session.",
     );
+    // Not awaited: the form above is usable while this runs, and a read that
+    // fails says so in its own region rather than stopping the page.
+    readBack("Reading back what this account has sent.");
   }
 
   /** A plain visit: restore, renew if the access token is spent, say which. */
@@ -880,15 +1064,213 @@ const CONTRACT = [
   // it is sitting on. Without this, somebody who signs out here keeps a form
   // that would refuse on send with a sentence about a session that is already
   // gone.
+  //
+  // The records read back go with it, and they are removed from the document
+  // rather than hidden inside it: the next person to sign in on this browser is
+  // a different person, and a hidden element is still an element they can find.
   window.addEventListener("controlbun:session", () => {
     if (signed && !restore()) {
       signed = null;
       signer = null;
+      forgetPlayed();
       show("submit-section", false);
       show("remembered", false);
       show("nosession", true);
     }
   });
+
+  // ------------------------------------------------------------------ //
+  // What this account has already sent, read back.
+  //
+  // Held in one variable and redrawn, rather than appended to, so the list on
+  // screen is always the answer to one request. Wiped on sign out: a second
+  // person signing in on the same browser must not find the first one's
+  // records sitting in the document, hidden or otherwise.
+
+  let sent = [];
+  let newestFirst = false;
+
+  /** One value as it was typed, quoted, and never parsed into anything. */
+  function asTyped(text) {
+    const said = document.createElement("span");
+    said.className = "typed";
+    said.textContent = text;
+    return said;
+  }
+
+  function line(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  /** The `<dt>`/`<dd>` pair for one field, absence included as a state. */
+  function fieldPair(entry) {
+    const name = line("dt", null, entry.name);
+    const value = line("dd");
+    if (entry.state === "none") {
+      // The same rule an absent eval gets: absence renders as absence, in its
+      // own words, never as an empty box and never as an error.
+      value.append(line("span", "absent", "nothing was sent for this"));
+    } else {
+      value.append(asTyped(entry.text));
+    }
+    return [name, value];
+  }
+
+  function playedRow(shown) {
+    const row = document.createElement("article");
+    row.className = "played-row";
+
+    const when = line("h3", "played-when");
+    when.append(document.createTextNode("Received "));
+    const stamp = document.createElement("time");
+    stamp.dateTime = shown.received_at ?? "";
+    // The stamp the database wrote, as it wrote it. Not reformatted into the
+    // reader's locale: every date this site renders is UTC, and a row's arrival
+    // time is a fact about a server clock rather than about where somebody is
+    // sitting.
+    stamp.textContent = shown.received_at ?? "at a time the answer did not carry";
+    when.append(stamp);
+    row.append(when);
+
+    // Said again on every record, because a banner at the top of a long list is
+    // a banner somebody scrolled past.
+    row.append(line(
+      "p",
+      "unchecked",
+      "Your own words, unchecked, not in the corpus, and readable by nobody " +
+        "else.",
+    ));
+
+    row.append(line("p", "note", `row ${shown.id ?? "the answer carried no id"}`));
+
+    row.append(line(
+      "p",
+      "note",
+      shown.taken_at
+        ? `The author read this in on ${shown.taken_at}. Read in means pulled ` +
+          "into the corpus file on their machine, which is not the same as " +
+          "accepted: there is nothing to accept. It reaches the site when they " +
+          "publish the next build."
+        : "The author has not read this in yet. That is not a decision about " +
+          "it and it is not a place in a line. The row sits in the holding " +
+          "table until they pull it, and a pull that refuses it leaves it " +
+          "here and writes to you about why.",
+    ));
+
+    // Neutral rather than the warning surface. Nothing failed and the reader
+    // did nothing wrong: a handle that changed between a sign-in and a send is
+    // an ordinary fact about a real person, and `intake.pull` reports it as a
+    // note rather than refusing the row. Same rule this page applies to being
+    // signed out.
+    for (const difference of shown.differs) {
+      row.append(line(
+        "p",
+        "state",
+        `The ${difference.field} stamped on this row is ` +
+          `${JSON.stringify(difference.stamped)} and the record's own copy ` +
+          `says ${JSON.stringify(difference.in_record)}. The stamped one is ` +
+          "the one the author reads, because the database wrote it from the " +
+          "session and the record carries what this browser thought at the " +
+          "time. That is what a handle renamed between signing in and sending " +
+          "looks like, and neither copy is dropped.",
+      ));
+    }
+
+    // One marked region per record. `data-authored` is what the falsifier reads
+    // on a published page to tell an author's number from one this registry
+    // derived, and everything in here is the first kind.
+    const body = document.createElement("div");
+    body.className = "played-body";
+    body.setAttribute("data-authored", "");
+
+    for (const group of shown.groups) {
+      if (!group.entries.length) continue;
+      if (group.name) body.append(line("h4", null, group.name));
+      const fields = document.createElement("dl");
+      fields.className = "played-fields";
+      for (const entry of group.entries) fields.append(...fieldPair(entry));
+      body.append(fields);
+    }
+
+    if (shown.pasted !== null) {
+      body.append(line(
+        "p",
+        "note",
+        "This arrived as a paste. It is text and nothing in this browser has " +
+          "read it, so there are no fields to show: the one parser is Python " +
+          "and it runs when the author pulls the row in.",
+      ));
+      body.append(line("pre", "played-paste", shown.pasted));
+    }
+
+    row.append(body);
+    return row;
+  }
+
+  function drawPlayed() {
+    const list = document.getElementById("played-list");
+    if (!list) return;
+    list.replaceChildren();
+    for (const row of inArrivalOrder(sent, { newestFirst })) {
+      list.append(playedRow(playback(row)));
+    }
+    show("played-none", sent.length === 0);
+    show("played-order", sent.length > 1);
+    say("played-order-now", newestFirst ? "newest first" : "oldest first");
+    for (const button of document.querySelectorAll("#played-order button")) {
+      button.setAttribute(
+        "aria-pressed",
+        String((button.dataset.newest === "true") === newestFirst),
+      );
+    }
+  }
+
+  /** Read them back, renewing first for the same reason the send does. */
+  async function readBack(why) {
+    if (!SUPABASE || !KEY || !signed) return;
+    show("played-said", true);
+    say("played-said", why);
+    try {
+      const now = await usable(SUPABASE, KEY, {
+        provider: config.provider,
+        held: signed,
+        onStale: (problem) => {
+          show("stale", true);
+          say("stale", staleSaid(problem));
+          show("nosession", true);
+        },
+      });
+      signed = now;
+      sent = await readPending(SUPABASE, KEY, { accessToken: now.access_token });
+      drawPlayed();
+      say(
+        "played-said",
+        sent.length === 0
+          ? "This account has sent nothing yet."
+          : `This account has sent ${sent.length} ` +
+            (sent.length === 1 ? "record" : "records") +
+            ", below. None of them is in the corpus.",
+      );
+    } catch (problem) {
+      say(
+        "played-said",
+        `${problem.message ?? problem} Nothing was changed by this: reading ` +
+          "back is a read. Whatever you have sent is still in the holding " +
+          "table.",
+      );
+    }
+  }
+
+  function forgetPlayed() {
+    sent = [];
+    newestFirst = false;
+    drawPlayed();
+    show("played-said", false);
+    show("played-none", false);
+  }
 
   // ------------------------------------------------------------------ //
   // The permission window, for the upload offer and for nothing else.
@@ -1190,6 +1572,22 @@ const CONTRACT = [
     show("send-said", false);
     show("record-out", false);
     show("sent", true);
+    // So the receipt is not the end of it. The row that was just written is
+    // read back with everything else this account has sent, out of the table
+    // rather than out of what this page happens to be holding.
+    await readBack("Reading back what this account has sent, this one included.");
+  }
+
+  // The control that reverses the list. Bound here and computing the order in
+  // `inArrivalOrder`, which is a pure function a test runs: a bar that renders,
+  // sets `aria-pressed` and has nothing behind it shipped once already on the
+  // corpus views, and so did one that sorted on something other than what its
+  // caption said.
+  for (const button of document.querySelectorAll("#played-order button")) {
+    button.addEventListener("click", () => {
+      newestFirst = button.dataset.newest === "true";
+      drawPlayed();
+    });
   }
 
   document.getElementById("send-record").addEventListener("click", (event) => {

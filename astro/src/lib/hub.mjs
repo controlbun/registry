@@ -30,6 +30,14 @@
  * arriving. `MAY_SEND_TO` in `tests/test_intake.py` names the destination and
  * the reason, so a third one is a test edit rather than a line that arrived.
  *
+ * `readPending` reads back out of that same table, as of 2026-09-20, and the
+ * policy it runs under was already there: a signed-in person reads their own
+ * rows and nobody else's. Reading the corpus is still anonymous and still
+ * reaches no origin at all, because the corpus is in the files the build
+ * emitted. What needed saying in `MAY_SEND_TO` is that the sentence "no read
+ * anywhere on this site goes through it" stopped being true, and why the one
+ * that replaced it is narrower than it sounds.
+ *
  * ## Nothing here writes anything down, and the two credentials differ
  *
  * No function in this file writes to `localStorage`, `sessionStorage`, a
@@ -250,6 +258,52 @@ export async function sendPending(supabaseUrl, key, { accessToken, row }) {
     );
   }
   return written;
+}
+
+/**
+ * The rows this account sent, and nobody else's.
+ *
+ * **The access this needs already exists and nothing was widened for it.** The
+ * select policy in `schema/supabase/001_pending_submission.sql` is
+ * `using (account = auth.uid())`, which is one signed-in person reading their
+ * own rows. An anonymous caller gets an empty list, because `auth.uid()` is
+ * null for one and no row matches. So this is a read of somebody's own text
+ * with their own session and it is not a second corpus: nothing here can see a
+ * row anybody else sent, and there is no call anywhere that tries.
+ *
+ * **Ordered by the clock it arrived on, ascending, which is the order
+ * `intake.pending` reads them in on the author's machine.** An order has to be
+ * something. It is not a ranking, it decides nothing, and a row's place in the
+ * list changes nothing about the row: `/submit/` names it on screen and
+ * reverses it on a press, which is the cheapest proof that the sequence
+ * carries no meaning.
+ *
+ * The columns are named rather than `*`, so a column added to that table later
+ * reaches this browser when somebody decides it should and not before.
+ */
+export async function readPending(supabaseUrl, key, { accessToken }) {
+  const query = new URLSearchParams({
+    select: "id,received_at,subject,handle,record,taken_at",
+    order: "received_at.asc",
+  });
+  const url =
+    `${supabaseUrl.replace(/\/+$/, "")}/rest/v1/pending_submission?${query}`;
+  const response = await ask(
+    url,
+    {
+      headers: { apikey: key, Authorization: `Bearer ${accessToken}` },
+    },
+    "reading what you have sent",
+  );
+  const said = await response.json();
+  if (!Array.isArray(said)) {
+    throw new HubError(
+      "the holding table answered with something other than a list of rows, " +
+        "so nothing here knows what it is holding. Nothing was changed: this " +
+        "is a read.",
+    );
+  }
+  return said;
 }
 
 /** What the provider says about the account holding this token, right now. */

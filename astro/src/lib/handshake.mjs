@@ -67,6 +67,16 @@
  * `pendingRowFrom` still has no parameter a token can arrive in, which is why
  * it takes the user out of the held record rather than the record.
  *
+ * ## Both directions, and the second one reads nothing
+ *
+ * `submissionFrom`, `pasteFrom` and `pendingRowFrom` build what gets sent.
+ * `playback` and `inArrivalOrder`, added 2026-09-20, take a row back out of the
+ * holding table for the one account that put it there. That direction reads no
+ * field for meaning: it walks the keys the record has, in the order it has
+ * them, and says what each value is. A record is not the corpus and a number in
+ * one is a number somebody typed, so nothing here derives, checks or re-orders
+ * anything off what a record says.
+ *
  * ## No closed enum, anywhere
  *
  * `provider`, the organization's role, `kind`, `hook_point` and every other
@@ -628,6 +638,142 @@ export function pendingRowFrom(user, record) {
     );
   }
   return { account: id, subject, handle, record };
+}
+
+// --------------------------------------------------------------------------
+// The other direction: a row that was sent, played back to whoever sent it.
+//
+// **A record coming back is not a submission arriving.** `submissionFrom` and
+// `pasteFrom` above build something to send; these take a row out of the
+// holding table and say what is in it, for the one account that put it there.
+// The whole of the rule is that nothing here reads a record for meaning. It
+// walks the keys it finds, in the order they are in, and says what each value
+// is. No field is required, no field is preferred, no shape is refused and no
+// key is dropped for being one this file has never seen, which is the same rule
+// `captureFrom` applies to an organization entry and the same reason.
+//
+// A number that comes back this way is a number somebody typed. Nothing has
+// fetched the bytes at the pin, so nothing here can re-derive one, and the page
+// says that rather than letting a figure sit in the same grammar as a figure
+// the falsifier checked.
+
+/** What one value is, without deciding what it means. */
+function valueShown(value) {
+  if (value === null || value === undefined) return { state: "none", text: null };
+  if (typeof value === "boolean") {
+    return { state: "flag", text: value ? "yes" : "no" };
+  }
+  if (typeof value === "number") return { state: "number", text: String(value) };
+  if (typeof value === "string") return { state: "text", text: value };
+  // An array or an object nested deeper than this walks. Shown as it was sent
+  // rather than flattened or dropped: a key this file has never met is the
+  // ordinary way a record grows, and a reader checking their own work is
+  // entitled to see what they sent whatever shape it took.
+  return { state: "text", text: JSON.stringify(value) };
+}
+
+function entriesShown(record) {
+  return Object.entries(record).map(([name, value]) => ({
+    name,
+    ...valueShown(value),
+  }));
+}
+
+/**
+ * One row out of the holding table, said back.
+ *
+ * **The stamped identity wins and the disagreement is surfaced.** Postgres
+ * writes `handle` and `subject` from the verified session; the record carries
+ * the browser's own copy of both. `artifacts/intake.py` substitutes the first
+ * for the second when the author pulls the row and reports the difference
+ * rather than swallowing it, and this does the same thing on the page, because
+ * a handle renamed between a sign-in and a send is a real fact about a real
+ * person and preferring one copy silently hides it.
+ *
+ * **Nothing here mints `author/model/label@version`.** That string resolves to
+ * one frozen submission in the corpus, forever, and a row in a holding table is
+ * not one: printing the ref here would claim a resolution that does not exist.
+ * The label and the version come back as two values somebody typed, which is
+ * what they are.
+ *
+ * `pasted` comes out whole and separate, because a paste has no fields: nothing
+ * in this browser reads one, `artifacts/agent_handoff.py` is the one parser and
+ * it runs on the author's machine. Everything else in a paste record, including
+ * its shape and when it was built, is a field like any other.
+ */
+export function playback(row) {
+  const record = (row && row.record) || {};
+  const readable = record && typeof record === "object" && !Array.isArray(record)
+    ? record
+    : {};
+  const stamped = {
+    handle: (row && row.handle) ?? null,
+    subject: (row && row.subject) ?? null,
+  };
+  const differs = [];
+  for (const [field, was, inRecord] of [
+    ["handle", stamped.handle, readable.author],
+    ["subject", stamped.subject, readable.subject],
+  ]) {
+    if (typeof inRecord === "string" && inRecord !== "" && inRecord !== was) {
+      differs.push({ field, stamped: was, in_record: inRecord });
+    }
+  }
+
+  const flat = {};
+  const groups = [];
+  for (const [name, value] of Object.entries(readable)) {
+    if (name === "pasted" && typeof value === "string") continue;
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      groups.push({ name, entries: entriesShown(value) });
+    } else {
+      flat[name] = value;
+    }
+  }
+
+  return {
+    id: (row && row.id) ?? null,
+    received_at: (row && row.received_at) ?? null,
+    // Read in, which never means approved. `artifacts/intake.py` says so in
+    // those words and so does the schema comment: null is not yet read, and a
+    // row that was refused when the author pulled it keeps a null here and
+    // stays where it is.
+    taken_at: (row && row.taken_at) ?? null,
+    stamped,
+    differs,
+    pasted: typeof readable.pasted === "string" ? readable.pasted : null,
+    groups: [{ name: null, entries: entriesShown(flat) }, ...groups],
+  };
+}
+
+/**
+ * The rows in the order they arrived, or that order reversed.
+ *
+ * **The only sequence a holding table has is its clock**, and this is a
+ * separate function so the control on the page cannot say one thing and do
+ * another. `tests/test_ordering_control.py` exists because that happened once
+ * already on the corpus views: a bar that rendered, set `aria-pressed`, and had
+ * no handler behind it, and then a handler that sorted on something other than
+ * what the caption said.
+ *
+ * Nothing in the record is read. Not the label, not the layer, not whether the
+ * author has read the row in, and not whether it carries a number. A row with
+ * no `received_at` keeps the place it came in, because a missing clock is not a
+ * reason to move somebody's row.
+ */
+export function inArrivalOrder(rows, { newestFirst = false } = {}) {
+  const keep = Array.isArray(rows) ? [...rows] : [];
+  const at = (row) => String((row && row.received_at) ?? "");
+  const byClock = keep
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => {
+      const left = at(a.row);
+      const right = at(b.row);
+      if (left === right || !left || !right) return a.index - b.index;
+      return left < right ? -1 : 1;
+    })
+    .map(({ row }) => row);
+  return newestFirst ? byClock.reverse() : byClock;
 }
 
 // --------------------------------------------------------------------------
