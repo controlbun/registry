@@ -31,6 +31,20 @@ on is checked: an integer that is an integer, a commit that is forty hex through
 `controlbun.fetch.commit_sha` rather than a second copy of that rule, and no value
 that is still a placeholder out of the template.
 
+**The one unbounded value is written last, and that is structural.** A model
+asked to open a delimiter forgets to close it, which is not a thing a stricter
+instruction fixes. `definition` used to be the fifth of twenty-eight lines, so
+one missing `>>>` ran to the end of the submission and swallowed the other
+twenty-three; the first three real uses of this handoff failed that way and
+nothing was recoverable. It is now the last line of the template, below the
+`not-found:` lines, so an unterminated fence swallows nothing and the end of the
+submission closes it. The general rule, recorded in `DECISIONS.md` 2026-09-20:
+in any format a language model is asked to produce, the value with no natural
+end goes last, because a missing terminator then costs nothing. The prose above
+the template still explains `definition` third, where it belongs, and says in
+its own words that the position is the format protecting the field rather than
+ranking it.
+
 Two entry points for the form, and this module owns no socket, no route and no
 markup. `artifacts/intake.py` owns all three and is not edited from here:
 
@@ -55,6 +69,7 @@ from __future__ import annotations
 
 import re
 import sys
+import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -147,7 +162,12 @@ class Spec:
         return self.column or self.name
 
 
-# Order is the order the prompt lists them in and the order they are displayed.
+# Order is the order the template asks for them in and the order they are
+# displayed. It is not the order the prose above the template explains them in:
+# `definition` is explained third, where it belongs, and written last, where an
+# unterminated fence costs nothing. Those two orders differ on purpose and the
+# prompt says so in its own words.
+#
 # `shape`, `dtype` and `l2_norm` are NOT NULL columns and are not marked here,
 # because `intake.entry_from` takes all three off the bytes rather than off the
 # form: stating one is a claim the bytes are held to, and stating nothing is not
@@ -158,7 +178,6 @@ SPECS: tuple[Spec, ...] = (
     Spec("version", ("version",), cannot_be_absent=True),
     Spec("created_at", ("created_at",), cannot_be_absent=True,
          aliases=("created", "extracted_at", "when")),
-    Spec("definition", ("definition",), cannot_be_absent=True),
     Spec("intervention_id", ("intervention_id",), cannot_be_absent=True,
          aliases=("id", "intervention")),
     Spec("kind", ("kind",), cannot_be_absent=True),
@@ -201,6 +220,13 @@ SPECS: tuple[Spec, ...] = (
     Spec("artifact_host", ("link_host",), aliases=("host",)),
     Spec("artifact_url_template", ("link_url_template",),
          aliases=("url_template", "template")),
+    # Last, and last structurally rather than by rank. It is the only value in
+    # this list with no natural end to it, so it is the only one the template
+    # fences, and a fence with nothing after it swallows nothing when its
+    # closing marker is missing. `_gather` closes it on the end of the
+    # submission for that reason. Moving it here is what turned the defect that
+    # lost the first three real submissions from fatal into a note.
+    Spec("definition", ("definition",), cannot_be_absent=True),
 )
 
 BY_NAME: dict[str, Spec] = {}
@@ -295,6 +321,11 @@ their take unlike anybody else's, and including what they think it is not. If
 you have their words for it, in a paper, a README, a docstring or the contrast
 prompts themselves, use theirs. If you do not, ask them rather than composing
 one.
+
+Its line is the last one in the block, below every other field and below the
+`not-found:` lines. That is the format protecting it rather than demoting it,
+and the reason is under `How to answer`. Read this section again before you
+write that line; it is the one place in the block worth spending your effort.
 
 **version** Whatever distinguishes this take from the author's other takes on
 the same label against the same model. `author/model_id/label@version` resolves
@@ -478,7 +509,86 @@ it, and that means the definition, open with `<<<` and close with `>>>` on their
 own lines. For anything you could not find, one `not-found:` line naming the
 field and the reason. Leave nothing empty and leave no placeholder in: the
 parser refuses both rather than guessing which you meant.
+
+**The definition is the last line of the block, and last here is not least.** It
+is the field that matters most and the only one with no natural end to it, so it
+sits where running long is free. Everything short goes above it, the `not-found:`
+lines included, and the one value that can be any length goes where nothing comes
+after it.
 """
+
+
+def _wrap(text: str) -> str:
+    """One paragraph at the width the rest of this document is written to.
+
+    Wrapped here rather than in the source, because the markers substitute
+    shorter than their names and a paragraph laid out by eye around
+    `OPEN_BLOCK` comes out ragged in the text an agent actually reads.
+    `break_on_hyphens` off because `not-found:` is a field name and a wrap
+    inside it reads as two words.
+    """
+    return textwrap.fill(" ".join(text.split()), width=80,
+                         break_on_hyphens=False)
+
+
+# Wrong beside right, and nothing in it is invented. Two of the three were
+# observed and are dated here; the third is a refusal the parser makes, stated
+# as a refusal rather than as something somebody did. A template shows the
+# shape and does not stop the mistake, which is why the same one happened three
+# times, and an invented failure would teach an agent to avoid something nobody
+# has ever done while leaving the real ones where they are.
+_GOES_WRONG = "\n\n".join([
+    "## What actually goes wrong",
+
+    _wrap("The first three submissions written through this handoff were all "
+          "refused, and all three failed the same way. None of them was wrong "
+          "about the artifact."),
+
+    _wrap(f"**The `{OPEN_BLOCK}` that never closed.** All three, hours apart, "
+          "one author, one agent, one line."),
+
+    f"    definition: {OPEN_BLOCK}\n"
+    "    ...the author's own theory, over as many lines as it takes...\n"
+    "    intervention_id: ...       <- swallowed, and so was every line below",
+
+    "What came back, all three times:",
+
+    # The refusal those three got, verbatim. Rewrapped under an indent and not
+    # reworded: a message quoted back differently from the one that arrives is
+    # a message somebody stops trusting.
+    f"    definition opened with {OPEN_BLOCK} and nothing closed it, so it ran"
+    " to the\n    end of the submission and took everything after it with it,"
+    " including\n    artifact_path, hook_point, intervention_id, kind, layer,"
+    " layer_convention,\n    license_status, model_id, model_revision,"
+    " not-found, steering_position.",
+
+    "The fix is one line:",
+
+    f"    definition: {OPEN_BLOCK}\n"
+    "    ...the author's own theory, over as many lines as it takes...\n"
+    f"    {CLOSE_BLOCK}",
+
+    _wrap("`definition` is the last line of the block for this reason, so "
+          f"forgetting the `{CLOSE_BLOCK}` there now swallows nothing and the "
+          f"end of the submission closes it. Open a `{OPEN_BLOCK}` on any "
+          "value with lines after it, forget to close it, and the block still "
+          "eats them and the whole paste is still refused."),
+
+    _wrap("**A local path in `artifact_path`.** Observed once, on a real "
+          "submission, and caught before the row was written. The agent "
+          "answered with the path it had just read the file from on the "
+          "author's cluster. Anything starting with `/` is refused: it names a "
+          "folder on one machine, so every fetch after today gets a 404. "
+          "Answer with where the file sits in the published repo, like "
+          "`vectors/direction.safetensors`."),
+
+    _wrap("**A branch where the commit goes.** `artifact_commit: main` is "
+          "refused, and refused rather than resolved for you. Whoever owns a "
+          "repo can move `main`, so it pins to whatever is there today, which "
+          "is the opposite of what `author/model_id/label@version` promises. "
+          "Resolve it yourself and give the forty hex characters it points at "
+          "right now."),
+]) + "\n"
 
 _TEMPLATE = f"""\
 {BEGIN}
@@ -486,10 +596,6 @@ author: <namespace>
 label: <the trait, as your author names it>
 version: <what distinguishes this take>
 created_at: <ISO 8601 UTC, when the work ran>
-definition: {OPEN_BLOCK}
-<your author's own theory of the label, in their words,
-over as many lines as it takes>
-{CLOSE_BLOCK}
 intervention_id: <unique, stable, the author's to choose>
 kind: <what this artifact is>
 model_id: <the repo id the activations were read from>
@@ -513,16 +619,25 @@ artifact_commit: <forty hex characters>
 artifact_host: <the host that repo is on; drop the line for the Hub>
 artifact_url_template: <how host, repo, commit and path become a URL>
 not-found: <field name> <why there is no value, in a sentence>
+definition: {OPEN_BLOCK}
+<your author's own theory of the label, in their words,
+over as many lines as it takes>
+{CLOSE_BLOCK}
 {END}
 """
 
-_TAIL = """\
-Every line is droppable except the ones the schema cannot write a row without:
-author, label, version, created_at, definition, intervention_id, kind, model_id,
-layer, layer_convention, hook_point and artifact_path. For those, a `not-found:`
-is refused too, because there is no row to write without them. That is a shape
-the database has, not a judgment about the artifact.
-"""
+# Read off the spec list rather than typed out again. It was typed out again,
+# and it named the fields in an order the template no longer uses the moment
+# `definition` moved, which is a second copy going stale in the same edit that
+# made it wrong.
+_REQUIRED = [spec.name for spec in SPECS if spec.cannot_be_absent]
+_TAIL = _wrap(
+    "Every line is droppable except the ones the schema cannot write a row "
+    "without: " + ", ".join(_REQUIRED[:-1]) + f" and {_REQUIRED[-1]}"
+    + ". For those, a `not-found:` is refused too, because there is no row to "
+    "write without them. That is a shape the database has, not a judgment "
+    "about the artifact."
+) + "\n"
 
 _OBSERVED_HEAD = """\
 ## What other people have typed into these fields
@@ -556,9 +671,12 @@ def prompt(observed: dict[str, list[str]] | None = None) -> str:
     )
     if lines:
         parts.append(_OBSERVED_HEAD + "\n" + "\n".join(lines) + "\n")
-    # The template goes last and nothing follows it, because the thing being
-    # asked for is the thing an agent's eye lands on when it starts writing.
-    parts += [_HOW, _TEMPLATE, _TAIL]
+    # The template goes last and nothing follows it but the one paragraph about
+    # which lines are droppable, because the thing being asked for is the thing
+    # an agent's eye lands on when it starts writing. `_GOES_WRONG` sits
+    # immediately above it for the same reason: a failure named far from where
+    # the answer gets typed is a failure nobody reads.
+    parts += [_HOW, _GOES_WRONG, _TEMPLATE, _TAIL]
     return "\n".join(parts)
 
 
@@ -695,7 +813,8 @@ def _pairs(lines: list[str]) -> tuple[list[tuple[str, str]], list[str]]:
             if not value:
                 n += 1
                 value = OPEN_BLOCK
-            body, n = _gather(lines, n, fenced=value == OPEN_BLOCK, key=key)
+            body, n = _gather(lines, n, fenced=value == OPEN_BLOCK, key=key,
+                              answered=_answered(pairs), notes=notes)
             pairs.append((key, body))
             continue
 
@@ -730,19 +849,76 @@ def _unquote(key: str, value: str) -> tuple[str, str]:
     return key, value.strip()
 
 
-def _gather(lines: list[str], n: int, *, fenced: bool, key: str = "") -> tuple[str, int]:
+def _answered(pairs: list[tuple[str, str]]) -> frozenset[str]:
+    """The fields already given a value above here, by the name this form uses.
+
+    Read at the point a fence opens rather than at the end, because that is the
+    question `_eaten` asks: of the names appearing below this `<<<`, which ones
+    had not been answered yet, and are therefore lines the fence swallowed
+    rather than the author's own prose.
+    """
+    return frozenset(
+        BY_NAME[name].name for key, _ in pairs
+        if (name := _key(key)) in BY_NAME
+    )
+
+
+def _eaten(lines: list[str], opened: int, answered: frozenset[str]) -> list[str]:
+    """Fields an unclosed fence swallowed, which is what tells the two cases apart.
+
+    Only names this form knows, because a definition is prose and its prose has
+    colons in it: every "Estimator:" and "On verdicts:" inside the swallowed
+    block matches the key pattern too, and listing those back would bury the
+    ones that matter in the author's own sentences. Case-sensitively, so a
+    sentence opening "Position: ..." is prose and `position:` is a field.
+
+    And only names nothing above the fence answered. Every other field is
+    written before the definition now, so a line inside the definition spelled
+    like one of them is the author's prose by construction. That narrowing is
+    what the reordering bought: without it, an author whose theory of a trait
+    happens to contain a line reading `model: ...` would be refused for it.
+    """
+    known = {spec.name for spec in SPECS}
+    known.update(alias for spec in SPECS for alias in spec.aliases)
+    known.add("not-found")
+    found: set[str] = set()
+    for line in lines[opened:]:
+        match = _KEY_RX.match(line)
+        if not match or match.group(1) not in known:
+            continue
+        name = match.group(1)
+        name = BY_NAME[name].name if name in BY_NAME else name
+        if name not in answered:
+            found.add(name)
+    return sorted(found)
+
+
+def _gather(lines: list[str], n: int, *, fenced: bool, key: str = "",
+            answered: frozenset[str] = frozenset(),
+            notes: list[str] | None = None) -> tuple[str, int]:
     """A multi-line value from `n` on: to the closing marker, or while indented.
 
     Nothing is peeled inside a fenced body. A definition is prose and its
     asterisks, backticks and leading dashes are the author's.
 
-    **An unclosed block is refused here rather than downstream.** A `<<<` with
-    no `>>>` runs to the end of the submission and eats every field after it,
-    and what arrives at the caller is a row missing everything below the
-    definition. That reported as seven required fields being absent, which is
-    true, useless, and points at the wrong end of the paste: the author's agent
-    wrote all seven and one missing marker ate them. Said here because this is
-    the only place that knows the block never closed.
+    **A `<<<` with nothing after it is closed by the end of the submission.**
+    Opening a delimiter and forgetting to close it is among the most common
+    things a model does with one, and the first three real uses of this handoff
+    all did it on the definition. So the template puts the one unbounded value
+    last and this accepts the end of input as its terminator: nothing follows
+    it, so nothing is lost, and the submitter is told what was decided rather
+    than left to assume a marker was read. Closing at the next line that looks
+    like a key would be the other thing, and it is not done here: that is a
+    guess about where somebody's prose ends and it can truncate it.
+
+    **A `<<<` that swallowed fields is still refused.** If the fence was not
+    last, what ran to the end of the submission took every field below it, and
+    the row that arrives at the caller is missing all of them. That reported as
+    seven required fields being absent, which is true, useless, and points at
+    the wrong end of the paste: the author's agent wrote all seven and one
+    missing marker ate them. Said here because this is the only place that
+    knows the fence never closed, and the two cases are told apart by whether
+    anything the form takes and nobody had answered sits inside the body.
     """
     opened = n
     body: list[str] = []
@@ -766,26 +942,28 @@ def _gather(lines: list[str], n: int, *, fenced: bool, key: str = "") -> tuple[s
         n += 1
     else:
         if fenced:
-            # Only names this form knows. A definition is prose and its prose
-            # has colons in it, so every "Estimator:" and "On verdicts:" inside
-            # the swallowed block matches the key pattern too. Listing those
-            # back would bury the seven that matter in the author's own
-            # sentences.
-            known = {spec.name for spec in SPECS}
-            known.update(alias for spec in SPECS for alias in spec.aliases)
-            known.add("not-found")
-            eaten = sorted({
-                m.group(1) for line in lines[opened:]
-                if (m := _KEY_RX.match(line)) and m.group(1) in known
-            })
-            raise Refused(
-                f"{key or 'a value'} opened with {OPEN_BLOCK} and nothing "
-                f"closed it, so it ran to the end of the submission and took "
-                f"everything after it with it"
-                + (f", including {', '.join(eaten)}" if eaten else "")
-                + f". Put {CLOSE_BLOCK} on a line of its own where the value "
-                "ends. Nothing else about the paste is wrong."
-            )
+            eaten = _eaten(lines, opened, answered)
+            if eaten:
+                raise Refused(
+                    f"{key or 'a value'} opened with {OPEN_BLOCK} and nothing "
+                    f"closed it, so it ran to the end of the submission and "
+                    f"took everything after it with it, including "
+                    f"{', '.join(eaten)}. Put {CLOSE_BLOCK} on a line of its "
+                    f"own where the value ends. Nothing else about the paste "
+                    f"is wrong. The template asks for the definition last, "
+                    f"below every other line, because there a missing "
+                    f"{CLOSE_BLOCK} costs nothing; this one had fields after "
+                    f"it."
+                )
+            if notes is not None:
+                notes.append(
+                    f"{key or 'a value'} opened with {OPEN_BLOCK} and nothing "
+                    f"closed it. It is the last thing in the submission, so "
+                    f"the end of the submission closed it and nothing was "
+                    f"lost: every line from the {OPEN_BLOCK} to the end is the "
+                    f"value. Put {CLOSE_BLOCK} on a line of its own if part of "
+                    f"that was meant to be something else."
+                )
     return "\n".join(body).strip("\n").rstrip(), n
 
 

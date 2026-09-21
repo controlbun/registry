@@ -108,6 +108,7 @@ Format:
 - `2026-09-20` `/submit/` asks which of the two ways in before it asks for anything else
 - `2026-09-20` Publishing is automatic end to end, and nobody types anything
 - `2026-09-20` A submitter reads their own rows back, and a played-back record is not a corpus page
+- `2026-09-20` The unbounded value goes last, so a missing terminator costs nothing
 
 <!-- end index -->
 
@@ -4479,3 +4480,143 @@ the page's own script draws rather than against what the source contains,
 through `tests/played_harness.py`, for the reason `tests/ordering_harness.py`
 exists: a control that renders, sets `aria-pressed` and has no handler behind it
 passes every test that asks whether the markup is there.
+
+## 2026-09-20 The unbounded value goes last, so a missing terminator costs nothing
+
+**Decided:** In any format a language model is asked to produce, the value with
+no natural end to it is written last. `definition` moves from the fifth of
+twenty-eight lines in the submission template to the last line, below the
+`not-found:` lines, and `agent_handoff._gather` accepts the end of the
+submission as closing a fence that nothing follows. The two together are the
+fix; neither alone is.
+
+**This is a real defect and it cost three submissions.** The first three real
+uses of the agent handoff were all refused and all three failed identically: a
+coding agent opened `definition: <<<`, wrote the author's theory of the trait
+over many lines, and did not write the closing `>>>`. Opening a delimiter and
+forgetting to close it is among the most common things a model does with one.
+Because `definition` sat near the top, the unterminated fence ran to the end of
+the submission and swallowed the twenty-three fields below it. Each row was
+refused, correctly, with this:
+
+    definition opened with <<< and nothing closed it, so it ran to the end of
+    the submission and took everything after it with it, including
+    artifact_path, hook_point, intervention_id, kind, layer, layer_convention,
+    license_status, model_id, model_revision, not-found, steering_position.
+
+The message was good and it did not help. Nothing arrived, hours apart, three
+times, and the loss was invisible until a human pulled the holding table.
+
+### The fix is structural, because the instruction was already there
+
+The format already said to close the fence, in the section on how to answer,
+and the template already showed the `>>>` on its own line. A stricter version of
+that sentence is a fourth attempt at the thing that failed three times. What
+changed instead is where the value sits: with nothing after the fence, an
+unterminated fence has nothing to swallow, so the same mistake produces a
+complete row and a note rather than a refusal and a lost submission.
+
+**The general rule, which is worth more than this one field.** A free-text value
+with no bound on its length goes last in any format a language model is asked to
+produce, because a missing terminator then costs nothing. It applies to every
+prompt-shaped format this project ships and to any it ships later: the cheapest
+place to absorb the most likely generation error is the end of the output, and
+field order is free. The corollary is the part that is easy to miss: keeping
+exactly one unbounded field, and keeping it last, is what makes every *other*
+unterminated fence detectable, because something known always follows it.
+
+`license_status`, `steering_position` and the `not-found:` reasons are the other
+free-text fields here. None is fenced in the template and each is a sentence
+rather than a document, so none moves. An agent that fences one of them and
+leaves it open is still refused, and that is the right outcome: the definition
+follows it and gets eaten, which is exactly the signal below.
+
+### What still refuses, and how the two cases are told apart
+
+An unclosed fence that swallowed a field this form takes and nobody had answered
+yet is still refused, with the message above. An unclosed fence that swallowed
+nothing of the sort is closed by the end of the submission and reported in the
+notes the panel prints.
+
+The discriminator is a scan of the swallowed region for lines matching known
+field names, case-sensitively, minus the names already answered above the fence.
+The second half of that is what the reordering bought: every other field is
+written before the definition now, so a line inside an unterminated definition
+spelled like one of them is the author's prose by construction. Without it, an
+author whose theory of a trait contained a line reading `model: ...` would be
+refused for writing it.
+
+**The scan decides whether to refuse. It never decides where a value ends.** A
+fenced value is taken whole or refused whole. Closing a fence at "the next line
+that looks like a key" would rescue every case here and would also cut somebody's
+definition off at whatever sentence happened to start with a word and a colon,
+silently, in the field this project calls the one that matters most. That is a
+guess, it is the opposite of the liberal-in strict-out rule the module is built
+on, and it is not done. The residual cost is stated rather than hidden: an
+unterminated definition whose own prose carries a line spelled exactly like a
+field nobody filled in is refused. Refusing never writes a wrong row, and one
+`>>>` ends it.
+
+### Last is not least, and the document says so
+
+Moving the field this project calls the one that matters most to the bottom of a
+form reads as a demotion unless the document says otherwise, so the document
+says otherwise twice and in its own words. The prose that explains `definition`
+stays third, where it belongs, and now ends by saying its line is last, that
+this is the format protecting it rather than demoting it, and to read the
+section again before writing it. The section on how to answer says "the
+definition is the last line of the block, and last here is not least", and gives
+the mechanical reason. Where a field is explained and where it is typed are two
+different orders on purpose.
+
+### The prompt now shows the failure next to the fix
+
+A template shows the shape and does not stop the mistake, which is what three
+identical refusals demonstrate. A short section sits immediately above the
+template, where an agent's eye lands as it starts writing, showing wrong beside
+right with one line of consequence each.
+
+**Only real failures are in it.** The unclosed fence, observed three times
+tonight, quoted with the refusal those rows actually got. A local path in
+`artifact_path`, observed once on a real submission and corrected before the row
+was written, recorded in `minor_updates.md` 2026-09-19. A branch where the
+commit goes, stated as the refusal the parser makes rather than as something
+somebody did. Two candidates were dropped for having no instance behind them: a
+field carrying both a value and a `not-found:` line, and a fabricated number in a
+paste. Both are refused by the code and neither has ever been observed, and an
+invented example teaches an agent to avoid something nobody has ever done while
+leaving the real ones where they are. The fabrication rule already leads the
+prompt in the strongest terms it has.
+
+### The three refused rows are not rescued and should not be
+
+They carry the old shape, with twenty-three fields written after the fence, so
+the fence really did eat them and the text of those fields really is inside the
+definition. Reading them now would mean cutting the value at a line that looks
+like a key, which is the guess this entry refuses. They stay refused. The author
+resubmits against the new template, which takes one paste.
+
+### What this makes impossible to express
+
+- A second unbounded field. Only one value can be last, and a format with two of
+  them has one that is not protected. Anything else that grows without bound has
+  to be folded into the definition or into the recipe payload.
+- Free choice of field order in the template. The order is now load bearing at
+  the bottom, and an editor moving `definition` up reintroduces the defect
+  silently. `tests/test_agent_handoff.py` fails the build on it instead.
+- An agent reordering the block at will. It always could, and it still can, but a
+  paste that puts the definition back in the middle and drops the `>>>` is
+  refused rather than read, which is a worse outcome for that agent than for one
+  that follows the template.
+- Reading a definition that was cut short by its author's own punctuation. That
+  is the point, stated as a loss because it is one: the cases in the paragraph
+  above get a refusal where a guessing parser would get a row.
+
+### The invariant this added
+
+In `CLAUDE.md`, on the bullet that already holds the generated prompt, and held
+in `tests/test_agent_handoff.py`: the one unbounded free-text value is the last
+line of the template, it is the only fenced field, an unterminated fence with
+nothing after it parses and says so, and an unterminated fence that swallowed a
+field refuses and names it. No value is ever truncated at a line that looks like
+a key.

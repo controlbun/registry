@@ -181,7 +181,14 @@ design. Tests that fail the build:
   `make site`, and its parser never crosses into the browser: one thing reads a
   format, the way one thing reads bytes. A paste is posted as text and checked
   when the author pulls it, and the page says that in those words rather than
-  implying a check it does not do
+  implying a check it does not do. **In that format the one unbounded free-text
+  value is the last line and the only fenced one**, because a missing
+  terminator then costs nothing: an unterminated fence with nothing after it
+  parses and says so, and one that swallowed a field refuses and names it.
+  `definition` was the fifth of twenty-eight lines and the first three real
+  submissions were all lost to one missing `>>>`. No value is ever truncated at
+  a line that looks like a key, which is the guess the refusal exists instead
+  of. Held in `tests/test_agent_handoff.py`
 - The bar's signed-in state never comes from anything the page asserts about a
   person. `SiteNav.astro` takes no props and reads nothing about the page it is
   on. A submission page knows an author's handle, so a bar that read its own
