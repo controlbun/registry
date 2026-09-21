@@ -107,6 +107,7 @@ Format:
 - `2026-09-20` Animation is CSS, and Motion is a named option rather than a dependency
 - `2026-09-20` `/submit/` asks which of the two ways in before it asks for anything else
 - `2026-09-20` Publishing is automatic end to end, and nobody types anything
+- `2026-09-20` A submitter reads their own rows back, and a played-back record is not a corpus page
 
 <!-- end index -->
 
@@ -4380,3 +4381,101 @@ twice over an unchanged corpus for the determinism the hook's diff needs. No
 `subprocess.run(timeout=...)` rather than by a shell wrapper: an access prompt
 with nobody there to click it is a job that hangs holding the lock, logging
 nothing and notifying nothing, which is worse than one that fails.
+## 2026-09-20 A submitter reads their own rows back, and a played-back record is not a corpus page
+**Decided:** `/submit/` reads the rows this account has sent out of the holding
+table, in the browser, over the reader's own session, and renders them. The one
+just sent is among them, so the receipt stops being a row id and a timestamp
+with nothing behind it. It is a section on `/submit/` rather than a page of its
+own.
+
+**Nothing was widened to do it.** The select policy on
+`schema/supabase/001_pending_submission.sql` has said `account = auth.uid()`
+since the table existed: a signed-in person reads their own rows and nobody
+else's, and `auth.uid()` is null for an anonymous caller, so an anonymous read
+returns an empty list. No view, no public read, no schema change and no new
+policy. The read is `GET /rest/v1/pending_submission` with its columns named
+rather than `select=*`, so a column added to that table later reaches a browser
+when somebody decides it should.
+
+**Why a section on `/submit/` and not a page of its own.** That page already
+resolves the session through `held.mjs` and already renders all five states it
+can be in, and a second page would be a second copy of those, which is the
+arrangement `held.mjs` exists to prevent. The receipt is there, so the record
+appears where the dead end was, with no navigation. And a destination called
+"your submissions" is the grammar of a status board; a section underneath the
+banner saying a submission does not appear until the author publishes is read in
+that context.
+
+**What it deliberately is not.** Not a corpus page: the region says in its first
+sentence, and every record says again, that it is not in the corpus, that
+nothing has checked it and that nobody else can read it. Not a queue: there is
+no reviewer, nothing to approve, and `taken_at` renders as read in, in the words
+`artifacts/intake.py` and the schema comment both use, never as accepted. Not a
+count of anything on this site: the only number is how many records this account
+sent, which is a fact about one person's own unpublished text. Not a ranking:
+the only sequence is the clock, named on screen and reversed on a press, and
+`inArrivalOrder` reads no field of any record, so a label, a layer, a version
+and whether a row has been read in are all invisible to it.
+
+**A number in a record is a number the submitter typed, and the rendering says
+so rather than a caption.** Every value is quoted and every record sits in a
+`data-authored` region, which is the mark the falsifier reads on a published
+page to tell an author's claim from a figure this registry derived. Nothing has
+fetched the bytes at the pin, so no number in a held row can be re-derived at
+all, and it must not sit in the grammar of one that was.
+
+**`author/model_id/label@version` is never printed for a held row.** That string
+resolves to one frozen submission in the corpus, forever. A row in the holding
+table resolves to nothing, so the label and the version render as two strings
+somebody typed.
+
+**A paste renders as the text it is.** No field is extracted from one, here or
+anywhere else in the browser, and the prose the agent wrote around the block
+travels with it. That is the same rule the send path already follows, in the
+other direction.
+
+**What this makes impossible to express**, stated because a constraint that
+cannot name its cost has not been thought through:
+
+- Showing a held record to anybody but the account that sent it. Two people
+  working on one submission cannot look at the draft together, and there is no
+  link to send, because it is a region on a page behind a session rather than a
+  URL.
+- Reading it with scripting off. The build emits files and runs no route, so
+  there is no page that could render somebody's unpublished record server side.
+  The `noscript` says that plainly rather than leaving a dead region.
+- Correcting one. There is still no update and no delete policy, so a submitter
+  now watches a statement they cannot take back. A correction is another
+  submission, which is the rule the corpus applies to a published row.
+- Being told when the author reads a row in. Nothing here notifies; the page has
+  to be opened again.
+- Grouping. Somebody with many records gets one flat list in clock order, with
+  no way to gather them by label or by model, because every grouping key is a
+  field in the record and nothing here reads one.
+
+**The judgment call, recorded as one.** `taken_at` is rendered. It is the single
+most queue-flavored thing on the page, and the argument for showing it is that
+the row holds the fact, the submitter's next question after "did it arrive" is
+"has anything happened", and withholding it would be this page deciding what
+somebody may know about their own record. It renders as a dated observation in a
+sentence, never as a badge, a column or an icon, and never as a sort key. If it
+turns out to read as a progress board, the thing to remove is that sentence and
+nothing else.
+
+**The origin guard was amended rather than left to pass.** `MAY_SEND_TO` in
+`tests/test_intake.py` already named the Supabase project, so the host is not
+new, but its reason ended "reading stays anonymous, because no read anywhere on
+this site goes through it", which this makes false. It now says which read goes
+through it, under which policy, and keeps the property that was actually being
+protected: nobody has to sign in to read this site, and signing in shows
+somebody their own unpublished text and nobody else's.
+
+**The invariant this added**, in `CLAUDE.md` and held in
+`tests/test_submit_page.py`: a record somebody sent and nobody has read renders
+only to the account that sent it, never as a corpus page, never in a count, a
+label view, a model page or the search index, with every value marked as its
+author's own words, and with no sequence but the clock. It is held against what
+the page's own script draws rather than against what the source contains,
+through `tests/played_harness.py`, for the reason `tests/ordering_harness.py`
+exists: a control that renders, sets `aria-pressed` and has no handler behind it
+passes every test that asks whether the markup is there.

@@ -186,6 +186,20 @@ design. Tests that fail the build:
   person. `SiteNav.astro` takes no props and reads nothing about the page it is
   on. A submission page knows an author's handle, so a bar that read its own
   page would greet a stranger by the name of whoever they were reading
+- A record somebody sent and nobody has read is played back only to the account
+  that sent it, and never renders as a corpus page. It says in the region and
+  again on every record that it is not in the corpus, that nothing has checked
+  it and that nobody else can read it. Every value in one is the string its
+  author typed, quoted and inside a `data-authored` region, so a number in one
+  is never scanned as this registry's and never sits in the grammar of a figure
+  the falsifier traced. It enters no count, no label view, no model page and no
+  search index, and `author/model_id/label@version` is never printed for one,
+  because that ref resolves to a frozen submission and this resolves to
+  nothing. `taken_at` renders as read in and never as accepted. The only
+  sequence it has is the clock it arrived on, named on screen, reversible, and
+  derived from nothing in the record. Held in `tests/test_submit_page.py`
+  against what the page's own script draws, through `tests/played_harness.py`,
+  because presence is not behavior and every sentence here is built by script
 - Every document says at the top whether it still instructs, and on what date it
   said so. `tests/test_doc_status.py` fails the build on a missing block, a date
   in the future, or one pushed below the first twelve lines. The word after the

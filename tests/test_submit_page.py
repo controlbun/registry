@@ -62,6 +62,10 @@ sys.path.insert(0, str(ROOT / "artifacts"))
 import agent_handoff  # noqa: E402
 import intake  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import played_harness as played  # noqa: E402
+
 # Run against the real module rather than a restatement of it, same as the page
 # tests next door. Imported rather than copied, because a second implementation
 # in a test is the same failure as a second implementation in the product, one
@@ -659,12 +663,47 @@ def test_the_permission_window_comes_back_through_the_registered_redirect():
 def test_the_page_says_nothing_about_a_session_it_cannot_check():
     """A page that is not the return leg knows one thing about a reader: what
     the session in their own browser says. It reads no page content and asserts
-    nothing about who anybody is."""
+    nothing about who anybody is.
+
+    **The patterns are reads and not the word.** This matched the bare
+    substring `data-author` until 2026-09-20, when the page started marking a
+    played-back record with `data-authored`, which is the site's own mark for
+    somebody's quoted words and the one the falsifier reads on a published page
+    to tell an author's number from one this registry derived. The page writing
+    that attribute onto its own output is the opposite of the failure here, and
+    the substring called it the failure: the trap `CLAUDE.md` names, a grep
+    catching the word rather than the meaning, one more time. What matters is
+    whether this page **reads** an author off a document, so the patterns below
+    are the ways it could.
+    """
     source = PAGE.read_text()
-    for asserting in ("data-author", "data-owner", "controlbun.json"):
-        assert asserting not in source, (
+    for asserting in (r"data-author[\"'=\]]", r"data-owner[\"'=\]]",
+                      r"dataset\.(author|owner)", r"controlbun\.json"):
+        assert not re.search(asserting, source), (
             f"the page reads {asserting!r}, so it can say a reader is whoever "
             "they happen to be reading about"
+        )
+
+
+def test_that_narrowing_still_catches_a_page_reading_an_author():
+    """The bite. A guard narrowed to let a legitimate edit through is a guard
+    one character away from seeing nothing, which is the failure this
+    repository has hit more than once."""
+    reads = (r"data-author[\"'=\]]", r"data-owner[\"'=\]]",
+             r"dataset\.(author|owner)", r"controlbun\.json")
+    for bad in ('document.querySelector("[data-author]")',
+                'node.getAttribute("data-owner")',
+                'const who = box.dataset.author;',
+                'import corpus from "../data/controlbun.json";'):
+        assert any(re.search(p, bad) for p in reads), (
+            f"the guard stopped seeing {bad!r}"
+        )
+    # And the mark the page writes on its own output is not one of them.
+    for fine in ('body.setAttribute("data-authored", "");',
+                 '<div class="played-body" data-authored>'):
+        assert not any(re.search(p, fine) for p in reads), (
+            f"the guard flags {fine!r}, which is the page quoting somebody "
+            "rather than reading them"
         )
 
 
@@ -676,6 +715,562 @@ def test_no_session_in_this_browser_is_a_state_with_its_own_words():
     body = text_of(page).lower()
     assert "there is no session in this browser" in body
     assert 'href="/sign-in/"' in page and 'href="/signed-in/"' in page
+
+
+# --------------------------------------------------------------------------- #
+# What this account has already sent, read back.
+#
+# **A record played back is the submitter's own text and it is not a corpus
+# page.** Everything below is about keeping those two apart, because one design
+# slip in this direction is a submission queue awaiting approval, which is the
+# thing this project exists not to be.
+#
+# **The states the corpus gives no instance of are built here rather than
+# looked for.** Nobody has sent a paste, nobody's handle has been renamed
+# between a sign-in and a send, and nothing in the holding table has been read
+# in. Those three are the interesting cases, so they are constructed, the same
+# way `tests/probe.py` constructs the corpus states nothing real demonstrates.
+# Every value in them is obviously synthetic and no number in this file is a
+# measurement.
+
+
+def a_row(record: dict, **over) -> dict:
+    """One row as the holding table answers with it. Synthetic throughout."""
+    row = {
+        "id": "00000000-0000-4000-8000-000000000000",
+        "received_at": "2026-09-20T00:00:00Z",
+        "subject": "opaque",
+        "handle": "sohampadia",
+        "record": record,
+        "taken_at": None,
+    }
+    row.update(over)
+    return row
+
+
+def played_back(row: dict) -> dict:
+    return run_js(f"return h.playback({json.dumps(row)});")
+
+
+def ordered(rows: list[dict], newest_first: bool = False) -> list[dict]:
+    return run_js(
+        f"return h.inArrivalOrder({json.dumps(rows)}, "
+        f"{{newestFirst: {str(newest_first).lower()}}});"
+    )
+
+
+def names_in(shown: dict) -> set[str]:
+    return {entry["name"] for group in shown["groups"] for entry in group["entries"]}
+
+
+def test_a_record_plays_back_every_key_it_holds_including_one_nobody_has_met():
+    """No closed enum on the way back either.
+
+    A reader checking their own work needs what they sent, and a list of keys
+    this file knows about would drop the one a record grew after it was
+    written. The record is walked rather than read.
+    """
+    record = submission(a_form())
+    record["a_key_nobody_has_met"] = "and it comes back anyway"
+    shown = played_back(a_row(record))
+    for name in record:
+        if name in ("artifact", "intervention", "absent", "pasted"):
+            continue
+        assert name in names_in(shown), f"{name} was sent and does not come back"
+    assert "a_key_nobody_has_met" in names_in(shown)
+    # And the nested objects come back as their own groups, by the name the
+    # record gave them rather than by a title this page chose.
+    assert {"artifact", "intervention", "absent"} <= {
+        group["name"] for group in shown["groups"] if group["name"]
+    }
+
+
+def test_a_value_that_was_not_sent_plays_back_as_its_own_state():
+    """Absence renders as absence, which is the rule an absent eval gets. An
+    empty string in its place is a value somebody has to read as a blank."""
+    shown = played_back(a_row(submission(a_form())))
+    intervention = next(g for g in shown["groups"] if g["name"] == "intervention")
+    absent = {e["name"]: e for e in intervention["entries"] if e["state"] == "none"}
+    assert "model_revision" in absent
+    assert absent["model_revision"]["text"] is None
+
+
+def test_a_paste_plays_back_as_text_and_nothing_here_reads_it():
+    """The property the whole arrangement rests on, in the other direction.
+
+    Sending a paste does not parse it and neither does reading it back. The
+    text comes out whole, with the prose the agent wrote around it, and no
+    field is extracted from it anywhere in this browser.
+    """
+    record = paste_record(paste_text())
+    shown = played_back(a_row(record))
+    assert shown["pasted"] == record["pasted"]
+    assert agent_handoff.BEGIN in shown["pasted"]
+    # Every field the block inside it names, and none of them became a field.
+    # `author` is not among them: it is on the record's envelope as well, put
+    # there by `pasteFrom` off the session, and it comes back for that reason
+    # rather than by anything having read the block.
+    for field in set(PASTE_FIELDS) - {"author"}:
+        assert field not in names_in(shown), (
+            f"{field} was read out of a paste in the browser, which is the "
+            "second parser this arrangement exists to not have"
+        )
+    # What does come back as fields is the record's own envelope, unread.
+    assert {"shape", "submitted_at", "provider", "author"} <= names_in(shown)
+
+
+def test_the_stamped_identity_wins_and_the_disagreement_is_surfaced():
+    """`CLAUDE.md`: where the stamped identity and the record's own copy
+    disagree, the stamped one is used and the disagreement is surfaced rather
+    than either being preferred silently. `artifacts/intake.py` does this when
+    the author pulls the row; this does it on the page, for the person it is
+    about, who is the one who can say which is right.
+
+    Constructed, because nobody in this corpus has renamed a handle between
+    signing in and sending.
+    """
+    record = submission(a_form(), handle="the-handle-that-was")
+    shown = played_back(a_row(record, handle="the-handle-now"))
+    assert shown["stamped"]["handle"] == "the-handle-now"
+    assert shown["differs"] == [{
+        "field": "handle",
+        "stamped": "the-handle-now",
+        "in_record": "the-handle-that-was",
+    }]
+    # And an agreeing row says nothing, because there is nothing to say.
+    assert played_back(a_row(submission(a_form())))["differs"] == []
+
+
+def test_playback_mints_no_reference_that_resolves():
+    """`author/model_id/label@version` resolves to one frozen submission in the
+    corpus, forever. A row in a holding table resolves to nothing, so printing
+    the ref would be this page claiming a resolution that does not exist. The
+    label and the version come back as two strings somebody typed."""
+    shown = played_back(a_row(submission(a_form())))
+    flat = json.dumps(shown)
+    assert "@meandiff" not in flat, "a played-back record carries a version ref"
+    assert "pro-human@" not in flat
+    assert "sohampadia/allenai" not in flat
+
+
+def test_playback_invents_no_field_of_its_own():
+    """It says what is in the record. A key the record does not carry, arriving
+    on the way out, would be this page asserting something about somebody's
+    unpublished work."""
+    record = submission(a_form())
+    shown = played_back(a_row(record))
+    for group in shown["groups"]:
+        source = record if group["name"] is None else record[group["name"]]
+        for entry in group["entries"]:
+            assert entry["name"] in source, (
+                f"{entry['name']} is not in the record and is on the page"
+            )
+
+
+def test_the_only_order_is_the_clock_and_it_reverses():
+    """An order has to be something. This one is the time each row arrived,
+    which is the order `intake.pending` reads them in on the author's machine,
+    and reversing it changes nothing about any row."""
+    rows = [
+        a_row(submission(a_form(label="second")), received_at="2026-09-20T02:00:00Z"),
+        a_row(submission(a_form(label="first")), received_at="2026-09-20T01:00:00Z"),
+        a_row(submission(a_form(label="third")), received_at="2026-09-20T03:00:00Z"),
+    ]
+    at = lambda out: [row["received_at"] for row in out]
+    assert at(ordered(rows)) == [
+        "2026-09-20T01:00:00Z", "2026-09-20T02:00:00Z", "2026-09-20T03:00:00Z",
+    ]
+    assert at(ordered(rows, newest_first=True)) == list(
+        reversed(at(ordered(rows)))
+    )
+
+
+def test_no_ordering_derives_from_anything_in_a_record():
+    """The invariant `CLAUDE.md` states about eval results, applied where there
+    are no eval results and somebody might reach for the next thing: a label, a
+    layer, a version string, whether the author has read the row in.
+
+    Two rows arriving at the same moment keep the order they came in, and a row
+    with no arrival time is not moved for having none.
+    """
+    same = [
+        a_row(submission(a_form(label="zzz", layer="41")), id="second",
+              taken_at="2026-09-20T09:00:00Z"),
+        a_row(submission(a_form(label="aaa", layer="7")), id="first"),
+    ]
+    assert [row["id"] for row in ordered(same)] == ["second", "first"]
+
+    missing = [a_row(submission(a_form()), id="no-clock", received_at=None),
+               a_row(submission(a_form()), id="has-one")]
+    assert [row["id"] for row in ordered(missing)] == ["no-clock", "has-one"]
+
+
+def joined(source: str) -> str:
+    """JavaScript string concatenation, put back together.
+
+    Every sentence a record renders is a string in the page's script, wrapped
+    across lines at eighty columns. Asserting on the wrapped halves would be
+    asserting on where the wrap fell.
+    """
+    return re.sub(r'"\s*\+\s*\n\s*"', "", source)
+
+
+def test_the_page_reads_back_what_this_account_sent():
+    """Read off the built bundle rather than the source, because the question
+    is what the browser does. A minifier renames functions and keeps string
+    literals, so the literals are what there is to assert on."""
+    code = bundle()
+    assert "rest/v1/pending_submission?" in code, (
+        "the page no longer reads anything back, or it reads from somewhere "
+        "this test has not seen"
+    )
+    assert "id,received_at,subject,handle,record,taken_at" in code, (
+        "the read no longer names its columns, so a column added to that table "
+        "later reaches this browser without anybody deciding it should"
+    )
+    assert "received_at.asc" in code
+    assert 'id="played"' in built(), "there is nowhere for it to render"
+
+
+def test_the_read_needs_only_the_policy_that_was_already_there():
+    """Nothing was widened to show somebody their own rows.
+
+    The select policy is `account = auth.uid()`: one signed-in person reads
+    their own rows and nobody else's, and `auth.uid()` is null for an anonymous
+    caller, so anonymous reads return an empty list. This asserts the schema
+    still says that and still offers nothing wider, because a view or a policy
+    for `anon` is how a holding table becomes a second corpus with none of the
+    properties the first one has.
+    """
+    schema = (ROOT / "schema" / "supabase" / "001_pending_submission.sql").read_text()
+    assert re.search(r"for\s+select\s+to\s+authenticated\s+using\s*\(\s*account\s*=\s*auth\.uid\(\)\s*\)",
+                     schema, re.S), "the select policy is not the one this page relies on"
+    assert not re.search(r"\bto\s+anon\b", schema), (
+        "the holding table grants an anonymous role something, and reading "
+        "somebody's unpublished record is not a thing a stranger does here"
+    )
+    assert "create view" not in schema.lower(), (
+        "a view over this table is a second surface with its own policies"
+    )
+
+
+def test_a_played_back_record_says_where_it_cannot_be_missed_what_it_is_not():
+    """Three claims, in the region and on every record rather than in a note
+    under it: it is not in the corpus, nothing has checked it, and nobody else
+    can read it. A long list is a thing somebody scrolls, so the banner at the
+    top is not enough on its own."""
+    body = " ".join(text_of(built()).split()).lower()
+    assert ("none of this is in the corpus, nothing has checked it, and nobody "
+            "else can read it") in body
+    assert "no bytes were fetched, no paste was parsed" in body
+    assert "counts toward a claimant" in body
+
+    # And again on each record, which is drawn by the script and so is read out
+    # of the page's source rather than out of the rendered body.
+    source = joined(PAGE.read_text())
+    assert ("Your own words, unchecked, not in the corpus, and readable by "
+            "nobody else.") in source, (
+        "a record on its own no longer says what it is, so a reader who "
+        "scrolled past the banner has nothing"
+    )
+
+
+def test_a_number_in_a_played_back_record_is_marked_as_the_submitters_own():
+    """The rule the falsifier enforces on a published page, applied to a page
+    it cannot see.
+
+    Every figure the site publishes is re-derived or traced, and `data-authored`
+    is what marks the regions that are somebody's own words instead. A record in
+    the holding table is entirely that: nothing has fetched the bytes at the
+    pin, so no number in one can be re-derived, and it must not sit in the same
+    grammar as a number that was.
+    """
+    source = PAGE.read_text()
+    assert 'setAttribute("data-authored", "")' in source, (
+        "a played-back record is no longer marked as the submitter's own words"
+    )
+    assert "asTyped(entry.text)" in source, (
+        "a value renders without the quoting that says it is a string somebody "
+        "typed rather than a figure anything derived"
+    )
+    body = " ".join(text_of(built()).split()).lower()
+    assert "a number here is a number you typed" in body
+    assert "cannot re-derive it" in body
+
+
+def test_nothing_played_back_reads_as_a_queue():
+    """The same list `test_the_page_offers_no_queue_and_nothing_to_approve`
+    holds the rendered page to, applied to the page's source.
+
+    That test reads `text_of(built())`, which strips `<script>`, and every
+    sentence a record renders is a string inside one. So the copy that is most
+    at risk of becoming a queue was the copy that guard could not see, which is
+    the failure this repository keeps catching: a check that passes because it
+    cannot look at the thing it is about.
+    """
+    source = PAGE.read_text().lower()
+    for queueing in ("pending review", "awaiting approval", "in the queue",
+                     "your position", "position in", "your turn", "under review",
+                     "will be reviewed", "once approved", "moderat"):
+        assert queueing not in source, f"{queueing!r} is a queue arriving in prose"
+    # `taken_at` is the one field that could read as a verdict, and it renders
+    # in the words `artifacts/intake.py` and the schema comment both use.
+    assert "Read in means pulled" in PAGE.read_text()
+    assert "which is not the same as " in PAGE.read_text()
+
+
+def test_a_pending_row_reaches_no_other_page_and_no_search_index():
+    """It counts toward nothing. `CLAUDE.md` has an invariant that no page
+    asserts a plurality the corpus does not hold, and an unpublished record
+    turning up in a claimant count, a label view or the site search would be
+    the shortest route to breaking it."""
+    src = ROOT / "astro" / "src"
+    # The path rather than the table's name: three files name the table in a
+    # comment, and naming it is not reaching it.
+    reaching = sorted(
+        str(p.relative_to(src)) for p in src.rglob("*")
+        if p.is_file()
+        and "/rest/v1/pending_submission" in p.read_text(errors="ignore")
+    )
+    assert reaching == ["lib/hub.mjs"], (
+        f"the holding table is reached from {reaching}; both hops belong to the "
+        "one module that talks to the project"
+    )
+    calling = sorted(
+        str(p.relative_to(src)) for p in src.rglob("*")
+        if p.is_file() and "readPending" in p.read_text(errors="ignore")
+    )
+    assert calling == ["lib/hub.mjs", "pages/submit.astro"], (
+        f"a second page reads the holding table: {calling}"
+    )
+    assert re.search(r'<section id="played"[^>]*data-pagefind-ignore',
+                     built()), (
+        "the region is not held out of the search index, so a record could be "
+        "indexed the moment anything renders into it at build time"
+    )
+
+
+def test_the_ordering_is_named_on_screen_and_switchable():
+    """A default ordering is allowed and has to be named and switchable. What
+    is being switched here is a clock, and being able to reverse it is the
+    cheapest demonstration that the sequence carries nothing.
+
+    `tests/test_ordering_control.py` exists because a bar rendered, set
+    `aria-pressed` and had no handler behind it. So the handler is asserted as
+    well as the copy, and the order itself is `inArrivalOrder`, which the tests
+    above run.
+    """
+    body = " ".join(text_of(built()).split()).lower()
+    assert "ordered by the time each one arrived here" in body
+    assert "oldest first" in body and "newest first" in body
+    assert "it is not a rank, not a place in a line" in body
+
+    source = PAGE.read_text()
+    assert 'document.querySelectorAll("#played-order button")' in source
+    assert 'button.dataset.newest === "true"' in source
+    assert "inArrivalOrder(sent, { newestFirst })" in source, (
+        "the control no longer orders through the function the tests run"
+    )
+
+
+def test_an_account_that_has_sent_nothing_gets_words_and_not_an_empty_box():
+    body = " ".join(text_of(built()).split()).lower()
+    assert "this account has sent nothing yet" in body
+    assert "that is a state and not a failure" in body
+    source = PAGE.read_text()
+    assert "nothing was sent for this" in source, (
+        "a field nobody filled in renders as a blank rather than as an absence"
+    )
+    assert 'role="status"' in built(), "the fetch state is not announced"
+    assert 'id="played-said"' in built()
+
+
+def test_the_records_leave_the_document_on_sign_out():
+    """The next person to sign in on this browser is a different person, and a
+    hidden element is still an element."""
+    source = PAGE.read_text()
+    listener = re.search(
+        r'window\.addEventListener\("controlbun:session".*?\}\);', source, re.S)
+    assert listener and "forgetPlayed()" in listener.group(0), (
+        "signing out leaves one person's records on the page"
+    )
+    wipe = re.search(r"function forgetPlayed\(\).*?\n  \}", source, re.S)
+    assert wipe and "sent = []" in wipe.group(0)
+    assert "list.replaceChildren()" in source, (
+        "the rendered records are hidden rather than removed"
+    )
+
+
+def test_the_part_that_needs_script_says_so_with_scripting_off():
+    """Not a dead region. The page already says the form needs JavaScript; the
+    read back is a second thing that does, and it has no other page to point
+    at."""
+    noscript = re.search(r"<noscript>(.*?)</noscript>", built(), re.S)
+    assert noscript, "the page no longer says anything with scripting off"
+    said = " ".join(re.sub(r"<[^>]+>", " ", noscript.group(1)).split()).lower()
+    assert "reading back what you have already sent needs it too" in said
+    assert "no other page on this site that has it" in said
+
+
+# --------------------------------------------------------------------------- #
+# What a reader actually sees, drawn by the page's own script.
+#
+# Everything above this line asks whether the right strings are in the source.
+# `tests/ordering_harness.py` exists because that question passed on a control
+# that rendered, set `aria-pressed` and had no handler: presence is not
+# behavior. Every sentence a record shows is built by script out of a fetch, so
+# these run that script against rows and read what it drew.
+
+
+def rendered(rows, press=None):
+    return played.render(rows, press=press)
+
+
+def test_reading_back_is_a_read_and_asks_for_what_it_says_it_does():
+    """The harness refuses any request that is not this one and any that
+    carries a method, so the shape of the request is held here as well as in
+    the bundle."""
+    out = rendered([a_row(submission(a_form()))])
+    assert len(out["asked"]) == 1, "reading back made more than one request"
+    asked = out["asked"][0]
+    assert asked["method"] == "GET"
+    assert "/rest/v1/pending_submission" in asked["url"]
+    assert "order=received_at.asc" in asked["url"]
+
+
+def test_a_record_a_reader_sees_says_what_it_is_and_shows_what_was_sent():
+    out = rendered([a_row(submission(a_form()))])
+    assert out["said"] == (
+        "This account has sent 1 record, below. None of them is in the corpus."
+    )
+    shown = played.records(out)
+    assert len(shown) == 1
+    text = played.flatten(shown[0])
+    assert ("Your own words, unchecked, not in the corpus, and readable by "
+            "nobody else.") in text
+    # The work a submitter came to check: the label, the version, the model,
+    # their own definition and the pin.
+    for value in ("pro-human", "meandiff", "allenai/Olmo-3-1125-32B",
+                  "what the author means by it", "someone/direction", "a" * 40,
+                  "direction.safetensors"):
+        assert value in text, f"{value} was sent and is not on the page"
+    # An absence is a sentence rather than a blank.
+    assert "nothing was sent for this" in text
+
+
+def test_every_value_a_reader_sees_is_marked_as_typed_rather_than_derived():
+    """The rule `data-authored` carries on a published page, on a page the
+    falsifier cannot reach: the numbers in here are the submitter's own and
+    nothing has re-derived one."""
+    out = rendered([a_row(submission(a_form()))])
+    record = played.records(out)[0]
+    marked = played.find(record, tag="div", **{"class": "played-body"})
+    assert marked and "data-authored" in marked[0]["attrs"], (
+        "a record renders outside a marked region, so a number in one reads "
+        "as a figure this registry derived"
+    )
+    typed = {played.flatten(node)
+             for node in played.find(record, tag="span", **{"class": "typed"})}
+    # The layer is the number in this fixture, and it renders as a typed
+    # string inside the marked region like everything else.
+    assert "31" in typed
+    assert "pro-human" in typed
+    # And nothing a reader sees is a value that escaped the quoting.
+    for group in ("dd",):
+        for cell in played.find(record, tag=group):
+            text = played.flatten(cell)
+            assert (text == "" or "nothing was sent for this" in text
+                    or text in typed), f"{text!r} renders unquoted"
+
+
+def test_nothing_drawn_reads_as_a_queue():
+    """The same list the built page is held to, applied to what the script
+    draws, which is where the copy at risk of becoming a queue actually is."""
+    rows = [
+        a_row(submission(a_form()), id="one"),
+        a_row(submission(a_form()), id="two", received_at="2026-09-20T01:00:00Z",
+              taken_at="2026-09-20T09:00:00Z"),
+    ]
+    text = played.flatten(rendered(rows)["list"]).lower()
+    # Phrases rather than the bare words, for the reason the built-page version
+    # of this list gives: the copy that keeps a record from reading as a verdict
+    # is the copy that says it is not one, so "not the same as accepted" is the
+    # sentence a substring scan on `accepted` flags. The trap `CLAUDE.md` names,
+    # caught here rather than worked around by softening the sentence.
+    for queueing in ("pending review", "awaiting approval", "in the queue",
+                     "your position", "position in", "your turn", "under review",
+                     "will be reviewed", "once approved", "moderat",
+                     "is approved", "was approved", "has been accepted",
+                     "was rejected", "waiting for review"):
+        assert queueing not in text, f"{queueing!r} is a queue arriving in prose"
+    # `taken_at` is the field that could read as a verdict, and both states are
+    # rendered here: one row has been read in and one has not.
+    assert "the author read this in on 2026-09-20t09:00:00z" in text
+    assert "has not read this in yet" in text
+    assert "not the same as accept" in text
+
+
+def test_nothing_drawn_is_a_reference_that_resolves():
+    out = rendered([a_row(submission(a_form()))])
+    text = played.flatten(out["list"])
+    assert "@meandiff" not in text, (
+        "a record in the holding table renders a version ref, which resolves "
+        "to a frozen submission in the corpus and to nothing here"
+    )
+    assert "pro-human@" not in text
+
+
+def test_the_order_is_named_and_a_press_reverses_what_is_drawn():
+    """A control that renders and does nothing is worse than none. This is the
+    press, through the page's own handler and its own ordering function."""
+    rows = [
+        a_row(submission(a_form()), id="second",
+              received_at="2026-09-20T02:00:00Z"),
+        a_row(submission(a_form()), id="first",
+              received_at="2026-09-20T01:00:00Z"),
+    ]
+    oldest = rendered(rows)
+    assert oldest["order"]["hidden"] is False, (
+        "two records and no way to see what the order is"
+    )
+    assert oldest["order"]["now"] == "oldest first"
+    assert oldest["order"]["pressed"] == {"oldest": "true", "newest": "false"}
+    first = [played.flatten(r) for r in played.records(oldest)]
+    assert "2026-09-20T01:00:00Z" in first[0]
+
+    newest = rendered(rows, press="newest")
+    assert newest["order"]["now"] == "newest first"
+    assert newest["order"]["pressed"] == {"oldest": "false", "newest": "true"}
+    after = [played.flatten(r) for r in played.records(newest)]
+    assert "2026-09-20T02:00:00Z" in after[0], "the press changed nothing"
+    assert [text[:40] for text in after] == [text[:40] for text in reversed(first)]
+
+
+def test_one_record_is_not_offered_an_ordering():
+    """An order of one is not an order, and a control over it is a control
+    with nothing to do."""
+    out = rendered([a_row(submission(a_form()))])
+    assert out["order"]["hidden"] is True
+
+
+def test_a_paste_is_drawn_as_the_text_it_is():
+    out = rendered([a_row(paste_record(paste_text()))])
+    record = played.records(out)[0]
+    text = played.flatten(record)
+    assert "nothing in this browser has read it" in text
+    assert agent_handoff.BEGIN in text, "the paste itself is not shown"
+    assert "I read the extraction script" in text, (
+        "the prose the agent wrote around the block was trimmed, which is this "
+        "page deciding which part of somebody's reply is the answer"
+    )
+    assert played.find(record, tag="pre"), "a paste renders as prose"
+
+
+def test_an_account_that_has_sent_nothing_is_told_so():
+    out = rendered([])
+    assert out["none"]["hidden"] is False
+    assert out["said"] == "This account has sent nothing yet."
+    assert played.records(out) == []
 
 
 def test_the_page_is_reachable():
